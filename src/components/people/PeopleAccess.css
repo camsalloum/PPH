@@ -1,0 +1,283 @@
+/**
+ * People & Access Module Styles
+ * Part of: User Management Module Implementation
+ * Date: December 25, 2025
+ */
+
+/* Main Layout */
+.people-access-module {
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+.people-access-module .ant-layout-sider {
+  background: #fff;
+  border-right: 1px solid #f0f0f0;
+}
+
+.people-access-module .ant-layout-content {
+  padding: 24px;
+  background: #f0f2f5;
+}
+
+/* Menu Styling */
+.people-access-module .ant-menu-item {
+  border-radius: 6px;
+  margin: 4px 8px;
+}
+
+.people-access-module .ant-menu-item-selected {
+  background-color: #e6f7ff !important;
+}
+
+/* Summary Cards */
+.people-access-module .summary-card {
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.people-access-module .summary-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+/* Organization Chart */
+.enhanced-org-chart .org-node {
+  transition: all 0.3s ease;
+}
+
+.enhanced-org-chart .org-node:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transform: translateY(-3px);
+}
+
+.enhanced-org-chart .org-node-container {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Unified User Employee */
+.unified-user-employee .ant-table-row {
+  transition: background-color 0.2s;
+}
+
+.unified-user-employee .ant-table-row:hover {
+  background-color: #fafafa;
+}
+
+.unified-user-employee .ant-statistic-title {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* Sales Team Manager */
+.sales-team-manager .ant-tree-node-content-wrapper {
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.sales-team-manager .ant-tree-node-content-wrapper:hover {
+  background-color: #e6f7ff;
+}
+
+.sales-team-manager .ant-tree-switcher {
+  color: #1890ff;
+}
+
+/* Territory Manager */
+.territory-manager .ant-tree-title {
+  padding: 4px 0;
+}
+
+.territory-manager .territory-card {
+  border-left: 3px solid #1890ff;
+}
+
+/* Roles & Permissions */
+.roles-permissions .permission-matrix {
+  overflow-x: auto;
+}
+
+.roles-permissions .ant-tag {
+  margin: 1px;
+}
+
+.roles-permissions .ant-collapse-header {
+  font-weight: 500;
+}
+
+/* Authorization Rules */
+.authorization-rules-manager .rule-card {
+  border-left: 3px solid #52c41a;
+}
+
+.authorization-rules-manager .rule-card.inactive {
+  border-left-color: #d9d9d9;
+  opacity: 0.7;
+}
+
+.authorization-rules-manager .ant-timeline-item-tail {
+  border-left: 2px solid #f0f0f0;
+}
+
+/* Audit Log */
+.audit-log .ant-timeline-item {
+  padding-bottom: 16px;
+}
+
+.audit-log .ant-table-row {
+  font-size: 13px;
+}
+
+.audit-log .log-action-tag {
+  min-width: 100px;
+  text-align: center;
+}
+
+/* User Profile */
+.user-profile .avatar-upload {
+  cursor: pointer;
+  position: relative;
+}
+
+.user-profile .avatar-upload:hover .upload-overlay {
+  opacity: 1;
+}
+
+.user-profile .upload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.user-profile .ant-descriptions-item-label {
+  font-weight: 500;
+  background-color: #fafafa;
+}
+
+/* Permission Gate */
+.permission-gate-disabled {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.permission-gate-disabled::after {
+  content: '🔒';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+}
+
+/* Cards */
+.people-access-module .ant-card {
+  border-radius: 8px;
+}
+
+.people-access-module .ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 16px;
+}
+
+.people-access-module .ant-card-head-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Tables */
+.people-access-module .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.people-access-module .ant-table-tbody > tr > td {
+  font-size: 13px;
+}
+
+/* Buttons */
+.people-access-module .ant-btn-sm {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+/* Tags */
+.people-access-module .ant-tag {
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+/* Modals */
+.people-access-module .ant-modal-header {
+  border-radius: 8px 8px 0 0;
+}
+
+.people-access-module .ant-modal-content {
+  border-radius: 8px;
+}
+
+/* Badges */
+.people-access-module .ant-badge-count {
+  font-size: 10px;
+  height: 16px;
+  min-width: 16px;
+  line-height: 16px;
+}
+
+/* Alerts */
+.people-access-module .ant-alert {
+  border-radius: 6px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .people-access-module .ant-layout-sider {
+    display: none;
+  }
+  
+  .enhanced-org-chart {
+    overflow-x: auto;
+  }
+  
+  .people-access-module .ant-card-body {
+    padding: 12px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .people-access-module .ant-layout-sider {
+    display: none;
+  }
+  
+  .people-access-module .ant-btn {
+    display: none;
+  }
+  
+  .enhanced-org-chart {
+    transform: none !important;
+  }
+}

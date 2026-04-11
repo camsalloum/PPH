@@ -1,0 +1,170 @@
+.table-detail {
+  width: 100%;
+  min-height: 500px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(15, 40, 87, 0.08);
+  overflow: visible; /* Changed from hidden to allow sticky headers */
+}
+
+.table-detail__wrapper {
+  width: 100%;
+  padding: 8px 4px; /* Reduced padding - minimal gaps */
+  overflow-x: auto;   /* Allow horizontal scroll when needed (mobile/tablet + wide tables) */
+  overflow-y: auto;   /* Enable vertical scrolling */
+  max-height: 78vh;   /* Increased height to use more screen */
+  position: relative; /* Required for sticky positioning context */
+}
+
+/*
+  Some tables (Product Groups, Sales by Sales Reps) already implement their own
+  internal scroll container (e.g. .pg-table-container / .sbsr-table-container).
+  If the wrapper also scrolls vertically, users often end up scrolling the wrapper
+  instead of the table container, making sticky headers/first-column appear "broken".
+*/
+.table-detail__wrapper--inner-scroll {
+  overflow: visible;
+  max-height: none;
+}
+
+/* Chart variant needs more height */
+.table-detail--chart {
+  min-height: 700px;
+}
+
+/* Ensure proper display in overlay */
+.divisional-dashboard__overlay .table-detail {
+  background: transparent;
+  box-shadow: none;
+  overflow: visible; /* Allow sticky headers */
+  margin: 0;
+}
+
+.divisional-dashboard__overlay .table-detail__wrapper {
+  padding: 1px 0; /* 1px vertical padding */
+  overflow-x: auto;   /* Allow horizontal scroll when needed */
+  overflow-y: auto;   /* Vertical scroll for sticky headers */
+  max-height: 78vh;   /* Increased height to maximize screen usage */
+  position: relative;
+}
+
+.divisional-dashboard__overlay .table-detail__wrapper--inner-scroll {
+  overflow: visible;
+  max-height: none;
+}
+
+/* Fix table overflow in overlay */
+.divisional-dashboard__overlay .table-detail table {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Override pl-table-container styles when inside table-detail */
+/* Let the wrapper handle scrolling, not the table container */
+.table-detail__wrapper .pl-table-container {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  max-height: none !important;
+}
+
+/* ========================================
+   OVERLAY-SPECIFIC STYLES FOR ALL TABLES
+   Remove padding/margin to match P&L table
+   ======================================== */
+
+/* P&L Table */
+.divisional-dashboard__overlay .pl-table-view {
+  padding: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Product Group Table */
+.divisional-dashboard__overlay .pg-table-view {
+  padding: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Sales by Sales Rep Table */
+.divisional-dashboard__overlay .sbsr-table-view {
+  padding: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Sales by Customer Table */
+.divisional-dashboard__overlay .table-view {
+  padding: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Sales by Country Chart */
+.divisional-dashboard__overlay .chart-layout {
+  padding: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Sales Country Chart container should maintain its own styles */
+.divisional-dashboard__overlay .sales-country-map-container {
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* Wrapper for Sales Country Chart should not cause overflow */
+.table-detail__wrapper--no-scroll .sales-country-map-container {
+  margin: 0 !important;
+}
+
+/* Generic: Remove padding/margin from all direct children in overlay */
+/* EXCEPTION: Don't strip styles from sales-country-map-container which needs its own padding */
+.divisional-dashboard__overlay .table-detail__wrapper > div:not(.sales-country-map-container) {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Generic table container overrides */
+.divisional-dashboard__overlay .table-detail__wrapper [class*="table-container"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  /* Let specific table implementations decide their scroll container.
+     Do NOT override Product Group / Sales Rep containers, otherwise sticky breaks on mobile/tablet. */
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.divisional-dashboard__overlay .table-detail__wrapper .pg-table-container,
+.divisional-dashboard__overlay .table-detail__wrapper .sbsr-table-container {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  max-height: 80vh !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .table-detail__wrapper {
+    padding: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .divisional-dashboard__overlay .table-detail__wrapper {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .table-detail {
+    border-radius: 4px;
+  }
+
+  .table-detail__wrapper {
+    padding: 4px 2px;
+    max-height: 70vh;
+  }
+
+  .divisional-dashboard__overlay .table-detail__wrapper {
+    max-height: 70vh;
+  }
+}

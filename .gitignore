@@ -1,0 +1,120 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Windows reserved names (cannot be committed)
+nul
+NUL
+CON
+PRN
+AUX
+com[1-9]
+lpt[1-9]
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+# /build  -- included in git for VPS deployment
+build/assets/*.map
+playwright-report/
+test-results/
+coverage/
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Server logs
+server/logs/
+logs/
+scripts/logs/
+*.log
+server/node_modules/
+node_modules/
+server/coverage/
+uploads/
+
+# IDE/editor metadata
+.idea/
+.vscode/
+
+# Temp/backup folders (old project versions)
+temp_old_kpi/
+temp_old_project/
+backups/
+
+# Environment and secrets (never commit real credentials)
+.env
+.env.*
+server/.env
+server/.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Allow safe templates/examples
+!.env.example
+!server/.env.example
+!.platform-credentials.example
+
+# AutoClaude cache (large files)
+.autoclaude/cache/
+
+# Database backups (large JSON files exceed GitHub 100MB limit)
+# backups/database/ -- covered by backups/ above
+
+# Large files that exceed GitHub limits
+database-export-full/
+to delete/
+
+# Generated audit and build outputs
+build-log*.txt
+build-output*.txt
+build-result*.txt
+test-output.txt
+npm-install-log.txt
+perf-audit-results.txt
+schema-err.txt
+schema-out.txt
+security-scan-results*.txt
+
+# SSH keys
+propackhub-ssh
+
+# Business data exports (CSVs, XLSX, SQL dumps)
+exports/
+
+# Non-source reference folders (large zips, sample projects, business docs)
+Dashboad designs/
+ERP integration files to check/
+HTML Budget 2026 sales reps export and import/
+unapp-master sample/
+
+# AI tool caches and configs (not project source)
+.autoclaude/
+.claude_agent_farm_backups/
+.aider*
+.cursorrules
+.windsurfrules
+.kiro/
+.playwright-mcp/
+
+# Vercel
+.vercel/
+
+# Stray data files in root
+*.xlsx

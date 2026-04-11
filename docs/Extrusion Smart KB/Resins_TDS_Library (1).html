@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resins TDS Library</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:#F1F5F9;color:#1E293B;min-height:100vh;-webkit-font-smoothing:antialiased}
+
+#main-view{animation:fadeUp .3s ease both}
+#tds-view{display:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+/* ── TOPBAR ── */
+.topbar{background:#0F1E3C;height:54px;display:flex;align-items:center;padding:0 clamp(12px,3vw,32px);gap:12px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.3)}
+.logo-icon{width:32px;height:32px;background:#3B82F6;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.logo-text{color:#fff;font-weight:700;font-size:clamp(12px,2vw,15px);white-space:nowrap}
+.logo-sub{color:#64748B;font-size:10px;white-space:nowrap}
+.tb-sep{width:1px;height:24px;background:#1E3A5F;flex-shrink:0}
+.grade-count{font-family:'DM Mono',monospace;font-size:11px;color:#475569;background:#162848;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.tb-space{flex:1}
+
+/* ── CONTROLS ── */
+.controls{padding:clamp(10px,2vw,18px) clamp(12px,3vw,32px) 8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.search-wrap{position:relative;flex:1 1 180px;min-width:0;max-width:380px}
+.s-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94A3B8;pointer-events:none}
+.search-input{width:100%;padding:8px 12px 8px 32px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:13px;color:#1E293B;outline:none;transition:border .15s,box-shadow .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.search-input:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.search-input::placeholder{color:#94A3B8}
+.ctrl-sel{padding:8px 10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;color:#374151;outline:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);flex:0 1 auto}
+.ctrl-sel:focus{border-color:#3B82F6}
+.clear-btn{padding:8px 14px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;color:#64748B;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:all .15s;white-space:nowrap}
+.clear-btn:hover{border-color:#CBD5E1;color:#374151}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:12px;padding:4px clamp(12px,3vw,32px) 8px;font-size:11px;color:#64748B}
+.li{display:flex;align-items:center;gap:5px}
+
+/* ── TABLE ── */
+.table-wrap{padding:0 clamp(12px,3vw,32px) 32px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;min-width:600px;border-collapse:separate;border-spacing:0;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.05);overflow:hidden;font-size:clamp(11px,1.3vw,13px)}
+thead tr{background:#0F1E3C}
+th{padding:10px clamp(8px,1.2vw,14px);text-align:left;font-size:9px;font-weight:700;color:#93C5FD;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;user-select:none}
+th.r{text-align:right}
+th:first-child{padding-left:clamp(12px,2vw,20px)}
+th:last-child{text-align:center}
+tbody tr{cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#EFF6FF}
+tbody tr[data-notds]{cursor:default}
+td{padding:8px clamp(8px,1.2vw,14px);vertical-align:middle;color:#374151}
+td:first-child{padding-left:clamp(12px,2vw,20px)}
+.td-id{font-family:'DM Mono',monospace;font-size:10px;color:#94A3B8;white-space:nowrap}
+.td-desc{font-weight:600;color:#0F172A;white-space:nowrap;max-width:clamp(140px,20vw,240px);overflow:hidden;text-overflow:ellipsis}
+.td-num{font-family:'DM Mono',monospace;font-weight:500;text-align:right;white-space:nowrap}
+.td-c{text-align:center}
+.tds-link{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#3B82F6;white-space:nowrap}
+tbody tr:hover .tds-link{color:#1D4ED8;text-decoration:underline}
+.no-tds{color:#CBD5E1;font-size:11px}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle;flex-shrink:0}
+.dot-ok{background:#22C55E}.dot-fix{background:#EF4444}.dot-rev{background:#F59E0B}.dot-info{background:#94A3B8}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-hdpe{background:#DBEAFE;color:#1E3A5F}.b-ldpe{background:#DCFCE7;color:#14532D}.b-lldpe{background:#FEF3C7;color:#78350F}.b-mlldpe{background:#EDE9FE;color:#4C1D95}.b-pp{background:#FCE7F3;color:#831843}.b-scrap{background:#F1F5F9;color:#475569}
+.no-res{text-align:center;padding:56px 20px;color:#94A3B8}
+.no-res .ico{font-size:34px;margin-bottom:10px}
+.no-res h3{font-size:14px;color:#64748B}
+
+/* ── TDS VIEW ── */
+#tds-view{max-width:min(900px,100vw);margin:0 auto;padding:clamp(14px,3vw,28px);animation:slideIn .25s ease both}
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff;border:1.5px solid #E2E8F0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#374151;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:all .15s;margin-bottom:16px}
+.back-btn:hover{border-color:#3B82F6;color:#1D4ED8}
+.tds-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08),0 8px 32px rgba(0,0,0,.06);overflow:hidden}
+.tds-hdr{padding:clamp(18px,3vw,26px);color:#fff}
+.eyebrow{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;opacity:.65;margin-bottom:5px}
+.tds-hdr h1{font-size:clamp(17px,3.5vw,23px);font-weight:700;letter-spacing:-.3px;margin-bottom:10px}
+.pills{display:flex;flex-wrap:wrap;gap:5px}
+.pill{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500}
+.tds-body{padding:clamp(14px,3vw,24px)}
+.phys-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.phys-card{background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:9px;padding:clamp(10px,2vw,14px);text-align:center}
+.phys-val{font-size:clamp(17px,3.5vw,25px);font-weight:700;color:#1D4ED8;font-family:'DM Mono',monospace;line-height:1;margin-bottom:2px}
+.phys-unit{font-size:9px;color:#64748B;margin-bottom:3px}
+.phys-lbl{font-size:9px;font-weight:700;color:#1E40AF;letter-spacing:.3px}
+.phys-meth{font-size:8px;color:#93C5FD;margin-top:3px;font-family:'DM Mono',monospace}
+.sec{margin-top:20px}
+.sec-ttl{font-size:9px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#94A3B8;padding-bottom:7px;border-bottom:1.5px solid #F1F5F9;margin-bottom:10px}
+.cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1px;background:#F1F5F9;border-radius:8px;overflow:hidden;border:1px solid #F1F5F9}
+.cls-item{background:#fff;padding:9px 13px}
+.cls-item.full{grid-column:1/-1}
+.cls-lbl{font-size:9px;font-weight:700;color:#94A3B8;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px}
+.cls-val{font-size:12px;color:#1E293B;font-weight:500}
+.mech-tbl{width:100%;border-collapse:collapse;font-size:clamp(11px,1.4vw,12px)}
+.mech-tbl th{background:#F8FAFC;color:#64748B;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:6px 11px;text-align:left;border-bottom:1.5px solid #E2E8F0;white-space:nowrap}
+.mech-tbl td{padding:6px 11px;border-bottom:1px solid #F1F5F9;color:#374151}
+.mech-tbl tr:last-child td{border-bottom:none}
+.mech-tbl td.r{text-align:right;font-family:'DM Mono',monospace;font-weight:500}
+.mech-tbl td.m{color:#94A3B8;font-size:10px;font-family:'DM Mono',monospace}
+.mech-tbl tr:nth-child(even) td{background:#FAFAFA}
+.src-box{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:13px 15px;display:flex;flex-wrap:wrap;gap:16px}
+.src-item .sl{font-size:9px;font-weight:700;color:#94A3B8;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px}
+.src-item .sv{font-size:12px;color:#374151;font-weight:500}
+.src-item a{color:#3B82F6;text-decoration:none;font-weight:500}
+.src-item a:hover{text-decoration:underline;color:#1D4ED8}
+</style>
+</head>
+<body>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main-view">
+  <div class="topbar">
+    <div class="logo-icon">🧪</div>
+    <div>
+      <div class="logo-text">Resins TDS Library</div>
+      <div class="logo-sub">Flexible Packaging Division</div>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="grade-count" id="cnt">39 grades</div>
+    <div class="tb-space"></div>
+  </div>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <svg class="s-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" id="srch" type="text" placeholder="Search grade, supplier, material…" autocomplete="off">
+    </div>
+    <select class="ctrl-sel" id="fCat">
+      <option value="">All Types</option>
+      <option value="HDPE">HDPE</option>
+      <option value="LDPE">LDPE</option>
+      <option value="LLDPE">LLDPE</option>
+      <option value="mLLDPE">mLLDPE</option>
+      <option value="Random PP">Polypropylene</option>
+      <option value="Film Scrap">Film Scrap</option>
+    </select>
+    <select class="ctrl-sel" id="fSup">
+      <option value="">All Suppliers</option>
+      <option value="SABIC">SABIC</option>
+      <option value="ExxonMobil">ExxonMobil</option>
+      <option value="Borealis">Borealis</option>
+      <option value="Dow">Dow</option>
+      <option value="LyondellBasell">LyondellBasell</option>
+      <option value="QAPCO">QAPCO</option>
+      <option value="Versalis">Versalis</option>
+      <option value="Chevron Phillips">Chevron Phillips</option>
+    </select>
+    <button class="clear-btn" onclick="clearF()">Clear</button>
+  </div>
+
+  <div class="legend">
+    <span class="li"><span class="dot dot-ok"></span>Verified</span>
+    <span class="li"><span class="dot dot-fix"></span>Corrected</span>
+    <span class="li"><span class="dot dot-rev"></span>Review</span>
+    <span class="li"><span class="dot dot-info"></span>Info</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Main Item</th>
+        <th>Main Description</th>
+        <th>Category</th>
+        <th>CatLineDesc</th>
+        <th>Material</th>
+        <th>Grade Type</th>
+        <th class="r">MFI<br><span style="font-weight:400;opacity:.6;font-size:8px">g/10min 190°C/2.16kg</span></th>
+        <th class="r">Density<br><span style="font-weight:400;opacity:.6;font-size:8px">kg/m³</span></th>
+        <th class="r">Melting<br><span style="font-weight:400;opacity:.6;font-size:8px">Temp °C</span></th>
+        <th>TDS</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="no-res" id="nores" style="display:none">
+      <div class="ico">🔍</div><h3>No grades match your filters</h3>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TDS DETAIL ═══ -->
+<div id="tds-view">
+  <button class="back-btn" onclick="goMain()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    Back to Main
+  </button>
+  <div class="tds-card" id="tds-inner"></div>
+</div>
+
+<script>
+const GRADES=[
+  {id:"BXXOTLDHDPE023CP",   desc:"HDPE MOBIL HMA 018",           cat:"Polyethylene", cl:"HDPE",      mat:"HDPE-1",   std:"High Density PE",                    mfi:0.18, dens:952, melt:130, st:"ok",  sup:"ExxonMobil",     tds:"HDPE_HMA018"},
+  {id:"BXXOTLDHDPE038CP",   desc:"HDPE HMA 025",                 cat:"Polyethylene", cl:"HDPE",      mat:"HDPE-1",   std:"High Density PE",                    mfi:0.25, dens:952, melt:130, st:"ok",  sup:"ExxonMobil",     tds:"HDPE_HMA025"},
+  {id:"BXXOTLDHDPEHMA016CP",desc:"HDPE ExxonMobil HMA 016",      cat:"Polyethylene", cl:"HDPE",      mat:"HDPE-1",   std:"High Density PE",                    mfi:0.16, dens:952, melt:130, st:"ok",  sup:"ExxonMobil",     tds:"HDPE_HMA016"},
+  {id:"BXXOTLDHDFB5600",    desc:"HDPE FB 5600",                 cat:"Polyethylene", cl:"HDPE",      mat:"HDPE-1",   std:"High Density PE",                    mfi:0.35, dens:952, melt:130, st:"ok",  sup:"SABIC",          tds:"HDPE_FB5600"},
+  {id:"BXXOTLDHDHTA001",    desc:"HDPE MOBIL HTA001",            cat:"Polyethylene", cl:"HDPE",      mat:"HDPE-2",   std:"High Density PE",                    mfi:0.33, dens:952, melt:130, st:"ok",  sup:"ExxonMobil",     tds:"HDPE_HTA001"},
+  {id:"BXXOTLDHDTR144",     desc:"HDPE TR-144 MARLEX",           cat:"Polyethylene", cl:"HDPE",      mat:"HDPE-3",   std:"High Density PE",                    mfi:0.18, dens:964, melt:133, st:"ok",  sup:"Chevron Phillips",tds:"HDPE_TR144"},
+  {id:"BXXOTLDAGG",         desc:"LDPE AGGLOMORATED",            cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-Agglo",std:"Agglomerated LDPE Regrind",         mfi:2.66, dens:923, melt:107, st:"info",sup:"Internal",       tds:null},
+  {id:"BXXOTLDHD0322N",     desc:"LDPE SABIC HP 0322NN",         cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-HD-1",std:"Low Density Heavy Duty PE",          mfi:0.30, dens:922, melt:108, st:"ok",  sup:"SABIC",          tds:"LDPE_HP0322NN"},
+  {id:"BXXOTLDPE150E",      desc:"LDPE 150 E",                   cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-HD-1",std:"Low Density Heavy Duty PE",          mfi:0.25, dens:921, melt:108, st:"ok",  sup:"SABIC",          tds:"LDPE_150E"},
+  {id:"BXXOTLDPE2221D",     desc:"LDPE LUPOLEN 2221D",           cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-HD-1",std:"Low Density Heavy Duty PE",          mfi:0.25, dens:922, melt:108, st:"ok",  sup:"LyondellBasell", tds:"LDPE_Lupolen2221D"},
+  {id:"BXXOTLDPEFB3003",    desc:"LDPE FB 3003 LOTRENE",         cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-HD-1",std:"Low Density Heavy Duty PE",          mfi:0.30, dens:924, melt:108, st:"ok",  sup:"QAPCO",          tds:"LDPE_FB3003"},
+  {id:"BXXOTLDPE1012",      desc:"EXCEED 1012MK",                cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-4", std:"Metallocene LLDPE – Low MFI",        mfi:1.20, dens:912, melt:116, st:"fix", sup:"ExxonMobil",     tds:"mLLDPE_Ex1012MK"},
+  {id:"BXXOTLDPE2023J",     desc:"LDPE HP2023J",                 cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-LD-1",std:"Low Density Light Duty PE",          mfi:2.30, dens:923, melt:107, st:"ok",  sup:"SABIC",          tds:"LDPE_HP2023J"},
+  {id:"BXXOTLDPEFT3260",    desc:"LDPE FT 3260",                 cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-HD-1",std:"Low Density Heavy Duty PE",          mfi:0.80, dens:924, melt:108, st:"fix", sup:"SABIC",          tds:"LDPE_FT3260"},
+  {id:"BXXOTLDPEFT6236",    desc:"LDPE FT 6236",                 cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-LD-1",std:"Low Density Light Duty PE",          mfi:6.00, dens:922, melt:106, st:"rev", sup:"SABIC",          tds:"LDPE_FT6236"},
+  {id:"BXXOTLDPE0474",      desc:"LDPE FD 0474",                 cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-LD-2",std:"Low Density Light Duty PE",          mfi:4.00, dens:921, melt:105, st:"ok",  sup:"SABIC",          tds:"LDPE_FD0474"},
+  {id:"BXXOTLDPEFT7236",    desc:"LDPE Polyethylene FT7236",     cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-LD-2",std:"Low Density Light Duty PE",          mfi:7.00, dens:920, melt:104, st:"ok",  sup:"SABIC",          tds:"LDPE_FT7236"},
+  {id:"BXXOTLDPEFT5230",    desc:"LDPE FT5230",                  cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-MD-1",std:"Low Density Medium Duty PE",         mfi:5.00, dens:922, melt:107, st:"ok",  sup:"SABIC",          tds:"LDPE_FT5230"},
+  {id:"BXXOTLDPE310E",      desc:"LDPE 310E DOW",                cat:"Polyethylene", cl:"LDPE",      mat:"LDPE-MD-2",std:"Low Density Medium Duty PE",         mfi:2.30, dens:923, melt:106, st:"ok",  sup:"Dow",            tds:"LDPE_310E"},
+  {id:"BXXOTLLDPE118N",     desc:"LLDPE 118 N SABIC",            cat:"Polyethylene", cl:"LLDPE",     mat:"LLDPE-1",  std:"LLDPE – Butene Comonomer (C4)",       mfi:1.00, dens:918, melt:120, st:"ok",  sup:"SABIC",          tds:"LLDPE_118N"},
+  {id:"BXXOTLLDPE119N",     desc:"LLDPE 119 N SABIC",            cat:"Polyethylene", cl:"LLDPE",     mat:"LLDPE-1",  std:"LLDPE – Butene Comonomer (C4)",       mfi:1.00, dens:919, melt:120, st:"ok",  sup:"SABIC",          tds:"LLDPE_119N"},
+  {id:"BXXOTLLDPE7047",     desc:"LLDPE GRADE EFDA-7047",        cat:"Polyethylene", cl:"LLDPE",     mat:"LLDPE-1",  std:"LLDPE – Butene Comonomer (C4)",       mfi:1.00, dens:918, melt:120, st:"rev", sup:"Unknown",        tds:"LLDPE_EFDA7047"},
+  {id:"BXXOTLLDPE218W",     desc:"LLDPE 218 W SABIC",            cat:"Polyethylene", cl:"LLDPE",     mat:"LLDPE-2",  std:"LLDPE – Butene Comonomer (C4)",       mfi:2.00, dens:918, melt:122, st:"ok",  sup:"SABIC",          tds:"LLDPE_218W"},
+  {id:"BXXOTLLDPE7050",     desc:"LLDPE 7050",                   cat:"Polyethylene", cl:"LLDPE",     mat:"LLDPE-2",  std:"LLDPE – Butene Comonomer (C4)",       mfi:0.80, dens:920, melt:121, st:"rev", sup:"Unknown",        tds:"LLDPE_7050"},
+  {id:"BXXOTLLDPEFB2230",   desc:"LLDPE FB2230 BORSTAR",         cat:"Polyethylene", cl:"LLDPE",     mat:"LLDPE-4",  std:"LLDPE – Bimodal Z-N (C6)",            mfi:0.25, dens:923, melt:124, st:"ok",  sup:"Borealis",       tds:"LLDPE_FB2230"},
+  {id:"BXXOTLDPE2000B",     desc:"PP TOPPYL SP 2000B",           cat:"Polypropylene",cl:"Random PP", mat:"PP-R",     std:"Random Copolymer PP",                 mfi:2.00, dens:905, melt:150, st:"fix", sup:"Borealis",       tds:"PP_Toppyl2000B"},
+  {id:"BXXOTPPRB707",       desc:"PP RB 707 CF",                 cat:"Polypropylene",cl:"Random PP", mat:"PP-R",     std:"Random Copolymer PP",                 mfi:1.50, dens:905, melt:150, st:"info",sup:"Unknown",        tds:"PP_RB707CF"},
+  {id:"BXXOTLDSCRAP24",     desc:"FILM SCRAP W/O D2W-CLEAR",     cat:"Polyethylene", cl:"Film Scrap",mat:"SCRAP",    std:"Post-Industrial Clear PE Scrap",      mfi:2.12, dens:926, melt:114, st:"info",sup:"Internal",       tds:null},
+  {id:"BXXOTLDSCRAPOBD14",  desc:"PE MIX FILM SCRAP-OBD;PRNTD",  cat:"Polyethylene", cl:"Film Scrap",mat:"SCRAP",    std:"Post-Industrial Printed PE Scrap",    mfi:2.12, dens:926, melt:114, st:"info",sup:"Internal",       tds:null},
+  {id:"BXXOTLDPE1018KB",    desc:"EXCEED 1018KB",                cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-1", std:"Metallocene LLDPE – Low MFI",        mfi:1.00, dens:918, melt:118, st:"fix", sup:"ExxonMobil",     tds:"mLLDPE_Ex1018KB"},
+  {id:"BXXOTLDPE2018",      desc:"EXCEED 2018KB",                cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-1", std:"Metallocene LLDPE – Low MFI",        mfi:2.00, dens:918, melt:119, st:"fix", sup:"ExxonMobil",     tds:"mLLDPE_Ex2018KB"},
+  {id:"BXXOTLDPE1327ED",    desc:"EXCEED 1327ED",                cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-2", std:"Metallocene LLDPE – Medium MFI",     mfi:1.30, dens:927, melt:123, st:"fix", sup:"ExxonMobil",     tds:"mLLDPE_Ex1327ED"},
+  {id:"BXXOTLDPEFK1516",    desc:"ANTEO FK1516 LLD Polyethylene",cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-2", std:"Metallocene LLDPE – Medium MFI",     mfi:1.50, dens:915, melt:118, st:"ok",  sup:"Versalis",       tds:"mLLDPE_FK1516"},
+  {id:"BXXOTLDPEFK2715",    desc:"ANTEO FK2715 LLD Polyethylene",cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-2", std:"Metallocene LLDPE – Medium MFI",     mfi:2.50, dens:915, melt:118, st:"ok",  sup:"Versalis",       tds:"mLLDPE_FK2715"},
+  {id:"BXXOTLDPE2703",      desc:"ENABLE 2703",                  cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-3", std:"Metallocene LLDPE – High MFI",       mfi:3.00, dens:917, melt:119, st:"fix", sup:"ExxonMobil",     tds:"mLLDPE_En2703"},
+  {id:"BXXOTLDPE4009MC",    desc:"ENABLE 4009",                  cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-3", std:"Metallocene LLDPE – High MFI",       mfi:4.00, dens:917, melt:119, st:"fix", sup:"ExxonMobil",     tds:"mLLDPE_En4009"},
+  {id:"BXXOTLLDPE3505",     desc:"ENABLE 3505 MC",               cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-3", std:"Metallocene LLDPE – High MFI",       mfi:5.00, dens:917, melt:119, st:"ok",  sup:"ExxonMobil",     tds:"mLLDPE_En3505MC"},
+  {id:"BXXOTLDPE3237",      desc:"EXACT 3237",                   cat:"Polyethylene", cl:"mLLDPE",    mat:"mLLDPE-P", std:"Metallocene Plastomer",               mfi:3.50, dens:900, melt:100, st:"fix", sup:"ExxonMobil",     tds:"Plastomer_Ex3237"},
+  {id:"BXXOTLDPE-P",        desc:"LDPE - PE-P",                  cat:"Polyethylene", cl:"LDPE",      mat:"rLDPE",    std:"Post-Consumer Recycled LDPE",         mfi:0.40, dens:925, melt:105, st:"ok",  sup:"Internal",       tds:null},
+];
+const TDS={
+  HDPE_HMA018:{g:"HDPE MOBIL HMA 018",sup:"ExxonMobil",poly:"HDPE",com:"Homopolymer",cat:"Ziegler-Natta",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"Bags-on-roll, T-shirt bag, shopping bag",mfi:0.18,mfi_m:"ASTM D1238",den:952,den_m:"ASTM D1505",melt:130,vic:127,tyd_md:28,tyd_td:28,tbk_md:"—",tbk_td:"—",elo_md:900,elo_td:900,elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"ExxonMobil HMA series datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  HDPE_HMA025:{g:"HDPE HMA 025",sup:"ExxonMobil",poly:"HDPE",com:"Homopolymer",cat:"Ziegler-Natta",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"Bags-on-roll, T-shirt bag, shopping bag",mfi:0.25,mfi_m:"ASTM D1238",den:952,den_m:"ASTM D1505",melt:130,vic:127,tyd_md:28,tyd_td:28,tbk_md:"—",tbk_td:"—",elo_md:900,elo_td:900,elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"ExxonMobil HMA series datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  HDPE_HMA016:{g:"HDPE ExxonMobil HMA 016",sup:"ExxonMobil",poly:"HDPE",com:"Homopolymer",cat:"Ziegler-Natta",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"Bags-on-roll, T-shirt bag, shopping bag",mfi:0.16,mfi_m:"ASTM D1238",den:952,den_m:"ASTM D1505",melt:130,vic:127,tyd_md:28,tyd_td:28,tbk_md:"—",tbk_td:"—",elo_md:900,elo_td:900,elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"ExxonMobil HMA series datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  HDPE_FB5600:{g:"HDPE FB 5600",sup:"SABIC",poly:"HDPE",com:"Homopolymer",cat:"Ziegler-Natta",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"Shopping bags, refuse bags, thin film, bags-on-roll",mfi:0.35,mfi_m:"ASTM D1238",den:952,den_m:"ASTM D1505",melt:130,vic:127,tyd_md:28,tyd_td:25,tbk_md:38,tbk_td:30,elo_md:900,elo_td:700,elm_md:"—",elm_td:"—",dart:200,haze:"—",gloss:"—",src:"SABIC Polymer Product Catalogue",url:"https://www.sabic.com",date:"2023"},
+  HDPE_HTA001:{g:"HDPE MOBIL HTA001",sup:"ExxonMobil",poly:"HDPE",com:"Homopolymer",cat:"Ziegler-Natta",proc:"Blown Film",add:"None",tnpp:"Yes",app:"Heavy-duty bags, industrial film",mfi:0.33,mfi_m:"ASTM D1238",den:952,den_m:"ASTM D1505",melt:130,vic:127,tyd_md:28,tyd_td:28,tbk_md:"—",tbk_td:"—",elo_md:800,elo_td:800,elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"ExxonMobil HTA series datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  HDPE_TR144:{g:"HDPE TR-144 MARLEX",sup:"Chevron Phillips",poly:"HDPE",com:"Homopolymer",cat:"Ziegler-Natta",proc:"Blown Film",add:"None",tnpp:"N/A",app:"Grocery sacks, merchandise bags, heavy-duty bags",mfi:0.18,mfi_m:"ASTM D1238",den:964,den_m:"ASTM D1505",melt:133,vic:130,tyd_md:30,tyd_td:28,tbk_md:40,tbk_td:35,elo_md:700,elo_td:700,elm_md:"—",elm_td:"—",dart:150,haze:"—",gloss:"—",src:"Chevron Phillips Marlex TR-144 TDS",url:"https://www.cpchem.com",date:"2021"},
+  LDPE_HP0322NN:{g:"LDPE SABIC HP 0322NN",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"Yes",app:"Heavy-duty bags, shrink film, agricultural film",mfi:0.30,mfi_m:"ASTM D1238 / ISO 1133",den:922,den_m:"ASTM D1505 / ISO 1183",melt:108,vic:88,tyd_md:12,tyd_td:11,tbk_md:28,tbk_td:24,elo_md:500,elo_td:600,elm_md:4,elm_td:8,dart:130,haze:8.0,gloss:55,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_150E:{g:"LDPE 150 E",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"Yes",app:"Heavy-duty film, shrink film, industrial film",mfi:0.25,mfi_m:"ASTM D1238",den:921,den_m:"ASTM D1505",melt:108,vic:88,tyd_md:12,tyd_td:11,tbk_md:27,tbk_td:23,elo_md:500,elo_td:600,elm_md:4,elm_td:8,dart:120,haze:9.0,gloss:52,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_Lupolen2221D:{g:"LDPE LUPOLEN 2221D",sup:"LyondellBasell",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"Antioxidant only",tnpp:"N/A",app:"Collation shrink, pallet shrink, heavy-duty packaging",mfi:0.25,mfi_m:"ISO 1133",den:922,den_m:"ISO 1183",melt:108,vic:88,tyd_md:12,tyd_td:12,tbk_md:28,tbk_td:26,elo_md:500,elo_td:600,elm_md:"—",elm_td:"—",dart:190,haze:7.5,gloss:62,src:"LyondellBasell Lupolen 2221D product page",url:"https://www.lyondellbasell.com",date:"2024"},
+  LDPE_FB3003:{g:"LDPE FB 3003 LOTRENE",sup:"QAPCO",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"N/A",app:"Heavy-duty bags, agricultural film, shrink film",mfi:0.30,mfi_m:"ASTM D1238",den:924,den_m:"ASTM D1505",melt:108,vic:88,tyd_md:12,tyd_td:11,tbk_md:28,tbk_td:24,elo_md:500,elo_td:600,elm_md:"—",elm_td:"—",dart:130,haze:9.0,gloss:50,src:"QAPCO Lotrene FB series TDS",url:"https://www.qapco.com",date:"2022"},
+  LDPE_HP2023J:{g:"LDPE HP2023J",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"Light produce bags, textile bags, general purpose",mfi:2.0,mfi_m:"ASTM D1238",den:923,den_m:"ASTM D1505",melt:106,vic:86,tyd_md:11,tyd_td:10,tbk_md:22,tbk_td:18,elo_md:450,elo_td:500,elm_md:2,elm_td:5,dart:80,haze:12,gloss:60,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_FT3260:{g:"LDPE FT 3260",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"Yes",app:"Heavy-duty bags, agricultural film, industrial shrink",mfi:0.80,mfi_m:"ASTM D1238",den:924,den_m:"ASTM D1505",melt:108,vic:88,tyd_md:12,tyd_td:11,tbk_md:27,tbk_td:23,elo_md:500,elo_td:580,elm_md:4,elm_td:8,dart:130,haze:9.0,gloss:52,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_FT6236:{g:"LDPE FT 6236",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"Light bags, produce bags, general purpose",mfi:6.0,mfi_m:"ASTM D1238",den:922,den_m:"ASTM D1505",melt:106,vic:86,tyd_md:10,tyd_td:9,tbk_md:20,tbk_td:16,elo_md:430,elo_td:480,elm_md:2,elm_td:4,dart:70,haze:14,gloss:55,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_FD0474:{g:"LDPE FD 0474",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"Light bags, textile bags, laundry bags",mfi:4.0,mfi_m:"ASTM D1238",den:921,den_m:"ASTM D1505",melt:105,vic:85,tyd_md:10,tyd_td:9,tbk_md:21,tbk_td:17,elo_md:450,elo_td:500,elm_md:2,elm_td:5,dart:75,haze:13,gloss:58,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_FT7236:{g:"LDPE Polyethylene FT7236",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"Yes",app:"High clarity applications, thin film",mfi:7.0,mfi_m:"ASTM D1238",den:920,den_m:"ASTM D1505",melt:104,vic:84,tyd_md:9,tyd_td:8,tbk_md:18,tbk_td:15,elo_md:420,elo_td:460,elm_md:1.5,elm_td:3.5,dart:65,haze:16,gloss:53,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_FT5230:{g:"LDPE FT5230",sup:"SABIC",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"Yes",app:"Medium-duty bags, shrink film, general packaging",mfi:5.0,mfi_m:"ASTM D1238",den:922,den_m:"ASTM D1505",melt:107,vic:87,tyd_md:11,tyd_td:10,tbk_md:22,tbk_td:18,elo_md:440,elo_td:490,elm_md:2,elm_td:5,dart:80,haze:13,gloss:56,src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LDPE_310E:{g:"LDPE 310E DOW",sup:"Dow",poly:"LDPE",com:"Homopolymer",cat:"High-pressure radical",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"N/A",app:"Medium-duty bags, general packaging, blending",mfi:2.3,mfi_m:"ASTM D1238",den:923,den_m:"ASTM D1505",melt:106,vic:86,tyd_md:11,tyd_td:10,tbk_md:23,tbk_td:19,elo_md:450,elo_td:500,elm_md:2.5,elm_td:6,dart:85,haze:12,gloss:57,src:"Dow LDPE 310E TDS",url:"https://www.dow.com",date:"2022"},
+  LLDPE_118N:{g:"LLDPE 118 N SABIC",sup:"SABIC",poly:"LLDPE",com:"Butene (C4)",cat:"Ziegler-Natta",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"Yes",app:"Frozen food, carrier bags, garbage bags, agricultural film",mfi:1.0,mfi_m:"ASTM D1238",den:918,den_m:"ASTM D1505",melt:120,vic:98,tyd_md:12,tyd_td:10,tbk_md:35,tbk_td:29,elo_md:700,elo_td:750,elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LLDPE_119N:{g:"LLDPE 119 N SABIC",sup:"SABIC",poly:"LLDPE",com:"Butene (C4)",cat:"Ziegler-Natta",proc:"Blown Film",add:"No Slip, No Antiblock",tnpp:"Yes",app:"Shipping sacks, ice bags, produce bags, stretch wrap",mfi:1.0,mfi_m:"ASTM D1238",den:919,den_m:"ASTM D1505",melt:120,vic:98,tyd_md:12,tyd_td:10,tbk_md:34,tbk_td:28,elo_md:700,elo_td:740,elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"SABIC Polymer Catalogue",url:"https://www.sabic.com",date:"2023"},
+  LLDPE_EFDA7047:{g:"LLDPE GRADE EFDA-7047",sup:"Unknown — Verify",poly:"LLDPE",com:"Butene C4 (assumed — verify)",cat:"Ziegler-Natta (assumed)",proc:"Blown Film",add:"Verify with supplier",tnpp:"N/A",app:"General packaging film",mfi:1.0,mfi_m:"ASTM D1238",den:918,den_m:"ASTM D1505",melt:120,vic:98,tyd_md:"—",tyd_td:"—",tbk_md:"—",tbk_td:"—",elo_md:"—",elo_td:"—",elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"No public TDS — request from supplier",url:null,date:"N/A"},
+  LLDPE_218W:{g:"LLDPE 218 W SABIC",sup:"SABIC",poly:"LLDPE",com:"Butene (C4)",cat:"Ziegler-Natta",proc:"Cast Film",add:"Slip: 1500 ppm, Antiblock: 3500 ppm",tnpp:"Yes",app:"Cling film, stretch films (manual & pallet wrap), melt embossed films",mfi:2.0,mfi_m:"ASTM D1238",den:918,den_m:"ASTM D1505",melt:122,vic:100,tyd_md:12,tyd_td:10,tbk_md:35,tbk_td:29,elo_md:700,elo_td:750,elm_md:130,elm_td:320,dart:85,haze:"—",gloss:"—",src:"SABIC LLDPE 218 Series official TDS",url:"https://www.sabic.com",date:"2023"},
+  LLDPE_7050:{g:"LLDPE 7050",sup:"Unknown — Verify",poly:"LLDPE",com:"Butene C4 (assumed — verify)",cat:"Ziegler-Natta (assumed)",proc:"Blown Film",add:"Verify with supplier",tnpp:"N/A",app:"General packaging, bags",mfi:0.80,mfi_m:"ASTM D1238",den:920,den_m:"ASTM D1505",melt:121,vic:99,tyd_md:"—",tyd_td:"—",tbk_md:"—",tbk_td:"—",elo_md:"—",elo_td:"—",elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"No public TDS — request from supplier",url:null,date:"N/A"},
+  LLDPE_FB2230:{g:"LLDPE FB2230 BORSTAR",sup:"Borealis / Borouge",poly:"LLDPE",com:"Hexene (C6) — Bimodal Z-N",cat:"Ziegler-Natta Bimodal (Borstar)",proc:"Blown Film",add:"Antioxidant only",tnpp:"N/A",app:"Industrial liners, heavy-duty sacks, deep-freeze packaging, agriculture",mfi:0.25,mfi_m:"ISO 1133",den:923,den_m:"ASTM D4883",melt:124,vic:101,tyd_md:50,tyd_td:35,tbk_md:50,tbk_td:35,elo_md:600,elo_td:900,elm_md:3,elm_td:7,dart:300,haze:65,gloss:15,src:"Borealis Borstar FB2230 official TDS",url:"https://www.borealisgroup.com",date:"Confirmed current"},
+  PP_Toppyl2000B:{g:"PP TOPPYL SP 2000B",sup:"Borealis",poly:"Polypropylene",com:"Random Copolymer PP",cat:"Ziegler-Natta",proc:"Blown / Cast Film",add:"Stabilizer package",tnpp:"N/A",app:"Packaging film, lamination, general purpose",mfi:2.0,mfi_m:"ISO 1133 (230°C/2.16kg)",den:905,den_m:"ISO 1183",melt:150,vic:130,tyd_md:25,tyd_td:25,tbk_md:35,tbk_td:35,elo_md:500,elo_td:500,elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"Borealis Toppyl SP 2000B TDS",url:"https://www.borealisgroup.com",date:"2022"},
+  PP_RB707CF:{g:"PP RB 707 CF",sup:"Unknown — Verify",poly:"Polypropylene",com:"Random Copolymer PP",cat:"N/A",proc:"Blown Film",add:"Verify with supplier",tnpp:"N/A",app:"Packaging film, general purpose",mfi:1.5,mfi_m:"ISO 1133 (230°C/2.16kg)",den:905,den_m:"ISO 1183",melt:150,vic:128,tyd_md:"—",tyd_td:"—",tbk_md:"—",tbk_td:"—",elo_md:"—",elo_td:"—",elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"No public TDS — request from supplier",url:null,date:"N/A"},
+  mLLDPE_Ex1018KB:{g:"EXCEED 1018KB",sup:"ExxonMobil",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene (EXXPOL)",proc:"Blown Film",add:"Antiblock: 5000 ppm, Slip: 1000 ppm, Processing Aid: Yes",tnpp:"Yes",app:"Bags, food packaging, FFS, heavy-duty, lamination",mfi:1.0,mfi_m:"ASTM D1238",den:918,den_m:"ASTM D792",melt:118,vic:96,tyd_md:8.7,tyd_td:8.8,tbk_md:60,tbk_td:60,elo_md:500,elo_td:640,elm_md:220,elm_td:370,dart:550,haze:16,gloss:43,src:"ExxonMobil Exceed m 1018 series datasheet",url:"https://www.exxonmobilchemical.com",date:"07/12/2022"},
+  mLLDPE_Ex2018KB:{g:"EXCEED 2018KB",sup:"ExxonMobil",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene (EXXPOL)",proc:"Blown Film",add:"No Slip, No Antiblock, Processing Aid: Yes",tnpp:"Yes",app:"Food packaging, FFS, lamination, trash bags",mfi:2.0,mfi_m:"ASTM D1238",den:918,den_m:"ASTM D792",melt:119,vic:97,tyd_md:8.7,tyd_td:8.8,tbk_md:58,tbk_td:58,elo_md:510,elo_td:650,elm_md:215,elm_td:360,dart:540,haze:17,gloss:41,src:"ExxonMobil Exceed m 2018 datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  mLLDPE_Ex1327ED:{g:"EXCEED 1327ED",sup:"ExxonMobil",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene (EXXPOL)",proc:"Blown Film",add:"Antiblock: 750 ppm, Slip: 1250 ppm, Processing Aid: Yes",tnpp:"Yes",app:"FFS, bread bags, food packaging, stand-up pouches, shrink film",mfi:1.3,mfi_m:"ASTM D1238",den:927,den_m:"ExxonMobil method",melt:123,vic:101,tyd_md:"—",tyd_td:"—",tbk_md:48.3,tbk_td:39.3,elo_md:530,elo_td:620,elm_md:280,elm_td:430,dart:180,haze:6.0,gloss:12,src:"ExxonMobil Exceed 1327ED datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  mLLDPE_FK1516:{g:"ANTEO FK1516 LLD Polyethylene",sup:"Versalis",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"N/A",app:"Packaging film, food contact, stretch film",mfi:1.5,mfi_m:"ISO 1133",den:915,den_m:"ISO 1183",melt:118,vic:95,tyd_md:"—",tyd_td:"—",tbk_md:"—",tbk_td:"—",elo_md:"—",elo_td:"—",elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"Limited public data — request full TDS from Versalis",url:"https://www.versalis.eni.com",date:"N/A"},
+  mLLDPE_FK2715:{g:"ANTEO FK2715 LLD Polyethylene",sup:"Versalis",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene",proc:"Blown Film",add:"Slip + Antiblock",tnpp:"N/A",app:"Packaging film, food contact, stretch/cling film",mfi:2.5,mfi_m:"ISO 1133",den:915,den_m:"ISO 1183",melt:118,vic:95,tyd_md:"—",tyd_td:"—",tbk_md:"—",tbk_td:"—",elo_md:"—",elo_td:"—",elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"Limited public data — request full TDS from Versalis",url:"https://www.versalis.eni.com",date:"N/A"},
+  mLLDPE_En2703:{g:"ENABLE 2703",sup:"ExxonMobil",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene",proc:"Blown Film",add:"No Slip, No Antiblock, Processing Aid: Yes",tnpp:"Yes",app:"Lamination, multilayer packaging, shrink, FFS, heavy-duty bags",mfi:3.0,mfi_m:"ASTM D1238",den:917,den_m:"ASTM D792",melt:119,vic:97,tyd_md:11,tyd_td:10,tbk_md:45,tbk_td:38,elo_md:520,elo_td:640,elm_md:200,elm_td:340,dart:420,haze:14,gloss:38,src:"ExxonMobil Enable 2703MC datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  mLLDPE_En4009:{g:"ENABLE 4009",sup:"ExxonMobil",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene",proc:"Blown Film",add:"No Slip, No Antiblock, Processing Aid: Yes",tnpp:"Yes",app:"Lamination, multilayer packaging, collation shrink, FFS",mfi:4.0,mfi_m:"ASTM D1238",den:917,den_m:"ASTM D792",melt:119,vic:97,tyd_md:11,tyd_td:10,tbk_md:43,tbk_td:36,elo_md:510,elo_td:630,elm_md:190,elm_td:330,dart:400,haze:15,gloss:36,src:"ExxonMobil Enable 4009 datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  mLLDPE_En3505MC:{g:"ENABLE 3505 MC",sup:"ExxonMobil",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene",proc:"Blown Film",add:"No Slip, No Antiblock, Processing Aid: Yes",tnpp:"Yes",app:"Lamination, multilayer packaging, shrink, stand-up pouches",mfi:5.0,mfi_m:"ASTM D1238",den:917,den_m:"ASTM D792",melt:119,vic:97,tyd_md:11,tyd_td:10,tbk_md:44,tbk_td:37,elo_md:515,elo_td:635,elm_md:195,elm_td:335,dart:410,haze:14,gloss:37,src:"ExxonMobil Enable 3505MC datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  mLLDPE_Ex1012MK:{g:"EXCEED 1012MK",sup:"ExxonMobil",poly:"mLLDPE",com:"Hexene (C6)",cat:"Metallocene (EXXPOL)",proc:"Blown Film",add:"Antiblock: 5000 ppm, Slip: 1000 ppm, Processing Aid: Yes",tnpp:"Yes",app:"Lamination, freezer bags, heavy-duty bags, agriculture, stretch hood",mfi:1.2,mfi_m:"ASTM D1238",den:912,den_m:"ASTM D792",melt:116,vic:92,tyd_md:7.5,tyd_td:7.8,tbk_md:62,tbk_td:62,elo_md:510,elo_td:660,elm_md:235,elm_td:390,dart:580,haze:18,gloss:40,src:"ExxonMobil Exceed 1012MK datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+  Plastomer_Ex3237:{g:"EXACT 3237",sup:"ExxonMobil",poly:"Plastomer",com:"Hexene (C6) — high comonomer content",cat:"Metallocene (EXXPOL)",proc:"Blown Film",add:"Slip: 1000 ppm, Antiblock: 5000 ppm, Processing Aid: Yes",tnpp:"Yes",app:"Barrier food packaging, sealant layer, freezer film, lamination, stand-up pouches",mfi:3.5,mfi_m:"ASTM D1238",den:900,den_m:"ASTM D792",melt:100,vic:78,tyd_md:"—",tyd_td:"—",tbk_md:"—",tbk_td:"—",elo_md:"—",elo_td:"—",elm_md:"—",elm_td:"—",dart:"—",haze:"—",gloss:"—",src:"ExxonMobil Exact 3237 plastomer series datasheet",url:"https://www.exxonmobilchemical.com",date:"2022"},
+};
+const BC={HDPE:"b-hdpe",LDPE:"b-ldpe",LLDPE:"b-lldpe",mLLDPE:"b-mlldpe","Random PP":"b-pp","Film Scrap":"b-scrap"};
+const HC={HDPE:"#1E3A5F",LDPE:"#14532D",LLDPE:"#78350F",mLLDPE:"#4C1D95",Polypropylene:"#831843",Plastomer:"#7B0A00"};
+function bc(cl){return BC[cl]||"b-scrap"}
+function hc(p){return HC[p]||"#1F3864"}
+function sv(x){return(x===null||x===undefined||x===""||x==="—")?"—":x}
+function render(data){
+  const tb=document.getElementById("tbody"),nr=document.getElementById("nores");
+  document.getElementById("cnt").textContent=data.length+" grades";
+  if(!data.length){tb.innerHTML="";nr.style.display="block";return}
+  nr.style.display="none";
+  const dot={ok:"dot-ok",fix:"dot-fix",rev:"dot-rev",info:"dot-info"};
+  tb.innerHTML=data.map(g=>`
+    <tr ${g.tds?`onclick="openTDS('${g.tds}')"`:``} ${!g.tds?`data-notds`:`""`}>
+      <td class="td-id">${g.id}</td>
+      <td class="td-desc"><span class="dot ${dot[g.st]||"dot-info"}"></span>${g.desc}</td>
+      <td><span class="badge ${bc(g.cl)}">${g.cat==="Polyethylene"?"PE":g.cat==="Polypropylene"?"PP":g.cat}</span></td>
+      <td><span class="badge ${bc(g.cl)}">${g.cl}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:10px;color:#475569;white-space:nowrap">${g.mat}</td>
+      <td style="color:#64748B;max-width:clamp(120px,18vw,220px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.std}</td>
+      <td class="td-num">${g.mfi}</td>
+      <td class="td-num">${g.dens}</td>
+      <td class="td-num">${g.melt}</td>
+      <td class="td-c">${g.tds?`<span class="tds-link">View <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg></span>`:`<span class="no-tds">—</span>`}</td>
+    </tr>`).join("");
+}
+function applyF(){
+  const q=document.getElementById("srch").value.toLowerCase();
+  const fC=document.getElementById("fCat").value;
+  const fS=document.getElementById("fSup").value;
+  render(GRADES.filter(g=>{
+    const mQ=!q||[g.id,g.desc,g.cl,g.mat,g.std,g.sup].some(f=>f.toLowerCase().includes(q));
+    const mC=!fC||g.cl===fC;
+    const mS=!fS||g.sup.includes(fS);
+    return mQ&&mC&&mS;
+  }));
+}
+function clearF(){document.getElementById("srch").value="";document.getElementById("fCat").value="";document.getElementById("fSup").value="";applyF()}
+document.getElementById("srch").addEventListener("input",applyF);
+document.getElementById("fCat").addEventListener("change",applyF);
+document.getElementById("fSup").addEventListener("change",applyF);
+function goMain(){
+  document.getElementById("tds-view").style.display="none";
+  document.getElementById("main-view").style.display="block";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function openTDS(key){
+  const d=TDS[key];if(!d)return;
+  const col=hc(d.poly);
+  const urlH=d.url?`<a href="${d.url}" target="_blank" rel="noopener">${d.url.replace("https://","")}</a>`:"—";
+  document.getElementById("tds-inner").innerHTML=`
+    <div class="tds-hdr" style="background:linear-gradient(130deg,${col} 0%,${col}e0 100%)">
+      <div class="eyebrow">${d.poly} · ${d.sup}</div>
+      <h1>${d.g}</h1>
+      <div class="pills">
+        <span class="pill">${d.com}</span>
+        <span class="pill">${d.proc}</span>
+        <span class="pill">TNPP-Free: ${d.tnpp}</span>
+      </div>
+    </div>
+    <div class="tds-body">
+      <div class="sec">
+        <div class="sec-ttl">Physical Properties</div>
+        <div class="phys-grid">
+          <div class="phys-card"><div class="phys-val">${d.mfi}</div><div class="phys-unit">g/10min</div><div class="phys-lbl">Melt Flow Rate</div><div class="phys-meth">${d.mfi_m}</div></div>
+          <div class="phys-card"><div class="phys-val">${d.den}</div><div class="phys-unit">kg/m³</div><div class="phys-lbl">Density</div><div class="phys-meth">${d.den_m}</div></div>
+          <div class="phys-card"><div class="phys-val">${d.melt}</div><div class="phys-unit">°C</div><div class="phys-lbl">Melting Temp</div><div class="phys-meth">DSC / ISO 11357</div></div>
+          <div class="phys-card"><div class="phys-val">${d.vic}</div><div class="phys-unit">°C</div><div class="phys-lbl">Vicat Softening</div><div class="phys-meth">ISO 306 / ASTM D1525</div></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-ttl">Product Classification</div>
+        <div class="cls-grid">
+          <div class="cls-item"><div class="cls-lbl">Supplier</div><div class="cls-val">${d.sup}</div></div>
+          <div class="cls-item"><div class="cls-lbl">Polymer Type</div><div class="cls-val">${d.poly}</div></div>
+          <div class="cls-item"><div class="cls-lbl">Comonomer</div><div class="cls-val">${d.com}</div></div>
+          <div class="cls-item"><div class="cls-lbl">Catalyst</div><div class="cls-val">${d.cat}</div></div>
+          <div class="cls-item"><div class="cls-lbl">Process</div><div class="cls-val">${d.proc}</div></div>
+          <div class="cls-item"><div class="cls-lbl">Additive Package</div><div class="cls-val">${d.add}</div></div>
+          <div class="cls-item full"><div class="cls-lbl">Applications</div><div class="cls-val">${d.app}</div></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-ttl">Mechanical Properties — Film (Typical Values)</div>
+        <div style="overflow-x:auto">
+        <table class="mech-tbl">
+          <thead><tr><th style="width:36%">Property</th><th style="text-align:right">MD</th><th style="text-align:right">TD</th><th>Unit</th><th>Test Method</th></tr></thead>
+          <tbody>
+            <tr><td>Tensile Strength at Yield</td><td class="r">${sv(d.tyd_md)}</td><td class="r">${sv(d.tyd_td)}</td><td>MPa</td><td class="m">ASTM D882</td></tr>
+            <tr><td>Tensile Strength at Break</td><td class="r">${sv(d.tbk_md)}</td><td class="r">${sv(d.tbk_td)}</td><td>MPa</td><td class="m">ASTM D882</td></tr>
+            <tr><td>Elongation at Break</td><td class="r">${sv(d.elo_md)}</td><td class="r">${sv(d.elo_td)}</td><td>%</td><td class="m">ASTM D882</td></tr>
+            <tr><td>Elmendorf Tear Strength</td><td class="r">${sv(d.elm_md)}</td><td class="r">${sv(d.elm_td)}</td><td>N</td><td class="m">ASTM D1922</td></tr>
+            <tr><td>Dart Drop Impact</td><td class="r" colspan="2">${sv(d.dart)}</td><td>g</td><td class="m">ASTM D1709</td></tr>
+            <tr><td>Haze</td><td class="r" colspan="2">${sv(d.haze)}</td><td>%</td><td class="m">ASTM D1003</td></tr>
+            <tr><td>Gloss (45°)</td><td class="r" colspan="2">${sv(d.gloss)}</td><td>—</td><td class="m">ASTM D2457</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-ttl">Data Source</div>
+        <div class="src-box">
+          <div class="src-item"><div class="sl">Source</div><div class="sv">${d.src}</div></div>
+          <div class="src-item"><div class="sl">URL</div><div class="sv">${urlH}</div></div>
+          <div class="src-item"><div class="sl">Date</div><div class="sv">${d.date}</div></div>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById("main-view").style.display="none";
+  document.getElementById("tds-view").style.display="block";
+  document.getElementById("tds-view").style.animation="slideIn .25s ease both";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+render(GRADES);
+</script>
+</body>
+</html>

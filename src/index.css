@@ -1,0 +1,145 @@
+/* Default theme CSS variables - will be overridden by ThemeContext */
+:root {
+  --color-primary: #3b82f6;
+  --color-primaryHover: #2563eb;
+  --color-primaryLight: #dbeafe;
+  /* Text colour to use ON TOP of --color-primary. Set per-theme in ThemeContext.
+     Defaults to white; light-primary themes (gold, midnight) override to dark. */
+  --color-primaryText: #ffffff;
+  --color-primary-text: #ffffff;
+  --color-secondary: #64748b;
+  --color-accent: #0ea5e9;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surfaceHover: #f1f5f9;
+  --color-text: #1e293b;
+  --color-textSecondary: #64748b;
+  --color-textMuted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-borderLight: #f1f5f9;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-gradient: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+  --color-tabActive: #3b82f6;
+  --color-tabBg: #f1f5f9;
+  --color-overlay: rgba(255, 255, 255, 0.15);
+  --color-cardGradient: linear-gradient(145deg, #ffffff 0%, #f7fafc 100%);
+  --color-cardBanner: linear-gradient(to right, #1e3a8a, #3b82f6, #60a5fa);
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+code {
+  font-family: 'Courier New', monospace;
+  color: var(--color-text);
+  background-color: var(--color-surfaceHover);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* =============================================
+   Resizable Table Column Styles
+   ============================================= */
+
+/* React-resizable base styles */
+.react-resizable {
+  position: relative;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  right: -5px;
+  bottom: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+  background: transparent;
+}
+
+.react-resizable-handle:hover {
+  background-color: rgba(24, 144, 255, 0.3);
+}
+
+.react-resizable-handle:active {
+  background-color: rgba(24, 144, 255, 0.5);
+}
+
+/* Ant Design Table resizable column adjustments */
+.ant-table-thead > tr > th.react-resizable {
+  position: relative;
+  background-clip: padding-box;
+}
+
+/* Native HTML table resizable styles */
+.resizable-th {
+  position: relative;
+  user-select: none;
+}
+
+.resizable-th .resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 1;
+}
+
+.resizable-th .resize-handle:hover,
+.resizable-th .resize-handle.resizing {
+  background: rgba(24, 144, 255, 0.5);
+}
+
+/* Prevent text selection during resize */
+.resizing-active {
+  user-select: none !important;
+  cursor: col-resize !important;
+}
+
+.resizing-active * {
+  user-select: none !important;
+}
+
+/* ========================================
+   Global Responsive Utilities
+   ======================================== */
+
+/* Responsive table wrapper for native HTML tables */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .full-width-mobile {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .stack-mobile {
+    flex-direction: column !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .hide-small-mobile {
+    display: none !important;
+  }
+}

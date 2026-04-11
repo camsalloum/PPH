@@ -1,0 +1,96 @@
+/* Product Group Table - Non-P&L Specific Styles Only */
+/* P&L table styles have been moved to PLTableStyles.css */
+
+/* Product Group table specific container and layout */
+.product-group-table-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: auto;
+}
+
+/* Product Group table specific styles */
+.product-group-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+  display: table !important;
+  font-family: 'DejaVu Sans', 'Segoe UI', Arial, sans-serif !important;
+  color: #222222 !important;
+  font-size: 13px !important;
+}
+
+.product-group-table thead {
+  display: table-header-group !important;
+}
+
+.product-group-table tbody {
+  display: table-row-group !important;
+}
+
+.product-group-table tr {
+  display: table-row !important;
+}
+
+.product-group-table th,
+.product-group-table td {
+  display: table-cell !important;
+  border: 1px solid #ddd !important;
+  text-align: center !important;
+  padding: 8px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+  line-height: 1.25 !important;
+}
+
+/* Product Group specific row labels */
+.product-group-table .row-label {
+  text-align: left !important;
+  background-color: #f8f9fa !important;
+  font-weight: 600 !important;
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+}
+
+.process-header-row td {
+  background-color: #FBC02D !important; /* solid yellow */
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* Page title styling - consistent with other pages */
+.table-title h2 {
+  text-align: center;
+  font-size: 1.5rem;  /* Consistent 24px */
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+@media (max-width: 768px) {
+  .product-group-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .product-group-table {
+    font-size: 11px !important;
+  }
+
+  .product-group-table th,
+  .product-group-table td {
+    padding: 6px !important;
+  }
+
+  .product-group-table .row-label {
+    width: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    font-size: 11px !important;
+  }
+}

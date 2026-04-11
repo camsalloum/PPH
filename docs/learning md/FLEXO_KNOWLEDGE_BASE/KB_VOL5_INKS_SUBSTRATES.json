@@ -1,0 +1,250 @@
+[
+  {
+    "id": "V5-001",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Ink",
+    "topic": "Flexographic Ink End-Use Requirements by Application",
+    "subtopic": "Ink property requirements for flexible packaging — adhesion, heat resistance, lamination bond, food compliance",
+    "tags": ["ink requirements", "flexible packaging", "adhesion", "heat resistance", "rub resistance", "lamination", "food safety", "FDA", "corona treatment", "reverse print", "paraffin wax", "solvent based", "water based"],
+    "app_modules": ["estimation", "job_entry", "knowledge_chat", "crm_quotation"],
+    "trigger_actions": [
+      "estimation includes substrate selection",
+      "job is for food packaging application",
+      "user selects reverse print for a job",
+      "AI validates ink specification for lamination job",
+      "customer asks about food-safe inks",
+      "estimation includes lamination in structure"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI validates ink specification for a job. Different end-use applications require very different ink properties. AI flags missing ink specifications or incompatible ink choices based on substrate and end-use.",
+    "text": "Flexo inks for flexible packaging must meet a wide range of performance requirements depending on the end use. Key properties and their relevance: ADHESION: The primary requirement for printing on non-absorbent films (BOPP, PET, PE, foil). Without adequate adhesion, ink lifts off the substrate during converting, lamination, or end use. Corona treatment of the film is required before printing to raise surface energy to 38-44 dynes/cm for adequate adhesion. HEAT RESISTANCE: Inks for flexible packaging must resist temperatures encountered in: (a) Drying ovens during printing (up to 120-150°C); (b) Lamination (if thermal lamination is used); (c) Heat sealing of the finished package (above 140°C at the seal zone — inks must not soften or stick); (d) Retort (autoclave) processing for retort pouches (121°C, 30 minutes). Typical heat resistance requirement: above 175°C (3,500°F). LAMINATION BOND STRENGTH: For reverse-printed films that will be laminated, the ink must bond strongly to the lamination adhesive. Low levels of paraffin wax and other additives in the ink formulation are critical — higher paraffin levels and lower surface energy subsequently inhibit adhesion and lamination bond strengths. RUB RESISTANCE: The outer surface of the package must withstand abrasion during handling, transport, and retail display. Surface and top-coated packs require high rub resistance. Reverse-printed laminates are inherently rub-resistant (ink is sandwiched between films). FOOD SAFETY: Inks for food packaging must not migrate through the substrate and contaminate the food product. Requirements include: compliance with FDA indirect food contact regulations; use of approved pigments with no heavy metal contamination; low-odor formulations with no residual solvents above threshold levels. Solvent-based inks require complete solvent evaporation in the dryer section — retained solvents cause odor and potential food safety issues. REVERSE PRINT SPECIFIC REQUIREMENTS: For reverse printing (inside of transparent film): White is always the last color in the print sequence (outermost layer on the film, seen first through the film from outside); The white must be fully opaque to provide a complete background; Low migration ink chemistry is critical since the ink layer faces the packaged product.",
+    "cross_references": ["V5-002", "V5-003", "V5-004", "V1-007", "V2-009"]
+  },
+
+  {
+    "id": "V5-002",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Ink",
+    "topic": "Solvent-Based Flexo Inks — Composition, Resins, Solvents, and Applications",
+    "subtopic": "Nitrocellulose, polyamide, acrylic resins — solvent systems — applications on flexible packaging films",
+    "tags": ["solvent ink", "nitrocellulose", "polyamide", "acrylic resin", "alcohol solvent", "propyl alcohol", "ethyl acetate", "solvent balance", "VOC", "solvent retention", "film adhesion", "laminating ink", "surface print", "reverse print"],
+    "app_modules": ["job_entry", "estimation", "press_characterization", "knowledge_chat"],
+    "trigger_actions": [
+      "job uses solvent-based ink system",
+      "user selects substrate and ink type in job entry",
+      "AI validates solvent-ink compatibility with plate type",
+      "press characterization includes solvent ink data",
+      "estimation on BOPP or PET substrate"
+    ],
+    "ai_use": "Retrieved when AI validates solvent-based ink selection for a job. Solvent balance must match substrate and plate material. AI uses this to check for plate compatibility issues (aromatic content) and flag environmental/VOC considerations.",
+    "text": "Solvent-based flexo inks dominate flexible packaging printing, particularly on film substrates (BOPP, PET, PE, foil). Composition: colorant in a vehicle of resin, solvent, and additives. KEY RESINS FOR FLEXIBLE PACKAGING: (1) Nitrocellulose (NC): Most common resin in solvent flexo inks. Provides good pigment wetting, low odor, good solvent release, high heat resistance and wide compatibility. Can be modified with other resins (polyamides, acrylics). Available in viscosity grades from very low to high. Used widely for surface and reverse printing on paper, film, and foil. (2) Polyamide resins (alcohol-soluble type, MW < 4,000): Provide excellent adhesion to corona-treated polyolefin films (PE, PP, BOPP). Excellent printability, transfer, high gloss, and solvent release. Compatible with NC, shellac, rosin esters, phenolics. Used for general flexible packaging on film. Caution: avoid heavy metals from drying agents or pigments — they catalyze oxidation of fatty acids producing rancid odors and blocking. (3) Co-solvent polyamides (MW > 4,000): Require blend of alcohol and aliphatic/aromatic hydrocarbon for solubilization. Wider adhesion range. Used for laminating inks — release properties into cold-seal release packaging. (4) Polyurethane resins: Provide excellent adhesion, flexibility and chemical resistance. Used in retort packaging and applications requiring high lamination bond strength. (5) Acrylic resins: Used primarily for adhesion on specific substrates. SOLVENT SYSTEMS: Primary solvent for most flexible packaging inks is n-propyl alcohol (NPA) or ethyl alcohol — both compatible with DuPont Cyrel photopolymer plates. Ethyl acetate is commonly used as a co-solvent to increase solvency power and drying speed. CRITICAL PLATE COMPATIBILITY RULE: Aromatic solvents (toluene, xylene, benzene) are NOT compatible with photopolymer plates — they cause swelling and plate distortion. Maximum aromatic content in contact with photopolymer: 1% in alcohol co-solvent. This is frequently the root cause of 'sticky surface' plate damage. SOLVENT BALANCE MANAGEMENT: As solvents evaporate during printing, the remaining solvent balance changes. Faster solvents evaporate first, leaving slower solvents that can cause: retained solvent in rewind (blocking); reduced ink adhesion; viscosity drift. Solvent additions during the press run must maintain correct balance — not just add the fastest solvent to restore viscosity.",
+    "cross_references": ["V5-001", "V5-003", "V4-007", "V1-007"]
+  },
+
+  {
+    "id": "V5-003",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Ink",
+    "topic": "Water-Based Flexo Inks — Properties, pH Control, and Press Management",
+    "subtopic": "Water-based ink pH management, formulation, drying, surface energy requirements, corona treatment interaction",
+    "tags": ["water-based ink", "pH control", "amine", "pH meter", "alkalinity", "drying", "viscosity", "water ink", "surface energy", "corona treatment", "glycol ether", "blocking", "water-based drying"],
+    "app_modules": ["job_entry", "estimation", "press_characterization", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "job uses water-based ink system",
+      "press characterization includes water-based ink",
+      "damage reason includes ink-related issue",
+      "user asks about pH control for water inks",
+      "estimation on paper or board substrate"
+    ],
+    "ai_use": "Retrieved when AI validates water-based ink management or diagnoses ink-related print defects. pH is the most critical variable in water-based ink management — most water-based print problems start with pH drift.",
+    "text": "Water-based flexo inks are the dominant ink system for printing on paper and paperboard substrates, and are increasingly used on film. They offer environmental advantages (no VOC emissions) but require careful management. COMPOSITION: Typical water-based formulation for non-absorbent substrate: 50% pigment dispersion; 10% acrylic solution polymer; 30% acrylic emulsion; 5% water; 1% organic amine; 3% polyethylene wax compound; 0.5% surfactant; 0.5% organic anti-foam. For absorbent substrates: higher pigment and acrylic solution polymer; less emulsion; more water. pH CONTROL — THE MOST CRITICAL VARIABLE: Water-based inks are stable within pH 8.6–9.4. Below this range: false heavy body (apparent viscosity increase) and resin 'kick-out' (resin precipitates from solution). Above this range: drying problems, odor issues, product resistance failures. Check pH at minimum every four hours. Use a pocket pH meter for easy, frequent checking. pH CORRECTION PROCEDURE: To raise pH that has dropped too low: prepare a diluted alkaline mixture (amine in water — never add full-strength amine directly to ink). Add slowly while agitating. Stop and check pH frequently — do not overshoot. A pH of 9.0 with ±0.2 variance is ideal. More amine above the desired range does not improve anything and increases overshooting risk. To lower pH that is too high: nothing can be added (adding acid destroys resins and additives). The only option is adding lower-pH virgin ink. DRYING MANAGEMENT: Water dries more slowly than typical flexo solvents (propyl alcohol, propyl acetate). Countermeasures used in water-based inks: higher resin and pigment solids; thinner wet ink film via finer aniloxes; slightly higher press viscosity for more color strength with less water applied; unique resin emulsions that allow lower virgin viscosity. Slow solvents (glycol ethers) are sometimes added to control fast-drying issues — but excessive glycol ether causes: blocking in rewind; gloss reduction after unwinding; retained solvent not visible until rewound. Use glycol ethers only when absolutely necessary, in minimal recommended amounts. SURFACE ENERGY REQUIREMENT: Water has a surface tension of 72 dynes/cm. Untreated polyolefin film has surface energy of 29-32 dynes/cm. Water-based ink CANNOT wet out on untreated film. Corona treatment must raise film surface energy to minimum 38-44 dynes/cm before printing with water-based inks. HUMIDITY EFFECT: Water-based inks dry by evaporation of water. High humidity in the pressroom significantly slows drying — adequate HVAC control is essential in summer months especially in Dubai climate.",
+    "cross_references": ["V5-001", "V5-002", "V5-006", "V1-007"]
+  },
+
+  {
+    "id": "V5-004",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Ink",
+    "topic": "Anilox Roll Selection for Ink Delivery — Cell Count, Volume, and Substrate",
+    "subtopic": "BCM selection guide for absorbent vs non-absorbent substrates — line vs halftone vs solid work",
+    "tags": ["anilox selection", "BCM", "cell count", "cell volume", "absorbent substrate", "non-absorbent substrate", "solids", "halftone", "line work", "ink delivery", "anilox guide", "film printing", "paper printing"],
+    "app_modules": ["press_characterization", "machine_settings", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "press characterization anilox entry",
+      "user asks which anilox to use for a substrate",
+      "AI diagnoses dot gain damage related to anilox",
+      "machine settings include anilox specification"
+    ],
+    "ai_use": "Retrieved when AI configures press characterization or diagnoses anilox-related print defects. The anilox selection guide provides specific BCM values per image type and substrate. Using too high a BCM causes over-inking and dot gain — a major source of 'Screen Dot Gain More' damage entries.",
+    "text": "Selecting the correct anilox roll is critical for achieving the thin ink film that delivers quality printing with minimum dot gain. The principle is to print with the thinnest ink film possible while maintaining color density — accomplished through high-strength inks, fine anilox rolls with low volumetric carrying capacity, and fast press speeds. ANILOX SELECTION GUIDE (BCM per image type and substrate): For ABSORBENT substrates (paper, board): Solids — 180 lines/inch, 9.5 BCM; Line work — 200 lines/inch, 8.3 BCM; Halftone — 250 lines/inch, 7.0 BCM. For NON-ABSORBENT substrates (film, foil): Solids — 220 lines/inch, 7.5 BCM; Line work — 250 lines/inch, 7.0 BCM; Halftone — 360 lines/inch, 4.5 BCM. Wide-web film printers may use a 220-line anilox with 7.7 BCM for large solids. Corrugated printers use 180-line anilox with 9.5 BCM for the same image on kraft. MINIMUM DOT SIZE vs ANILOX CELL SIZE: For reliable dot reproduction, the anilox cell opening must be smaller than the minimum printable dot. If a cell opening is larger than the dot, the entire dot falls into the cell and does not print. Ratio rule: anilox cell count should be at least 4-6 times the screen ruling. For 133 lpi process printing: minimum anilox = 133 × 4 = 532 cells/inch. For 150 lpi: minimum anilox = 600 cells/inch. PROCESS COLOR PRINTING ANILOX: 600-800 cells/inch typical. LINE WORK / SOLID ANILOX: 400-550 cells/inch. CRITICAL: Printing process halftone work on a line-work anilox (400-550 cells/inch) is not possible above 65-85 lpi screen ruling. The cell openings are too large for the fine dots. Always confirm anilox cell count is appropriate for the screen ruling before job setup. ANILOX WEAR: Regular measurement of BCM is essential — anilox cells wear over time, reducing ink delivery. Worn anilox causes progressively less color density and can cause incomplete solid coverage ('less covering' damage on repeated jobs).",
+    "cross_references": ["V1-013", "V2-010", "V5-001", "V5-002"]
+  },
+
+  {
+    "id": "V5-005",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Ink",
+    "topic": "Ink Viscosity Management and On-Press Ink Control",
+    "subtopic": "Viscosity measurement methods, viscosity control during press run, solvent addition, ink blending systems",
+    "tags": ["viscosity", "viscosity control", "Zahn cup", "efflux cup", "on-press control", "ink addition", "solvent addition", "ink blending", "gravimetric blending", "dispensing system", "press run management", "ink room"],
+    "app_modules": ["press_characterization", "production_log", "knowledge_chat"],
+    "trigger_actions": [
+      "production log entry includes ink issue",
+      "damage reason mentions ink viscosity",
+      "press characterization includes viscosity data",
+      "user asks about ink viscosity measurement"
+    ],
+    "ai_use": "Retrieved when AI diagnoses ink-related print defects or guides press operators on ink control. Viscosity drift is a primary cause of inconsistent color density during a press run.",
+    "text": "Viscosity is the most important on-press ink variable affecting color density, dot gain, and print consistency. All flexo inks must be maintained at correct working viscosity throughout the press run. VISCOSITY MEASUREMENT: Efflux cups (Zahn cups) are the standard tool. A Zahn cup is dipped into the ink and lifted out — the time in seconds for the ink to drain through the orifice is the viscosity reading. Common cup sizes: Zahn #2 (12-48 seconds for most flexo inks); Zahn #3 (for heavier body inks). Viscosity must be checked at start of run and at regular intervals — typically every hour or on every roll change for critical jobs. VISCOSITY EFFECTS ON PRINT QUALITY: Too high viscosity — excessive ink film thickness, dot gain, fill-in of fine screens and reverses, plate loading (ink buildup). Too low viscosity — insufficient color density, mottled solids, poor tonal value, potential for pin-holing in heavy solids. VISCOSITY CONTROL FOR SOLVENT-BASED INKS: Add correct solvent blend (maintaining solvent balance) to restore viscosity. Never add a single fast solvent alone — this upsets solvent balance and changes drying rate. Use the same solvent blend as specified for the ink. Typical working viscosity for solvent-based flexo on film: 18-25 seconds (Zahn #2). VISCOSITY CONTROL FOR WATER-BASED INKS: ALWAYS adjust pH first, then viscosity. Adding water to reduce viscosity without checking pH first can cause pH to drop, causing resin kick-out. After pH is in correct range, add plain water if viscosity is still too high. Working viscosity for water-based inks on film: typically slightly higher than solvent-based — 22-35 seconds (Zahn #2) to achieve adequate color with thin water film. INK BLENDING SYSTEMS: Progressive converters install automated gravimetric dispensing systems that: minimize ink-related downtime; reduce returned (waste) ink inventories; blend precise amounts from base components; prompt operators to reuse return inks. Gravimetric systems (weighing) are more accurate than volumetric (measuring volume) for large batches — volumetric accuracy is ±2%, meaning a 50 gallon batch could vary by 9 lbs. Ink blending databases store: color formulas, substrate specifications, press assignments, ink usage and costs — providing a complete ink management bookkeeping system.",
+    "cross_references": ["V5-002", "V5-003", "V5-004"]
+  },
+
+  {
+    "id": "V5-006",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Substrates",
+    "topic": "Flexible Packaging Substrate Overview — Five Main Groups",
+    "subtopic": "Paper/board, corrugated, laminates, foils, and films — classification and flexo printing considerations",
+    "tags": ["substrate", "paper", "board", "corrugated", "laminate", "foil", "film", "flexible packaging", "substrate classification", "substrate selection", "printing characteristics"],
+    "app_modules": ["estimation", "job_entry", "crm_quotation", "knowledge_chat"],
+    "trigger_actions": [
+      "user selects substrate in estimation",
+      "AI validates structure in estimation",
+      "user asks about substrate types",
+      "customer requests flexible packaging quotation",
+      "AI flags missing substrate specification"
+    ],
+    "ai_use": "Foundation substrate knowledge — retrieved when AI needs to classify and explain substrate options. Each substrate group has distinct printing requirements that affect ink selection, press type, corona treatment, and cost components in the estimate.",
+    "text": "Substrates for flexography are varied depending on the end use — almost no material cannot be printed by the flexo process. Substrates divide into five main groups: (1) PAPER AND PAPERBOARD: Most common for labels, folding cartons, food packaging, and paper bags. Absorbent surface — inks dry by absorption and evaporation. Key variables: basis weight, pH (acid vs alkaline), surface sizing, coating, moisture content. Acid papers (pH 4.0-5.5) eventually yellow and become brittle. Alkaline papers (pH 7-8) offer higher brightness, bulk, stiffness and archival qualities. Coated papers provide better print surface quality — coating fills the fiber spaces giving more uniform ink density, gloss, and print smoothness. (2) CORRUGATED BOARD: Used for shipping cartons and display. Two categories: direct print on combined board (sheetfed, limited quality due to board surface roughness) and preprint on linerboard (roll-to-roll, much higher quality, preprinted roll later corrugated). Corrugated inks must dry very quickly for high-speed sheetfed presses and resist the heat and pressure of the subsequent corrugating operation for preprint. (3) LAMINATES (DUPLEX/TRIPLEX): Two or more substrates bonded together. The most common structure in flexible packaging. Examples: BOPP/PE (print on BOPP, heat-seal via PE), PET/AL/PE (barrier structure for food), BOPP/BOPP (twist wrap). Lamination adhesive cost must be included in all estimates for laminate structures. (4) FOILS: Aluminum foil provides excellent barrier (moisture, oxygen, light). Printed either surface or reverse. Requires adhesion-promoting primer ink layer. Used in coffee, pharmaceutical, confectionery, and dairy packaging. Very sensitive to cracking — minimum bend radius must be maintained during converting. (5) FILMS: The largest category in modern flexible packaging — BOPP, PET, PE, CPP, PVDC, PA (nylon), metallized films. Each film type has specific surface energy, print receptivity, dimensional stability, and heat-seal characteristics. All non-polar film surfaces (polyolefins) require corona treatment before printing.",
+    "cross_references": ["V5-007", "V5-008", "V5-009", "V1-008"]
+  },
+
+  {
+    "id": "V5-007",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Substrates",
+    "topic": "BOPP (Biaxially Oriented Polypropylene) — Properties and Printing Characteristics",
+    "subtopic": "BOPP manufacturing, surface energy, corona treatment requirements, register challenges, tensile modulus",
+    "tags": ["BOPP", "biaxially oriented polypropylene", "OPP", "polypropylene", "surface energy", "corona treatment", "29 dynes", "tensile modulus", "register", "elongation", "flexible packaging film", "snack packaging", "reverse print"],
+    "app_modules": ["estimation", "job_entry", "press_characterization", "knowledge_chat"],
+    "trigger_actions": [
+      "substrate is BOPP in estimation or job entry",
+      "AI validates corona treatment cost for BOPP job",
+      "user asks about printing on BOPP",
+      "press characterization for BOPP substrate",
+      "AI checks ink system compatibility with BOPP"
+    ],
+    "ai_use": "CRITICAL — retrieved when substrate is BOPP. AI uses this to validate: corona treatment is included in estimate cost, ink system is correct (solvent or water-based compatible with OPP topcoat), and press type is CI (for register control on this extensible substrate).",
+    "text": "BOPP (Biaxially Oriented Polypropylene) is the most commonly used film in flexible packaging — snack bags, confectionery wrappers, labels, and general food packaging. Manufacturing: Polypropylene resin is extruded and then biaxially oriented (stretched in both machine and transverse directions) to achieve high tensile strength and optical clarity. Available typically at 2-mil thickness. Key properties: Excellent optical clarity and high solvent resistance; difficult to die cut; low inherent surface energy of 29 dynes/cm; high tensile modulus (resistance to elongation) of 280,000 psi for tenter-process film, giving good dimensional stability on press. SURFACE TREATMENT — MANDATORY: Untreated BOPP cannot be printed — the 29 dynes/cm surface energy is far too low for ink adhesion. Required treatment: Corona discharge to raise surface energy to minimum 38-44 dynes/cm. Film manufacturers pre-treat BOPP to 45+ dynes/cm — but this treatment fades during storage, typically to about 40 dynes/cm at time of printing. For water-based inks: minimum 42-44 dynes/cm required. Converters can supplement treatment by corona treating in-line on the press, but the freshly treated film must print immediately — do not allow significant time between treatment and printing as surface energy decays. TOPCOAT: Many BOPP films are supplied with a topcoat (thin low-solids primer coating) that stabilizes the printable surface and allows the use of UV flexo inks as well as solvent and water-based. Topcoated BOPP specifies the compatible ink systems — confirm with film supplier. REGISTER CONTROL: BOPP has high tensile modulus (resistant to stretch) — good dimensional stability on press. Web tension must be controlled carefully; maximum allowable elongation for good register is approximately 0.6% at converting temperatures. CI press preferred for multicolor process printing on BOPP — the common impression drum eliminates interstation web tension variations. REVERSE PRINTING: The majority of BOPP flexible packaging is reverse printed — image on inside surface, viewed through the film. White must be the last color printed (first visible layer from outside).",
+    "cross_references": ["V5-006", "V5-008", "V5-009", "V5-010"]
+  },
+
+  {
+    "id": "V5-008",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Substrates",
+    "topic": "PET (Polyester Film) — Properties and Printing Characteristics",
+    "subtopic": "PET manufacturing, dimensional stability, heat resistance, solvent sensitivity, surface treatment requirements",
+    "tags": ["PET", "polyester film", "polyethylene terephthalate", "biaxial orientation", "dimensional stability", "heat resistance", "solvent resistance", "corona treatment", "reverse print", "premium packaging", "retort packaging"],
+    "app_modules": ["estimation", "job_entry", "press_characterization", "knowledge_chat"],
+    "trigger_actions": [
+      "substrate is PET in estimation or job entry",
+      "job is retort or high-temperature application",
+      "AI validates ink system for PET substrate",
+      "estimation includes PET in laminate structure"
+    ],
+    "ai_use": "Retrieved when substrate is PET. AI uses this to validate ink system selection (polyurethane for retort, NC/polyamide for standard), confirm corona treatment cost in estimate, and flag that PET is NOT heat-sealable (PE or CPP sealant layer required in laminate).",
+    "text": "PET (Polyethylene Terephthalate, polyester) film is the premium flexible packaging substrate, offering superior clarity, dimensional stability and chemical resistance. It is increasingly the substrate of choice for high-quality printing and demanding applications. Manufacturing: Cast tentering method gives biaxial orientation — high tensile strength in both machine and transverse directions. Available as clear, white (titanium dioxide pigmented), and metallized. Thickness range 1.5-7.0 mils. Clear PET outdoor life: 2-3 years. KEY PROPERTIES FOR PRINTING: Dimensional stability — very high tensile modulus (500,000 psi) gives excellent register performance on press; dimensional changes due to heat or tension are minimal; PET is the most register-stable of all flexible packaging films. High solvent resistance — PET resists most organic solvents; this provides excellent end-use chemical resistance but makes it difficult to print with standard solvent inks without topcoating. High heat resistance — withstands up to 121°C (autoclave/retort conditions) making it essential for retort pouches. Stiffness — not conformable; cannot be used in squeezable applications. Very expensive relative to BOPP or PE. SURFACE TREATMENT: Non-topcoated PET is printable only with solvent-based inks specifically formulated for PET adhesion. Topcoated PET can be printed with water-based and UV-curable inks as well. More demanding corona treatment than BOPP — higher power density or slower speeds required to achieve adequate dyne level. INK SYSTEM: For standard reverse-print lamination applications: NC/polyamide solvent-based inks work well. For retort (121°C autoclave) applications: polyurethane-based inks are required — they maintain adhesion and bond strength at high temperatures. LAMINATE STRUCTURES WITH PET: PET is typically the print layer in high-barrier structures. PET alone is NOT heat-sealable — a heat-seal layer (PE or CPP) must be laminated to the non-printed side. Common structures: PET/PE (standard pouch), PET/Al/PE (high-barrier retort), PET/VMPET/PE (metallized barrier).",
+    "cross_references": ["V5-006", "V5-007", "V5-009", "V5-010"]
+  },
+
+  {
+    "id": "V5-009",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Substrates",
+    "topic": "Polyethylene (PE) Film — Types, Properties, and Printing Challenges",
+    "subtopic": "LDPE, LLDPE, HDPE types — low surface energy — corona treatment — register challenges — lamination sealant role",
+    "tags": ["polyethylene", "PE", "LDPE", "LLDPE", "HDPE", "corona treatment", "32 dynes", "surface energy", "heat sealable", "stretch film", "bag", "register", "laminate sealant", "slip agent", "anti-block"],
+    "app_modules": ["estimation", "job_entry", "press_characterization", "knowledge_chat"],
+    "trigger_actions": [
+      "substrate is PE in estimation or job entry",
+      "laminate structure includes PE sealant layer",
+      "user asks about printing on PE",
+      "AI validates that PE sealant layer cost is in estimate"
+    ],
+    "ai_use": "Retrieved when PE is part of the substrate or laminate structure. AI flags: PE is the sealant layer in most flexible packaging laminates — its cost must be included in structure estimates. Direct printing on PE is challenging for high-quality process work — confirm press is CI type.",
+    "text": "Polyethylene (PE) is the most common film used in flexible packaging by volume. It serves two main roles: (1) as the print substrate for bags and pouches; (2) as the heat-seal layer in laminate structures (BOPP/PE, PET/PE). PE TYPES: LDPE (Low Density PE) — most flexible, good clarity, wide heat-seal range. LLDPE (Linear Low Density PE) — toughest, best puncture resistance, commonly used for lamination. HDPE (High Density PE) — stiffest, most barrier, used for shopping bags, heavy duty. Metallocene PE (mLLDPE) — excellent clarity and sealing performance. SURFACE ENERGY — CRITICAL CHALLENGE: Untreated PE has surface energy of approximately 31-32 dynes/cm — even lower than BOPP. PE films require corona treatment to raise surface energy to 36-42 dynes/cm for printing. Film additives significantly complicate treatment: Slip agents (erucamide fatty amides): migrate to film surface — their waxy deposit prevents ink adhesion. At a given ppm loading, a 2-mil film has twice the slip agent on the surface as a 1-mil film. Slip agent buildup on equipment prevents inks and adhesives from adhering. Anti-block (SiO2): microscopically roughens the surface — this can actually help ink adhesion slightly, but high levels cause other issues. Films with additives require more corona power (or slower speed) to reach adequate treat levels. REGISTER AND PRINTING CHALLENGES: PE has low tensile modulus (50,000 psi for LDPE) — it stretches easily under press tension. Maintaining register across multiple colors is very difficult. For high-quality printing with exacting register requirements, PE is usually NOT the direct print substrate — instead, PET or BOPP is reverse printed and laminated with PE to lock in the print and provide heat sealability. LAMINATION ROLE: PE is the heat-seal ply in the majority of flexible packaging laminates. PE melts and bonds the package at seal temperatures of 100-160°C (depending on PE type). When estimating laminate structures, PE sealant layer material cost must be included.",
+    "cross_references": ["V5-006", "V5-007", "V5-008", "V5-010"]
+  },
+
+  {
+    "id": "V5-010",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Substrates",
+    "topic": "Corona Treatment — Surface Energy and Ink Adhesion",
+    "subtopic": "How corona discharge raises surface energy of polyolefin films — dyne level measurement — treatment decay — re-treatment",
+    "tags": ["corona treatment", "surface energy", "dyne level", "dynes per centimeter", "corona discharge", "treatment decay", "film adhesion", "ink wetting", "wetting tension", "surface oxidation", "BOPP corona", "PE corona", "treatment fade"],
+    "app_modules": ["estimation", "job_entry", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "substrate is a polyolefin film (BOPP, PE, PP) in estimation",
+      "AI checks if corona treatment cost is in estimate",
+      "user asks about why ink won't stick to film",
+      "damage reason includes poor adhesion or delamination",
+      "estimation includes water-based ink on film"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI validates estimate completeness for film substrates. Corona treatment is a mandatory cost item for all polyolefin film jobs. AI flags its absence. Also used to diagnose adhesion-related damage (ink delamination, poor lamination bond).",
+    "text": "Corona treatment is the primary method for improving ink adhesion on non-polar polyolefin film substrates (BOPP, PE, PP). It is a mandatory step before printing on these materials and must be reflected in the cost estimate. HOW CORONA WORKS: An electronic high-voltage discharge (corona) is applied to the film surface. The discharge creates a micro-pitting and oxidation of the polymer surface, generating polar functional groups (carbonyl, hydroxyl) that increase the surface energy. Higher surface energy allows inks to wet out and adhere to the surface. SURFACE ENERGY MEASUREMENT: Measured in dynes per centimeter (dynes/cm) using the wetting tension method (ASTM D2578). A series of test solutions of increasing surface tension are applied with a cotton swab — the correct dyne level is identified when the applied liquid neither beads up (too high) nor shrinks back (too low) but remains spread on the surface. REQUIRED TREAT LEVELS BY INK TYPE: Solvent-based inks on BOPP: minimum 38-40 dynes/cm; Water-based inks on BOPP: minimum 42-44 dynes/cm; UV-curable inks: minimum 40-42 dynes/cm; Untreated BOPP baseline: 29 dynes/cm; Untreated PE baseline: 31-32 dynes/cm. TREATMENT DECAY — CRITICAL: Corona treatment fades over time. Film manufacturers typically treat to 45+ dynes/cm, but this decays to approximately 40 dynes/cm by time of printing if stored for weeks. Factors accelerating decay: additives (slip agents migrate to surface and cover the oxidized sites); temperature; humidity; UV light exposure. Treatment decay is a root cause of intermittent adhesion failures even when the film is supposedly 'corona treated.' IN-LINE RE-TREATMENT: Many presses include a corona treater in the unwind section. This re-treats the film immediately before printing, compensating for treatment decay. Particularly important for water-based inks. CORONA TREATMENT IN ESTIMATION: For any polyolefin film job, the estimate must include: corona treatment energy cost (kW·h); any in-line treater maintenance allocation; if film is pre-treated by supplier, confirm dyne level meets requirements before press run.",
+    "cross_references": ["V5-006", "V5-007", "V5-009", "V5-001"]
+  },
+
+  {
+    "id": "V5-011",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Substrates",
+    "topic": "Laminate Structures — Duplex and Triplex Flexible Packaging",
+    "subtopic": "How laminates are constructed — print layer, barrier layer, sealant layer — adhesive systems — structure examples",
+    "tags": ["laminate", "duplex", "triplex", "lamination", "print layer", "barrier layer", "sealant layer", "lamination adhesive", "polyurethane adhesive", "water-based adhesive", "lamination bond", "delamination", "structure costing", "BOPP PE", "PET AL PE"],
+    "app_modules": ["estimation", "job_entry", "knowledge_chat", "crm_quotation"],
+    "trigger_actions": [
+      "estimation includes duplex or triplex structure",
+      "user enters laminate structure in estimation",
+      "AI checks laminate structure for completeness",
+      "AI validates that adhesive cost is in estimate",
+      "user asks about structure for a packaging application",
+      "customer requests costing for a pouch or bag"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI validates laminate structure estimates. The most common missing cost items in flexible packaging estimates are lamination adhesive and the sealant film ply. AI checks for both and flags if absent. Also provides structure recommendations for specific applications.",
+    "text": "Laminate structures are the dominant packaging form in modern flexible packaging. They combine the properties of multiple substrates to achieve the required combination of printability, barrier, and heat-sealability that no single film can provide alone. LAMINATE STRUCTURE ANATOMY: Every laminate has three functional layers: (1) Print layer (outermost): Must be printable — good surface for ink adhesion. Common print layers: BOPP (most common, snacks, general food), PET (premium, high-barrier, retort), OPA/Nylon (high-barrier, puncture-resistant, cooking pouches), VMPET/Metallized PET (barrier + decoration). (2) Barrier layer (middle, optional): Prevents moisture, oxygen, light transmission. Common barrier layers: Aluminum foil (best barrier), VMPET (medium barrier), PVDC/EVOH coating (oxygen barrier), OPA/Nylon (puncture resistance + moderate barrier). (3) Sealant layer (innermost): Must heat-seal to create the package closure. Must be food-contact compatible since it touches the product. Common sealants: LDPE (standard heat-seal, wide sealing range), LLDPE (tougher, better puncture resistance), CPP (Cast Polypropylene, higher temperature seal, good clarity), mLLDPE (excellent seal, low temperature initiation). LAMINATION ADHESIVE: The bond between layers is created by lamination adhesive. Two main systems: (a) Solvent-based polyurethane (two-component PU): highest bond strength, required for retort, pasteurization, and high-barrier applications; (b) Water-based adhesive: lower bond strength, suitable for dry food packaging. Adhesive cost is typically AED 3-8 per kg of laminate (depending on coat weight and adhesive type). COMMON FLEXIBLE PACKAGING STRUCTURES: BOPP/PE — general food, snacks, confectionery (most common); PET/PE — premium snacks, coffee, pet food; PET/Al foil/PE — high barrier (pharmaceutical, dairy, juice); BOPP/BOPP — twist wrap (candy); PET/VMPET/PE — metallized medium barrier; OPA/PE — cooking pouches, meat packaging; PET/Al/CPP — retort pouch. COST COMPONENTS FOR LAMINATE ESTIMATES (every estimate for a laminate must include): Print film cost (per kg or m²); Sealant film cost (per kg or m²); Barrier film or foil cost if applicable; Lamination adhesive cost; Lamination machine time and energy; Ink cost (plates + ink consumption); Printing machine time.",
+    "cross_references": ["V5-006", "V5-007", "V5-008", "V5-009", "V5-010"]
+  },
+
+  {
+    "id": "V5-012",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 5,
+    "chapter": "Substrates",
+    "topic": "Shrink Sleeves — CPP and PET-G Films for Shrink Application",
+    "subtopic": "Shrink sleeve substrates — PVC, PET-G, OPS — printing considerations — distortion for shrink",
+    "tags": ["shrink sleeve", "shrink film", "PET-G", "OPS", "PVC shrink", "sleeve printing", "shrink distortion", "sleeve artwork", "S/B job type", "HONG YANG", "UTECO sleeve"],
+    "app_modules": ["estimation", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "job type is S/B (Shrink Body)",
+      "estimation includes shrink sleeve substrate",
+      "user asks about shrink sleeve printing",
+      "machine is HONG YANG or UTECO for sleeve job"
+    ],
+    "ai_use": "Retrieved when AI handles shrink sleeve jobs (S/B type in your production log). Shrink sleeves require special artwork handling — the design must be pre-distorted (horizontally compressed) to compensate for shrinkage during application. This is different from the print distortion correction applied in the repeat direction.",
+    "text": "Shrink sleeves (S/B — Shrink Body in your production log) are a growing application in flexible packaging. They provide 360° decoration on irregular-shaped containers using film that shrinks to conform to the container shape when heat is applied. SHRINK SLEEVE SUBSTRATES: (1) PVC (Polyvinyl Chloride): Traditional shrink sleeve material. Shrink rate: 40-70% in transverse direction. Excellent clarity. Can be printed surface or reverse. Solvent and UV inks both used. Environmental concerns are driving replacement by PET-G. (2) PET-G (Glycol-modified PET): Growing replacement for PVC. Shrink rate: 70-80% in transverse direction. Better environmental profile — recyclable with PET stream. Reverse printing with solvent or UV inks. (3) OPS (Oriented Polystyrene): Lower shrink rate (30-50%). Lower cost. Used for non-round containers. Solvent-sensitive — ink system must be verified. ARTWORK FOR SHRINK SLEEVES — SPECIAL REQUIREMENT: The sleeve is printed flat and then shrinks around the container. This means the artwork must be pre-distorted (horizontally expanded in the transverse direction) to compensate for shrinkage during application. For example, if the sleeve shrinks 50% in the horizontal direction, the artwork must be stretched 100% horizontally so that after shrinking it appears at correct proportions. The shrink distortion factor depends on: the shrink percentage of the specific film; the container diameter at the specific height; and the orientation of the shrink direction. THIS IS A DIFFERENT DISTORTION from the plate distortion compensation (which is in the machine/repeat direction). Both must be applied — plate distortion (repeat direction, from plate wrapping cylinder) AND shrink pre-distortion (transverse direction, from film shrinking around container). In your plant: HONG YANG and UTECO machines run shrink sleeve jobs (S/B type). Cylinder sizes are specified as diameter × circumference × height (e.g. 26×35×15).",
+    "cross_references": ["V5-006", "V1-006", "V4-005"]
+  }
+]

@@ -1,0 +1,33 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"chat.agent.maxRequests": 25000,
+		"github.copilot.chat.useProjectTemplates": false,
+		"github.copilot.chat.scopeSelection": false,
+		"js/ts.implicitProjectConfig.checkJs": false,
+		"javascript.validate.enable": false,
+		"typescript.disableAutomaticTypeAcquisition": true,
+		"typescript.tsserver.maxTsServerMemory": 2048,
+		"chat.tools.terminal.autoApprove": {
+			"/^cd \"D:\\\\Projects\\\\IPD 10-12\" ; \\.\\\\upload-to-github\\.ps1$/": {
+				"approve": true,
+				"matchCommandLine": true
+			},
+			"/^psql -U postgres -d fp_database -c \"\\\\d fp_actualcommon\" \\| Select-Object -First 50$/": {
+				"approve": true,
+				"matchCommandLine": true
+			}
+		},
+		"terminal.integrated.scrollback": 1000,
+		"terminal.integrated.persistentSessionReviveProcess": "never",
+		"github.copilot.editor.enableCodeActions": false,
+		"github.copilot.chat.localeOverride": "en",
+		"workbench.editor.limit.enabled": true,
+		"workbench.editor.limit.value": 5,
+		"workbench.editor.limit.perEditorGroup": true
+	}
+}

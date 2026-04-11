@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ProPackHub — Pre-Sales Cycle Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f7f8fa;
+    color: #262626;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff;
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; }
+  .header .sub { font-size: 13px; color: #8ca0c0; margin-top: 2px; }
+  .header .version {
+    font-size: 11px; padding: 3px 10px; border-radius: 12px;
+    background: rgba(255,255,255,0.12); color: #8ca0c0;
+  }
+  .section { padding: 24px 32px; }
+  .section h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #1a1a2e; }
+  .section .desc { font-size: 13px; color: #8c8c8c; margin-bottom: 16px; }
+  .mermaid-wrap {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 24px;
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+  .stage-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .stage-table th {
+    text-align: left; padding: 8px 12px; background: #fafafa;
+    border-bottom: 2px solid #e8e8e8; color: #595959; font-weight: 600;
+  }
+  .stage-table td { padding: 7px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .stage-table tr:hover td { background: #fafbff; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .pill-auto { background: #e6f7ff; color: #096dd9; border: 1px solid #91d5ff; }
+  .pill-manual { background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; }
+  .pill-stage { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 11px; color: #722ed1; }
+  .footer {
+    padding: 16px 32px; text-align: center;
+    font-size: 11px; color: #bfbfbf; border-top: 1px solid #f0f0f0;
+  }
+  @media print {
+    .header { background: #1a1a2e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>ProPackHub — Pre-Sales Cycle Flow</h1>
+    <div class="sub">Flexible Packaging Division · Inquiry-to-Delivery Lifecycle</div>
+  </div>
+  <div>
+    <span class="version">v26.5 · Bug Fix Sprint · Soft-Delete · Lost Guard · stage_changed_at · Updated 2026-03-01</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 0: CRM — LEAD CAPTURE & CUSTOMER REGISTRATION            -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>0. CRM — Lead Capture &amp; Customer Registration <span style="font-size:12px;font-weight:400;color:#8c8c8c;">(SAR Optional · Minimal Registration First)</span></h2>
+  <div class="desc">Sales Rep creates an inquiry with minimal customer info. SAR items are optional — they can be added later. Full customer registration &amp; credit approval become mandatory at PO / production stage.</div>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart TD
+    classDef crm fill:#f9f0ff,stroke:#722ed1,stroke-width:2px,color:#531dab
+    classDef sales fill:#fff7e6,stroke:#fa8c16,stroke-width:2px,color:#d46b08
+    classDef gate fill:#f6ffed,stroke:#52c41a,stroke-width:2px,color:#389e0d
+    classDef data fill:#e6fffb,stroke:#13c2c2,stroke-width:1px,color:#006d75,font-size:11px
+    classDef po fill:#fff1f0,stroke:#f5222d,stroke-width:2px,color:#cf1322
+
+    L1["📥 Lead / Interest Received\n(inbound / outbound / referral)"]:::crm
+    L2["🏢 Minimal Registration\nCompany Name · Country · Source"]:::sales
+    L3["👤 Contact Person (optional)\nName · Phone · Email · WhatsApp"]:::sales
+    L7["📋 Log Initial Details\nProduct interest · Est. value · Close date · Notes"]:::sales
+    L8["📎 Attach Reference Files\nArtwork / Spec sheet / Competitor sample"]:::sales
+
+    L4{"SAR Needed\nNow?"}:::gate
+    L10["📝 Add SAR Items → Submit to QC"]:::crm
+    L11["📋 General Inquiry\n(No SAR · Add Later)"]:::crm
+    L12["💰 Pipeline Progression\nEstimation → Quote → Negotiate"]:::sales
+    L13["📥 PO Received"]:::po
+    L14["🏢 FULL Customer Registration\nTax ID · Address · Payment Terms\nCredit Limit · Approval"]:::po
+    L15["✅ Credit Approved\n→ Release to Production"]:::gate
+
+    L1 --> L2 --> L3 --> L7 --> L8
+    L8 --> L4
+    L4 -->|Yes| L10
+    L4 -->|No| L11
+    L10 --> L12
+    L11 --> L12
+    L12 --> L13
+    L13 --> L14
+    L14 --> L15
+    </pre>
+  </div>
+
+  <table class="stage-table">
+    <thead>
+      <tr><th>CRM Field</th><th>Type</th><th>At Inquiry Creation</th><th>At PO / Production</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Company / Account Name</td><td>Text</td><td>✅ Required</td><td>✅ Required</td></tr>
+      <tr><td>Country / Region</td><td>Dropdown</td><td>✅ Required</td><td>✅ Required</td></tr>
+      <tr><td>Lead Source</td><td>Dropdown</td><td>✅ Required</td><td>✅ Required</td></tr>
+      <tr><td>Contact Person</td><td>Text + Phone + Email</td><td>⚠️ Optional</td><td>✅ Required</td></tr>
+      <tr><td>Product Interest</td><td>Multi-select</td><td>⚠️ Via SAR or notes</td><td>✅ From SAR/Quote</td></tr>
+      <tr><td>Estimated Deal Value</td><td>Currency</td><td>⚠️ Optional</td><td>✅ From PO</td></tr>
+      <tr><td>Expected Close Date</td><td>Date</td><td>⚠️ Optional</td><td>n/a</td></tr>
+      <tr><td>Tax ID / VAT</td><td>Text</td><td>— Not needed</td><td>✅ Required</td></tr>
+      <tr><td>Full Address</td><td>Text</td><td>— Not needed</td><td>✅ Required</td></tr>
+      <tr><td>Payment Terms</td><td>Dropdown</td><td>— Not needed</td><td>✅ Required</td></tr>
+      <tr><td>Credit Limit</td><td>Currency</td><td>— Not needed</td><td>✅ If credit sale</td></tr>
+      <tr><td>Credit Approval</td><td>Approval gate</td><td>— Not needed</td><td>✅ Required for production</td></tr>
+      <tr><td>SAR Items</td><td>Sample requests</td><td>⚠️ Optional (add later)</td><td>n/a</td></tr>
+      <tr><td>Reference Files</td><td>Attachment</td><td>⚠️ Optional</td><td>PO document attached</td></tr>
+      <tr><td>Activity Log</td><td>Timeline</td><td>⚠️ Log calls/visits/emails</td><td>PO validation log</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1: FULL LIFECYCLE                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>1. Full Pre-Sales Lifecycle</h2>
+  <div class="desc">End-to-end journey — SAR registration through delivery. Blue = auto, orange = manual, green = gate.</div>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart TD
+    classDef auto fill:#e6f7ff,stroke:#1890ff,stroke-width:2px,color:#096dd9
+    classDef manual fill:#fff7e6,stroke:#fa8c16,stroke-width:2px,color:#d46b08
+    classDef gate fill:#f6ffed,stroke:#52c41a,stroke-width:2px,color:#389e0d
+    classDef terminal fill:#fff1f0,stroke:#f5222d,stroke-width:2px,color:#cf1322
+    classDef hold fill:#fffbe6,stroke:#faad14,stroke-width:2px,color:#d48806,stroke-dasharray:5 5
+
+    NI["📋 New Inquiry\n(general / no SAR)"]:::manual
+    A["📝 SAR Pending"]:::auto
+    B["🔬 QC In Progress"]:::auto
+    C["📋 CSE Pending"]:::auto
+    D["✅ CSE Approved"]:::gate
+    E["🧮 Estimation"]:::manual
+    F["💰 Quoted"]:::manual
+    G["🤝 Negotiating"]:::manual
+    H["🎉 Price Accepted"]:::manual
+    I["🏭 Pre-prod Sample"]:::manual
+    J["📦 Sample Sent"]:::manual
+    K["✅ Sample Approved"]:::manual
+    L["📄 PI Sent"]:::manual
+    M["📥 Order Confirmed"]:::manual
+    N["⚙️ In Production"]:::manual
+    O["📤 Ready to Dispatch"]:::manual
+    P["🚚 Delivered"]:::manual
+    Q(["🔒 Closed"]):::terminal
+    R(["❌ Lost"]):::terminal
+    S["⏸️ On Hold"]:::hold
+
+    NI -->|add SAR| A
+    NI -->|skip SAR| E
+    A -->|auto| B
+    B -->|auto| C
+    C -->|auto| D
+    D --> E
+    E --> F
+    F --> G
+    F -->|direct| H
+    G --> H
+    H -->|needs sample| I
+    H -->|skip to PI| L
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+    M --> MV["🔍 PO Validation\nPO vs Quote check"]:::gate
+    MV -->|mismatch| F
+    MV -->|confirmed| MR["🏢 Full Registration\n+ Credit Approval"]:::gate
+    MR -->|approved| N
+    N --> O
+    O --> P
+    P --> Q
+
+    %% Lost allowed from ANY active stage (guard: no active quotations)
+    NI -->|lost| R
+    E -->|lost| R
+    F -->|lost ⛔ guard| R
+    G -->|lost ⛔ guard| R
+    H -->|lost| R
+    I -->|lost| R
+    J -->|lost| R
+    K -->|lost| R
+    L -->|lost| R
+    M -->|lost| R
+    N -->|lost| R
+    O -->|lost| R
+
+    %% On Hold from any active stage
+    NI -.->|hold| S
+    A -.->|hold| S
+    E -.->|hold| S
+    F -.->|hold| S
+    G -.->|hold| S
+    H -.->|hold| S
+    I -.->|hold| S
+    J -.->|hold| S
+    K -.->|hold| S
+    L -.->|hold| S
+    M -.->|hold| S
+    N -.->|hold| S
+    O -.->|hold| S
+    S -.->|resume| NI
+    </pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2: PRE-SALES SUBPROCESS                                   -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>2. Pre-Sales Subprocess (SAR → CSE Approved)</h2>
+  <div class="desc">Zoomed-in view — actors, auto-stage updates, and notifications.</div>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart LR
+    classDef sales fill:#fff7e6,stroke:#fa8c16,stroke-width:2px,color:#d46b08
+    classDef qc fill:#e6f7ff,stroke:#1890ff,stroke-width:2px,color:#096dd9
+    classDef sys fill:#f9f0ff,stroke:#722ed1,stroke-width:2px,color:#531dab
+    classDef gate fill:#f6ffed,stroke:#52c41a,stroke-width:2px,color:#389e0d
+
+    subgraph SR ["👤 Sales Rep"]
+        direction TB
+        S1["Create Inquiry"]:::sales
+        S2["Register SAR Items"]:::sales
+        S3["Attach TDS / Specs"]:::sales
+        S4["Submit to QC"]:::sales
+        S1 --> S2 --> S3 --> S4
+    end
+
+    subgraph QL ["🔬 QC Lab"]
+        direction TB
+        Q1["Receive Samples"]:::qc
+        Q2["Perform Testing"]:::qc
+        Q3["Submit Analysis"]:::qc
+        Q1 --> Q2 --> Q3
+    end
+
+    subgraph CA ["📋 CSE Approval"]
+        direction TB
+        C0["CSE Auto-Generated"]:::sys
+        C1{"QC Mgr Review"}:::gate
+        C2{"Prod Mgr Review"}:::gate
+        C3["✅ Approved"]:::gate
+        C0 --> C1
+        C1 -->|approve| C2
+        C1 -->|revise| C0
+        C2 -->|approve| C3
+        C2 -->|revise| C0
+    end
+
+    S4 --> Q1
+    Q3 --> C0
+
+    subgraph ST ["⚡ Auto Stage Updates"]
+        direction TB
+        A1["sar_pending"]:::sys
+        A2["qc_in_progress"]:::sys
+        A3["cse_pending"]:::sys
+        A4["cse_approved"]:::sys
+    end
+
+    S1 -.-> A1
+    S4 -.-> A2
+    Q3 -.-> A3
+    C3 -.-> A4
+    </pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3: STATE DIAGRAM                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>3. Stage Transition Rules</h2>
+  <div class="desc">AUTO = system-triggered · MANUAL = user clicks in My Pipeline.</div>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+stateDiagram-v2
+    [*] --> new_inquiry : General inquiry (no SAR)
+    [*] --> sar_pending : SAR inquiry created
+
+    new_inquiry --> sar_pending : Add SAR
+    new_inquiry --> estimation : Skip SAR (direct)
+    new_inquiry --> lost : lost
+    new_inquiry --> on_hold : hold
+
+    sar_pending --> qc_in_progress : AUTO
+    sar_pending --> new_inquiry : revert
+    sar_pending --> lost : lost
+    sar_pending --> on_hold : hold
+
+    qc_in_progress --> qc_received : AUTO (batch receive)
+    qc_in_progress --> cse_pending : AUTO
+    qc_received --> cse_pending : AUTO
+
+    cse_pending --> cse_approved : AUTO
+
+    cse_approved --> estimation : MANUAL
+    cse_approved --> lost : lost
+    cse_approved --> on_hold : hold
+
+    estimation --> quoted : MANUAL
+    estimation --> lost : lost
+    estimation --> on_hold : hold
+
+    quoted --> negotiating : MANUAL
+    quoted --> price_accepted : MANUAL
+    quoted --> lost : MANUAL ⛔ guard
+    quoted --> on_hold : hold
+
+    negotiating --> price_accepted : MANUAL
+    negotiating --> lost : MANUAL ⛔ guard
+    negotiating --> on_hold : hold
+
+    price_accepted --> preprod_sample : MANUAL
+    price_accepted --> pi_sent : MANUAL
+    price_accepted --> lost : lost
+    price_accepted --> on_hold : hold
+
+    preprod_sample --> lost : lost
+    preprod_sample --> on_hold : hold
+    preprod_sent --> sample_approved : MANUAL
+    preprod_sent --> lost : lost
+    preprod_sent --> on_hold : hold
+
+    sample_approved --> pi_sent : MANUAL
+    sample_approved --> lost : lost
+    sample_approved --> on_hold : hold
+
+    pi_sent --> order_confirmed : MANUAL
+    pi_sent --> lost : lost
+    pi_sent --> on_hold : hold
+
+    order_confirmed --> in_production : MANUAL
+    order_confirmed --> lost : lost
+    order_confirmed --> on_hold : hold
+
+    in_production --> ready_dispatch : MANUAL
+    in_production --> lost : lost
+    in_production --> on_hold : hold
+
+    ready_dispatch --> delivered : MANUAL
+    ready_dispatch --> lost : lost
+    ready_dispatch --> on_hold : hold
+
+    delivered --> closed : MANUAL
+
+    on_hold --> new_inquiry : resume
+    on_hold --> sar_pending : resume
+    on_hold --> estimation : resume
+    on_hold --> quoted : resume
+    on_hold --> negotiating : resume
+    </pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4: STAGE REFERENCE TABLE                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>4. Stage Reference</h2>
+  <div class="desc">All 21 lifecycle stages — DB value, trigger type, responsible actor. <b>stage_changed_at</b> tracks actual time in stage (not updated_at).</div>
+  <table class="stage-table">
+    <thead>
+      <tr><th>#</th><th>Stage</th><th>DB Value</th><th>Trigger</th><th>Who</th><th>What Happens</th></tr>
+    </thead>
+    <tbody>
+      <tr style="background:#f0f5ff;"><td>0</td><td>📋 New Inquiry</td><td><span class="pill-stage">new_inquiry</span></td><td><span class="pill pill-auto">AUTO</span></td><td>System</td><td>General inquiry created (no SAR). Can add SAR later or proceed to estimation.</td></tr>
+      <tr><td>1</td><td>📝 SAR Pending</td><td><span class="pill-stage">sar_pending</span></td><td><span class="pill pill-auto">AUTO</span></td><td>System</td><td>Inquiry created with SAR items</td></tr>
+      <tr><td>2</td><td>🔬 QC In Progress</td><td><span class="pill-stage">qc_in_progress</span></td><td><span class="pill pill-auto">AUTO</span></td><td>System</td><td>Samples submitted to QC</td></tr>
+      <tr><td>2.5</td><td>📋 QC Received</td><td><span class="pill-stage">qc_received</span></td><td><span class="pill pill-auto">AUTO</span></td><td>QC Lab</td><td>QC batch-received samples, testing in progress</td></tr>
+      <tr><td>3</td><td>📋 CSE Pending</td><td><span class="pill-stage">cse_pending</span></td><td><span class="pill pill-auto">AUTO</span></td><td>System</td><td>QC analysis submitted, CSE generated</td></tr>
+      <tr><td>4</td><td>✅ CSE Approved</td><td><span class="pill-stage">cse_approved</span></td><td><span class="pill pill-auto">AUTO</span></td><td>System</td><td>Prod Manager gives final CSE approval</td></tr>
+      <tr><td>5</td><td>🧮 Estimation</td><td><span class="pill-stage">estimation</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Cost estimation started</td></tr>
+      <tr><td>6</td><td>💰 Quoted</td><td><span class="pill-stage">quoted</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Quotation sent to customer</td></tr>
+      <tr><td>7</td><td>🤝 Negotiating</td><td><span class="pill-stage">negotiating</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Price negotiation in progress</td></tr>
+      <tr><td>8</td><td>🎉 Price Accepted</td><td><span class="pill-stage">price_accepted</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Customer accepted the price</td></tr>
+      <tr><td>9</td><td>🏭 Pre-prod Sample</td><td><span class="pill-stage">preprod_sample</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Production</td><td>Pre-production sample requested</td></tr>
+      <tr><td>10</td><td>📦 Sample Sent</td><td><span class="pill-stage">preprod_sent</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Sample dispatched to customer</td></tr>
+      <tr><td>11</td><td>✅ Sample Approved</td><td><span class="pill-stage">sample_approved</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Customer approved pre-prod sample</td></tr>
+      <tr><td>12</td><td>📄 PI Sent</td><td><span class="pill-stage">pi_sent</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Accounts</td><td>Proforma Invoice sent</td></tr>
+      <tr><td>13</td><td>📥 Order Confirmed</td><td><span class="pill-stage">order_confirmed</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Customer PO received</td></tr>
+      <tr><td>14</td><td>⚙️ In Production</td><td><span class="pill-stage">in_production</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Production</td><td>Job order released</td></tr>
+      <tr><td>15</td><td>📤 Ready to Dispatch</td><td><span class="pill-stage">ready_dispatch</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>QC</td><td>Final QC passed, packed</td></tr>
+      <tr><td>16</td><td>🚚 Delivered</td><td><span class="pill-stage">delivered</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Logistics</td><td>Shipped, POD received</td></tr>
+      <tr><td>17</td><td>🔒 Closed</td><td><span class="pill-stage">closed</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Case closed</td></tr>
+      <tr><td>18</td><td>❌ Lost</td><td><span class="pill-stage">lost</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Deal lost — <b>⛔ guarded: blocked if active quotations exist</b>. Reachable from any non-terminal stage.</td></tr>
+      <tr><td>19</td><td>⏸️ On Hold</td><td><span class="pill-stage">on_hold</span></td><td><span class="pill pill-manual">MANUAL</span></td><td>Sales</td><td>Temporarily paused. Can resume to new_inquiry / sar_pending / estimation / quoted / negotiating.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5: GANTT                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>5. Implementation Status</h2>
+  <div class="desc">Built vs. planned — updated each sprint.</div>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+gantt
+    title Pre-Sales Implementation Progress
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+
+    section Sprint 1 Bug Fixes
+    samples.js INSERT fix        :done, s1a, 2026-02-27, 1d
+    InquiryCapture submit-to-qc  :done, s1b, 2026-02-27, 1d
+
+    section Sprint 2 DB + Hooks
+    Migration 008                :done, s2a, 2026-02-27, 1d
+    Stage hooks inquiries.js     :done, s2b, 2026-02-27, 1d
+    Stage hooks samples.js       :done, s2c, 2026-02-28, 1d
+    Stage hooks qc.js + cse.js   :done, s2d, 2026-02-28, 1d
+    Pipeline backend API         :done, s2e, 2026-02-28, 1d
+
+    section Sprint 3 Pipeline UI
+    MyPipeline.jsx               :done, s3a, 2026-02-28, 1d
+    Route wiring                 :done, s3b, 2026-02-28, 1d
+    Build verify                 :done, s3c, 2026-02-28, 1d
+
+    section Sprint 4 Quotation
+    Quotation form + API         :done, s4a, 2026-03-02, 3d
+    Customer response tracking   :done, s4b, 2026-03-05, 2d
+    Activity log (calls/email)   :done, s4c, 2026-03-05, 2d
+
+    section Sprint 5 CRM Phase 1
+    SAR optional (inquiry_type)  :done, s5x, 2026-03-09, 1d
+    Contact + Deal value fields  :done, s5y, 2026-03-09, 1d
+    CRM Activity logging         :done, s5z, 2026-03-09, 1d
+    Pre-prod sample tracking     :done, s5a, 2026-03-09, 2d
+    Proforma Invoice module      :done, s5b, 2026-03-11, 2d
+    new_inquiry stage + pipeline :done, s5c, 2026-03-11, 1d
+
+    section Sprint 5.1 Bug Fix
+    BUG-A Stage inside txn       :done, bf1, 2026-03-01, 1d
+    BUG-B Soft-delete inquiries  :done, bf2, 2026-03-01, 1d
+    BUG-D Paginate activities    :done, bf3, 2026-03-01, 1d
+    BUG-E stage_changed_at (22pt):done, bf4, 2026-03-01, 1d
+    BUG-F Lost from any stage    :done, bf5, 2026-03-01, 1d
+    ISS-18 Guard lost if quotes  :done, bf6, 2026-03-01, 1d
+
+    section Sprint 6 Production
+    PO Validation workflow       :s6v, 2026-03-16, 2d
+    Full registration gate       :s6r, 2026-03-16, 2d
+    Credit approval flow         :s6c, 2026-03-18, 2d
+    Order to Job Order handoff   :s6a, 2026-03-18, 2d
+    Dispatch + delivery          :s6b, 2026-03-20, 2d
+
+    section Sprint 7 CRM Dashboard
+    Pipeline KPIs widget         :s7a, 2026-03-23, 2d
+    Win/Loss analytics           :s7b, 2026-03-25, 2d
+    Follow-up reminders          :s7c, 2026-03-25, 2d
+    CRM fields full register     :s7d, 2026-03-27, 3d
+    </pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 6: CRM REGISTER MAP                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>6. CRM Register Map — What to Capture at Each Stage</h2>
+  <div class="desc">Sales Rep CRM data entry obligations per stage. <b>Minimal registration at inquiry → Full registration mandatory at PO.</b></div>
+  <table class="stage-table">
+    <thead>
+      <tr><th>Stage</th><th>Who</th><th>What to Register in CRM</th><th>Registration Level</th></tr>
+    </thead>
+    <tbody>
+      <tr style="background:#f0f5ff;"><td>📋 <b>New Inquiry (General)</b></td><td>Sales Rep</td><td>Company Name · Country · Source · Contact (optional) · Est. value · Expected close date · Notes</td><td><span class="pill" style="background:#e6f7ff;color:#096dd9;border:1px solid #91d5ff;">MINIMAL</span></td></tr>
+      <tr><td>📥 <b>Lead / First Contact</b></td><td>Sales Rep</td><td>Company · Contact (name/phone/email/WhatsApp) · Lead source · Product interest · Reference files · <b>Activity Log</b> (calls, visits)</td><td><span class="pill" style="background:#e6f7ff;color:#096dd9;border:1px solid #91d5ff;">MINIMAL</span></td></tr>
+      <tr><td>📝 <b>SAR Pending</b></td><td>Sales Rep</td><td>SAR item list · TDS / spec sheet · Sample submission note · Urgency flag</td><td><span class="pill" style="background:#e6f7ff;color:#096dd9;border:1px solid #91d5ff;">MINIMAL</span></td></tr>
+      <tr><td>🔬 <b>QC In Progress</b></td><td>System / QC</td><td>Sample receipt confirmation · Test parameters · Expected turnaround date</td><td>Auto → CSE Pending</td></tr>
+      <tr><td>📋 <b>CSE Pending / Approved</b></td><td>QC + Prod Mgr</td><td>CSE document · Approval notes · Any spec deviations</td><td>Auto → Estimation unlocked</td></tr>
+      <tr><td>🧮 <b>Estimation</b></td><td>Sales + Costing</td><td>Material cost · MOQ · Tooling cost · Lead time · Target margin</td><td>Unlocks Quotation form</td></tr>
+      <tr><td>💰 <b>Quoted</b></td><td>Sales Rep</td><td>Quote # · Version · Unit price · MOQ · Validity date · Payment terms · Incoterms · Log: sent via email/call</td><td>Awaits customer response</td></tr>
+      <tr><td>🤝 <b>Negotiating</b></td><td>Sales Rep</td><td>Revised quote versions · Counter-offer log · Discount approval trail · Activity log (calls/meetings/emails)</td><td>Price accepted or lost</td></tr>
+      <tr><td>🎉 <b>Price Accepted</b></td><td>Sales Rep</td><td>Accepted price · Accepted qty · Customer verbal/email confirmation log · Branch decision: sample or skip to PI</td><td>→ Sample or PI</td></tr>
+      <tr><td>🏭 <b>Pre-prod Sample</b></td><td>Sales + Production</td><td>Sample spec confirmation · Production request date · Courier details · Customer feedback on receipt</td><td>Sample Approved → PI</td></tr>
+      <tr><td>📄 <b>PI Sent</b></td><td>Accounts / Sales</td><td>PI # · PI date · PI amount · Payment terms · Advance % · Log: PI sent confirmation</td><td>Awaits Customer PO</td></tr>
+      <tr style="background:#fff7e6;"><td>📥 <b>Order Confirmed (PO Received)</b></td><td>Sales Rep</td><td><b>Customer PO # · PO date · PO qty · PO unit price · Delivery date · Ship-to address · Attach PO document</b></td><td><span class="pill" style="background:#fff1f0;color:#cf1322;border:1px solid #ffa39e;">FULL REQUIRED</span></td></tr>
+      <tr style="background:#f6ffed;"><td>🔍 <b>PO Validation</b></td><td>Sales + Finance</td><td>PO vs Quote: price ✅ qty ✅ specs ✅ terms ✅ — Mismatch log · Sales Mgr sign-off</td><td><span class="pill" style="background:#fff1f0;color:#cf1322;border:1px solid #ffa39e;">GATE</span></td></tr>
+      <tr style="background:#fff1f0;"><td>🏢 <b>Full Registration + Credit</b></td><td>Sales + Finance</td><td><b>Tax ID · Full address · Payment terms · Credit limit · Credit approval · Bank details</b></td><td><span class="pill" style="background:#fff1f0;color:#cf1322;border:1px solid #ffa39e;">MANDATORY GATE</span></td></tr>
+      <tr style="background:#e6f7ff;"><td>⚙️ <b>In Production — Handoff</b></td><td>Sales → Production</td><td><b>SO # · Job order · Final spec sheet · Delivery deadline · Priority flag · Linked PO # · Customer delivery contact</b></td><td><span class="pill" style="background:#f6ffed;color:#389e0d;border:1px solid #b7eb8f;">RELEASED</span></td></tr>
+      <tr><td>📤 <b>Ready to Dispatch</b></td><td>QC / Logistics</td><td>Final QC pass · Packing list · Invoice # · Courier / forwarder details</td><td>Dispatch initiated</td></tr>
+      <tr><td>🚚 <b>Delivered</b></td><td>Logistics / Sales</td><td>Actual delivery date · POD (proof of delivery) · Customer sign-off · Claims log if any</td><td>→ Closed</td></tr>
+      <tr><td>❌ <b>Lost</b></td><td>Sales Rep</td><td><b>Loss reason</b> (Price / Competitor / Timeline / Budget / Other) · Competitor name · Re-engage date · <b>⛔ Blocked if active quotations exist</b></td><td>Feeds win/loss analytics</td></tr>
+      <tr style="background:#f9f0ff;"><td>🗑️ <b>Deleted (Soft)</b></td><td>Admin/Sales</td><td>Record hidden via <code>deleted_at</code> timestamp · <code>deleted_by</code> + <code>deleted_by_name</code> audit trail · Recoverable</td><td>Not visible in pipeline</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 7: CRM DASHBOARD KPIs                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>7. CRM Dashboard — Sales Rep Panel Overview</h2>
+  <div class="desc">What the Sales Rep sees in My Pipeline — key widgets and data panels.</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:8px;">
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;">📊 Pipeline Summary</div>
+      <div style="font-size:12px;color:#595959;line-height:1.9;">• Total open deals &amp; value<br/>• Deals by stage (funnel)<br/>• Monthly target vs. actual<br/>• Win rate % (rolling 90d)<br/>• Avg. deal cycle time</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;">🗓️ Today's Actions</div>
+      <div style="font-size:12px;color:#595959;line-height:1.9;">• Overdue tasks / follow-ups<br/>• Deals with no activity &gt;7 days<br/>• Quotes expiring within 3 days<br/>• POs awaiting validation<br/>• Samples pending feedback</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;">📋 Activity Feed</div>
+      <div style="font-size:12px;color:#595959;line-height:1.9;">• Log call / email / meeting<br/>• Notes per deal<br/>• Quote version history<br/>• Stage change audit trail<br/>• Attachments per deal</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;">💰 Quotation Panel</div>
+      <div style="font-size:12px;color:#595959;line-height:1.9;">• Draft / Sent / Accepted / Rejected<br/>• Version control per quote<br/>• Discount approval status<br/>• One-click PI conversion<br/>• PDF quote generation</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;">📦 Order &amp; Production Tracker</div>
+      <div style="font-size:12px;color:#595959;line-height:1.9;">• PO validation status<br/>• SO # linked to PO<br/>• Production stage visibility<br/>• Estimated delivery date<br/>• Dispatch &amp; POD tracking</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;">📉 Win/Loss Analytics</div>
+      <div style="font-size:12px;color:#595959;line-height:1.9;">• Loss reason breakdown<br/>• Competitor comparison<br/>• Stage drop-off analysis<br/>• Quote-to-close time avg.<br/>• Customer re-engagement alerts</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  ProPackHub v26.5 · Flexible Packaging Division · Pre-Sales Cycle Flow<br/>
+  Bug Fix Sprint: soft-delete · stage_changed_at · lost-from-any-stage · quotation guard · paginated activities<br/>
+  21 stages · 16 manual transitions · Updated 2026-03-01
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    securityLevel: 'loose',
+    themeVariables: {
+      primaryColor: '#e6f7ff',
+      primaryBorderColor: '#1890ff',
+      primaryTextColor: '#096dd9',
+      lineColor: '#8c8c8c',
+      secondaryColor: '#fff7e6',
+      tertiaryColor: '#f6ffed',
+      fontFamily: '"Segoe UI", system-ui, sans-serif',
+      fontSize: '13px',
+    },
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis', padding: 15, nodeSpacing: 40, rankSpacing: 50 },
+    stateDiagram: { useMaxWidth: true },
+    gantt: { useMaxWidth: true, fontSize: 12, barHeight: 22, barGap: 4, topPadding: 40, sectionFontSize: 13 },
+  });
+</script>
+</body>
+</html>

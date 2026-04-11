@@ -1,0 +1,403 @@
+[
+  {
+    "id": "V1-001",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Flexographic Printing — Definition and Core Process",
+    "subtopic": "What is Flexography",
+    "tags": ["flexography", "definition", "rotary printing", "relief printing", "anilox", "photopolymer", "rubber plate", "substrate", "roll-to-roll"],
+    "app_modules": ["estimation", "job_entry", "crm_quotation", "knowledge_chat"],
+    "trigger_actions": [
+      "user creates first job",
+      "user asks what is flexography",
+      "user selects process type in estimation",
+      "new user onboarding"
+    ],
+    "ai_use": "Foundation context — retrieved when AI needs to explain the flexographic process to a user or validate that a job is correctly classified as flexographic",
+    "text": "Flexography is a method of direct rotary printing, similar to letterpress, that uses resilient relief-image plates of rubber or photopolymer material. The plates are affixed to plate cylinders and are inked by a cell-structured, ink-metering anilox roll carrying a fast-drying fluid ink to plates that print onto virtually any substrate, absorbent or nonabsorbent. For every revolution of the printing-plate cylinder, an image is produced. The process was developed primarily for printing on packaging substrates — board, paper, foil and film. Materials are commonly supplied in roll form for feeding into form-and-fill, over-wrapping, bag-making and other continuous web-processing machinery. For these applications, roll-to-roll or roll-to-cut printing is required. The four most common flexographic press designs are central impression, stack, in-line and sheetfed. The ink-fountain pan supplies ink to a rubber ink-fountain roll, which supplies ink to the ink-metering (anilox) roll and may come equipped with a reverse-angle doctor blade. The anilox roll transfers a precise amount of ink onto the printing plate, which is mounted onto the printing cylinder. The printing plate on the printing-plate cylinder and the impression cylinder form a nip where the ink is transferred onto the substrate. The fact that flexo printing plates are inked directly by the anilox roll makes the system simple and unique. Flexography uses low-viscosity inks, either solvent- or water-based, which dry very quickly between the print stations of a press.",
+    "cross_references": ["V1-002", "V1-005", "V1-010", "V1-015"]
+  },
+
+  {
+    "id": "V1-002",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Printing Plate Components and Anatomy",
+    "subtopic": "Plate structure — image area, floor, relief, shoulder, caliper, backing",
+    "tags": ["printing plate", "plate anatomy", "image area", "floor", "relief", "shoulder", "caliper", "plate backing", "stickyback", "photopolymer", "rubber plate"],
+    "app_modules": ["plate_inventory", "job_entry", "estimation", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user selects plate type in job entry",
+      "user logs plate damage",
+      "user asks about plate components",
+      "AI validates plate specification for a job"
+    ],
+    "ai_use": "Retrieved when AI needs to explain plate anatomy, validate plate selection, or explain damage in terms of plate structure (e.g. dot loss = relief erosion)",
+    "text": "The key component of the flexographic plate is the raised image area, which carries the image to be printed. A flexographic printing plate has the following components: (1) Image area — the printable raised surface that carries ink to the substrate; (2) Floor — the non-printable recessed area of the plate; (3) Relief — the distance from the floor to the top of the image area; (4) Shoulder — the support structure for the printable area, forming the edge of the image area; (5) Caliper — the total thickness of the plate, measured from backing to image surface; (6) Plate backing — the material on the back of the plate (usually dimensionally stable polyester) that provides stability and prevents distortion during processing and mounting. Unlike the hard metal plates used in letterpress, flexo plates are resilient and displaceable. The plates are attached to the plate cylinders with double-sided adhesive tape called stickyback, which may be solid vinyl or cushion foam type. The caliper (total plate thickness) is critical because it determines the undercut required on the plate cylinder. Plate caliper plus stickyback thickness must equal the cylinder undercut, so that the plate surface sits exactly at the pitch diameter of the driving gear.",
+    "cross_references": ["V1-010", "V1-011", "V1-012", "V4-001"]
+  },
+
+  {
+    "id": "V1-003",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Advantages of Flexography",
+    "subtopic": "Characteristics and competitive advantages of the flexographic process",
+    "tags": ["advantages", "flexography", "substrates", "speed", "inline operations", "color stations", "cost effective", "UV ink", "fluorescent", "metallic"],
+    "app_modules": ["crm_quotation", "estimation", "knowledge_chat"],
+    "trigger_actions": [
+      "user prepares customer quotation",
+      "user asks why flexo vs gravure",
+      "AI generates CRM pitch content",
+      "user compares processes"
+    ],
+    "ai_use": "Retrieved when AI assists in customer-facing explanations, process selection recommendations, or CRM content generation",
+    "text": "Flexographic printing is an efficient, cost-effective and versatile printing method with the following key characteristics and advantages: Prints on a wide variety of absorbent and nonabsorbent substrates. Prints on the reverse side of stretchable, transparent films. Prints using resilient rubber or photopolymer image carriers — millions of impressions can be printed. Allows printing of 10 or more colors because of multiple print stations. Allows continuous pattern printing (giftwrap, wallpaper, floor coverings) because of its near-total variable-repeat-length system. Can achieve press speeds of 2,000 feet per minute or more in certain segments. Prints process color jobs at 175-lpi and higher on smooth-coated substrates. Uses fast-drying solvent, water-based or UV-curable inks. Eliminates back-trap contamination, setoff and trapping problems by allowing wet ink to print over dry ink. Can deliver a predetermined amount of ink with minimum on-press adjustments. Can print using fluorescent and metallic inks. Allows printing-plate cylinders to be taken out of the press to enable printing plates to be mounted and proofed as a prepress operation. Can perform coating and in-line operations such as laminating and diecutting as a continuous operation. Can produce the complete package — folding cartons, displays, multiwall bags, labels — in-line. Is cost effective for many applications. Enables fast turnaround time between jobs. Can make short-run work more profitable. By the end of the 1990s, approximately one quarter of all printing was flexographic; in the packaging segment, flexo enjoys a market share of over 65%.",
+    "cross_references": ["V1-001", "V6-001"]
+  },
+
+  {
+    "id": "V1-004",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Flexography vs Other Printing Processes",
+    "subtopic": "Comparison with Gravure, Offset Lithography, Screen Printing, Letterpress",
+    "tags": ["gravure", "offset", "lithography", "letterpress", "screen printing", "process comparison", "print quality", "run length", "cost comparison"],
+    "app_modules": ["crm_quotation", "estimation", "knowledge_chat"],
+    "trigger_actions": [
+      "customer asks flexo vs gravure",
+      "user preparing process recommendation",
+      "estimation includes process selection step",
+      "AI helps sales team answer competitor comparison"
+    ],
+    "ai_use": "Retrieved when AI needs to compare flexo against other processes for a customer recommendation or when user is deciding which process to quote",
+    "text": "Gravure (Rotogravure): Uses an engraved metal cylinder where image areas are recessed cells. Gravure inks are very fluid with very low viscosity. The cylinder is flooded with ink and the excess wiped by a steel doctor blade. Gravure produces excellent fine halftone reproduction and is used for very long print runs (millions of impressions) where the high cylinder engraving cost is amortized. Gravure cylinder costs are much higher than flexo plate costs, making it less suitable for short to medium runs. Gravure print quality surpasses flexo in fine detail but flexo has closed the gap significantly with digital platemaking. Offset Lithography: Uses a flat plate where image and non-image areas are chemically differentiated. Ink is transferred from plate to rubber blanket, then to substrate (offset principle). Offset uses paste inks (much higher viscosity than flexo). It excels on paper and board but cannot print directly on films and foils without modification. Offset is not suitable for the wide variety of flexible packaging substrates that flexo handles. Letterpress: The original relief printing process. Uses hard plates pressed directly onto substrate with paste inks. Limited to 150-line screen work. Now mainly used for specialty work — numbering, embossing, hot stamping. Virtually replaced by flexo and offset in packaging. Screen Printing (Serigraphy): Forces ink through a mesh stencil with a squeegee. Lays down very heavy ink film. Used for printing on irregular surfaces (bottles, containers). Very versatile but slow; ideal for short runs. Cannot match flexo speeds for packaging production. Key Flexo Advantages over all processes: Lower plate cost vs gravure. Wider substrate range vs offset. Higher speed vs screen printing. Inline operations (lamination, die-cutting) not possible in gravure or offset.",
+    "cross_references": ["V1-001", "V1-003"]
+  },
+
+  {
+    "id": "V1-005",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Evolution of Flexography — Key Milestones",
+    "subtopic": "Historical development from aniline printing to modern CTP platemaking",
+    "tags": ["history", "aniline printing", "anilox roll", "photopolymer", "CTP", "computer to plate", "evolution", "rubber plates", "pin register"],
+    "app_modules": ["knowledge_chat"],
+    "trigger_actions": [
+      "user asks about history of flexo",
+      "training content generation"
+    ],
+    "ai_use": "Background context — retrieved for training, onboarding, or general knowledge queries about the evolution of the process",
+    "text": "Flexography evolved from aniline printing, a rotary letterpress process using rubber plates and aniline dye inks, first used in Europe around 1860. Key milestones in its development: 1890 — First modern aniline press built by Bibby Baron and Sons, Liverpool. 1905 — First patented aniline press by C.A. Holweg (stack-type). 1914 — Bag-making presses with inline printing appear. 1939 — Introduction of the mechanically engraved, chrome-plated anilox roll — a milestone. The anilox roll replaced the crude two-rubber-roll inking system and introduced controlled, metered ink delivery. This is regarded as the single most important development in flexography. 1940s — Introduction of polyethylene packaging substrates forced press redesign for stretchable films. 1945 — First accurate off-press plate mounting and proofing machines developed (Harley, Mosstype). 1950s — Photopolymer plate materials introduced, beginning replacement of molded rubber. 1952 — Name formally changed from aniline printing to flexographic printing. 1970s — Photopolymer plates achieve commercial viability; five US companies selling photopolymers. UV-curable inks introduced on narrow-web presses. 1975 — Stickyback (double-sided adhesive foam tape) developed for mounting photopolymers to plate cylinders. 1980s — Computer-controlled presses with digital drives appear. Preprinted linerboard corrugated emerges. 1990s — Electronic prepress fully adopted. By end of 1997, all graphics were computer-generated and laser-engraved directly to plate negative. Computer-to-plate (CTP) systems for photopolymers introduced — the laser ablates a mask on the uncured photopolymer eliminating film negatives entirely. Sleeve technology grows — enables quick job changeover and flexible repeat lengths with same gearing.",
+    "cross_references": ["V1-001", "V4-001", "V4-002"]
+  },
+
+  {
+    "id": "V1-006",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Plate Distortion and Elongation in Flexographic Printing",
+    "subtopic": "Why flat images elongate when plate wraps around cylinder — distortion compensation",
+    "tags": ["plate distortion", "elongation", "distortion compensation", "repeat length", "cylinder circumference", "image gain", "prepress compensation", "CTP", "Esko"],
+    "app_modules": ["estimation", "job_entry", "esko_export", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "user enters cylinder repeat in estimation",
+      "AI calculates imposition for a job",
+      "user sets up Esko parameters",
+      "prepress operator asks about image shrinkage",
+      "AI validates job parameters before Esko export"
+    ],
+    "ai_use": "CRITICAL — retrieved every time estimation engine calculates repeat dimensions or Esko parameters are generated. AI must apply distortion factor to compensate image shrinkage in repeat direction",
+    "text": "When a flat plate is mounted on a cylindrical plate cylinder, the image elongates in the repeat direction (around the cylinder). This occurs because the outer printing surface of the plate travels a longer circumferential path than the inner backing surface during one cylinder revolution. The amount of elongation is proportional to the plate thickness relative to the cylinder circumference. This means that if an image is prepared at its true final dimensions and imaged onto a flat plate, when that plate is wrapped around the cylinder, the image will print elongated — longer in the print direction than intended. To compensate, the artwork file sent to the CTP system (e.g. Esko CDI) must be pre-shrunk (compressed) in the repeat direction by a calculated distortion factor, so that after mounting and stretching around the cylinder, the image prints at the correct dimensions. Distortion compensation formula: Distortion Factor = (π × 2 × plate_thickness_mm) / cylinder_circumference_mm. Compensated image length = true_design_length / (1 + Distortion_Factor). This compensation must be applied to the repeat direction only — the cross-web direction is not affected. The thicker the plate and the smaller the cylinder, the greater the distortion and the larger the compensation required. This is why thinner plates (1.14mm) produce less distortion than thicker plates (2.84mm), and why large-circumference cylinders produce less distortion than small ones. Every CTP system including Esko CDI applies this compensation digitally when generating the plate exposure file. The correct plate thickness and cylinder repeat must be entered before generating plate files.",
+    "cross_references": ["V1-002", "V1-010", "V4-003", "V4-004"]
+  },
+
+  {
+    "id": "V1-007",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Flexographic Ink Types and Properties",
+    "subtopic": "Solvent-based, water-based, and UV-curable flexo inks — composition and characteristics",
+    "tags": ["ink", "solvent-based ink", "water-based ink", "UV ink", "viscosity", "pigment", "dye", "resin", "adhesion", "low viscosity", "fast drying"],
+    "app_modules": ["estimation", "job_entry", "press_characterization", "knowledge_chat", "crm_quotation"],
+    "trigger_actions": [
+      "user selects substrate in estimation",
+      "AI checks ink compatibility with substrate",
+      "user enters ink type for press characterization",
+      "customer asks about food-safe inks",
+      "AI validates ink system for job"
+    ],
+    "ai_use": "Retrieved when AI needs to validate ink-substrate compatibility, suggest ink type based on substrate and end-use requirements, or flag missing ink system specification in an estimate",
+    "text": "Flexography uses low-viscosity inks which dry very quickly between the print stations of a press. Ink viscosity is like that of a free-flowing liquid, such as light oil or light syrup — fundamentally different from the paste inks used in offset or letterpress. Three main categories of flexo inks exist: (1) Solvent-based inks: Composed of colorant (pigment or dye) in a liquid vehicle of resin and organic solvent. Nitrocellulose is the most common resin, offering good pigment wetting, low odor, good solvent release, high heat resistance and wide compatibility. Polyamide resins are used for excellent adhesion to polyethylene and polypropylene films. Solvent-based inks dry by solvent evaporation. They offer excellent adhesion to non-absorbent films but generate VOC emissions requiring environmental controls. (2) Water-based inks: Use water and co-solvents (amines) as the carrier. Environmentally friendlier than solvent-based. Good for paper, board, and some films. pH control is critical — typically maintained at pH 8.5-9.5. Adhesion to non-absorbent films can require corona treatment of the substrate. (3) UV-curable inks: 100% solids — no solvent to evaporate. The entire ink film deposited on the substrate remains and is hardened (cured/polymerized) by ultraviolet light energy. Typical UV-flexo ink viscosity is 500-1,700 centipoise. More stable than solvent inks — less viscosity drift on press. Do not release VOCs during printing. Used primarily on narrow-web label presses but growing in wide web. Ink components: Colorant (pigment or dye) — provides color, opacity and lightfastness. Pigments are insoluble particles, more opaque and lightfast than dyes. Resin — provides adhesion, gloss, flexibility and substrate compatibility. Solvent/carrier — controls viscosity and drying speed. Additives — control slip, rub resistance, gloss, foam.",
+    "cross_references": ["V1-008", "V5-001", "V5-002", "V5-003"]
+  },
+
+  {
+    "id": "V1-008",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Substrates in Flexographic Printing",
+    "subtopic": "Types of flexible packaging substrates and their printing characteristics",
+    "tags": ["substrate", "BOPP", "PET", "polyethylene", "PE", "polypropylene", "PP", "foil", "paper", "board", "film", "corrugated", "laminate", "non-absorbent", "absorbent"],
+    "app_modules": ["estimation", "job_entry", "press_characterization", "knowledge_chat", "crm_quotation"],
+    "trigger_actions": [
+      "user selects substrate in estimation",
+      "AI checks ink-substrate compatibility",
+      "user enters substrate for press characterization",
+      "estimation includes duplex or triplex structure",
+      "AI validates structure costing completeness"
+    ],
+    "ai_use": "CRITICAL — retrieved when user selects or enters a substrate or structure. AI uses this to validate ink compatibility, suggest press type, flag corona treatment requirements, check lamination adhesive costs in estimate",
+    "text": "Flexography is unique because it was developed primarily for printing packaging materials. Because there are so many kinds of paper, board, plastics, foil and film, the term substrate applies to any surface to be printed. If the material is reasonably smooth and comes in roll form, it can be printed by flexography. For high-quality images, the smoother the substrate the better. Main substrate categories used in flexible packaging: (1) BOPP (Biaxially Oriented Polypropylene): Most common flexible packaging film. Used for wrappers, snack bags, confectionery. Typically reverse printed — image is printed on the inside surface of the transparent film and viewed through the film. Non-absorbent surface requires corona treatment and correct ink/primer system. (2) PET (Polyester film): High clarity, excellent dimensional stability. Used for premium packaging, stand-up pouches, retort pouches. Usually reverse printed. Higher corona treatment requirements than BOPP. (3) PE (Polyethylene): Stretchable film used for bags, stretch wrap, agricultural films. Extensible nature requires CI press for good register. Low surface energy requires corona treatment. (4) CPP (Cast Polypropylene): Used for lamination inner ply in stand-up pouches. Heat-sealable. (5) Aluminum Foil: High barrier material used for coffee, pharmaceutical, confectionery packaging. Either surface or reverse printed. Requires adhesion-promoting ink systems. (6) Paper/Kraft: Absorbent substrate. Surface printed. Different ink and drying requirements — faster ink absorption assists drying. Used for bags, wrapping paper, labels. (7) Metallized Films: Film with vacuum-deposited aluminum layer. Gives metallic appearance. Requires adhesion-promoting inks. Common in confectionery and snack packaging. (8) Laminates/Duplex/Triplex structures: Two or more substrates bonded together. For example BOPP/PE duplex — BOPP gives printability and stiffness, PE gives heat-seal layer. Costing must include: substrate cost per ply, lamination adhesive cost, corona treatment, and appropriate ink system for the print ply.",
+    "cross_references": ["V1-007", "V5-004", "V5-005"]
+  },
+
+  {
+    "id": "V1-009",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Flexographic Press Designs — Four Main Types",
+    "subtopic": "Central Impression (CI), Stack, In-line, and Sheetfed press configurations",
+    "tags": ["press design", "CI press", "central impression", "stack press", "inline press", "sheetfed", "press configuration", "register", "color stations", "wide web", "narrow web"],
+    "app_modules": ["machine_settings", "job_entry", "estimation", "press_characterization", "knowledge_chat"],
+    "trigger_actions": [
+      "user selects machine in job entry",
+      "user configures machine settings",
+      "estimation links machine to press type",
+      "AI recommends press for a substrate",
+      "user asks why CI press for extensible film"
+    ],
+    "ai_use": "Retrieved when AI needs to explain machine selection rationale, validate press type against substrate, or configure press characterization parameters. BOBST, UTECO, CARINT, M6 = CI presses. KYMC = CI. FT = stack or inline. HONG YANG = specialty.",
+    "text": "The four most common flexographic press frame designs are: (1) Central Impression (CI) Press: Has a common large impression cylinder around which two to eight print stations are positioned. All color stations share one drum — the web is locked to the impression cylinder as it passes all stations. This is the key advantage: because the web does not leave the support of the impression cylinder between stations, CI presses deliver the tightest register capability (±0.1-0.15mm). This makes CI the press of choice for extensible substrates (PE, BOPP, CPP) that would stretch under the unsupported tension between stations on a stack press. The most common CI press in wide web is 6-color; 8 and 10-color CI presses are standard today. Impression cylinders range from 30 inch to 94 inch diameter. (2) Stack Press: Individual color stations stacked one above the other on one or both sides of a vertical main press frame. Each station is independent — the web travels unsupported between stations. Up to 8 color stations. Advantages: can print both sides in one pass (reverse the web), easy operator access, ability to print large repeats. Register capability: ±0.030-0.050 inch — less tight than CI. Suitable for paper, board, heavier gauges that don't stretch. (3) In-line Press: Color stations positioned in a horizontal straight row (tandem). 6 to 9 colors common. Used primarily for narrow-web label printing. Each station is independent. Can incorporate die-cutting, lamination, inspection inline. Register: ±0.020-0.030 inch. (4) Sheetfed Press: Used for corrugated post-print. Combined corrugated board is fed in sheet form. Each press has a fixed plate cylinder — the repeat cycle cannot be changed. Sheetfed presses are either bottom printers or top printers.",
+    "cross_references": ["V1-001", "V1-010", "V6-001", "V6-002"]
+  },
+
+  {
+    "id": "V1-010",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Plate Cylinder — Types, Undercut, and Diameter Relationship",
+    "subtopic": "Plate cylinder types (integral, demountable, magnetic, sleeve), undercut calculation, pitch diameter rule",
+    "tags": ["plate cylinder", "undercut", "pitch diameter", "integral cylinder", "demountable cylinder", "sleeve", "magnetic cylinder", "stickyback", "plate caliper", "cylinder diameter"],
+    "app_modules": ["machine_settings", "cylinder_repeats", "estimation", "job_entry", "esko_export", "knowledge_chat"],
+    "trigger_actions": [
+      "user enters plate thickness in estimation",
+      "user configures cylinder repeats for a machine",
+      "estimation engine calculates plate area",
+      "Esko export requires cylinder undercut value",
+      "AI validates plate-cylinder combination"
+    ],
+    "ai_use": "CRITICAL for estimation engine — retrieved when calculating cylinder undercut, validating plate thickness vs. cylinder specification, or generating Esko parameters. The undercut rule is fundamental to correct impression setting.",
+    "text": "The plate cylinder is usually steel and is installed between the ink-metering roll and the impression cylinder. Printing plates are mounted to the plate cylinder with stickyback. The total plate-cylinder diameter, including stickyback and printing plate, must equal the pitch diameter of the driving gear. Therefore, for a given print-repeat length, the bare cylinder diameter of the plate cylinder must be reduced or 'undercut' to accommodate the combined thickness of the stickyback and printing plate. This means: Undercut = Plate Caliper + Stickyback Thickness. If the wrong plate caliper or wrong stickyback thickness is used, the plate surface will sit above or below the pitch diameter — causing incorrect impression, registration errors, and plate damage. Four types of plate cylinders exist: (1) Integral: The cylinder body, end-caps and shaft are all one unit. Small cylinders (under 3 inch diameter) are usually one solid piece of steel. (2) Demountable: The cylinder face (core) is made to fit a prescribed shaft or mandrel. The core can be removed and replaced, allowing the same shaft to carry different repeat-length cores. (3) Magnetic: An integral cylinder generating a magnetic field to hold steel-backed printing plates — eliminates stickyback. (4) Sleeve: A thin-walled tube that slides onto a specially bored cylinder mandrel. High-pressure air enters through the mandrel, expands the resilient sleeve, and allows it to float into position. When air is released, the sleeve grips the mandrel tightly. Sleeve advantages: quick on-press plate remounting when a job is re-run; flexibility of different repeat lengths with the same gearing; ability to change to a thinner plate using the same undercut plate cylinder. The pitch diameter is the dimension of a circle through the gear teeth where the space between the teeth equals the thickness measured along the arc of the pitch circle. In the US, flexo presses use either 1/4 inch circular pitch or 10 diametrical pitch gearing.",
+    "cross_references": ["V1-002", "V1-006", "V1-011", "V1-012"]
+  },
+
+  {
+    "id": "V1-011",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Repeat Lengths, Gears, and Cylinder Circumference",
+    "subtopic": "How gear pitch determines available repeat lengths — the fundamental repeat calculation",
+    "tags": ["repeat length", "gear pitch", "cylinder circumference", "tooth count", "print repeat", "cutoff", "repeat calculation", "gear pitch formula", "metric gear", "diametrical pitch", "circular pitch"],
+    "app_modules": ["machine_settings", "cylinder_repeats", "estimation", "job_entry", "esko_export", "knowledge_chat"],
+    "trigger_actions": [
+      "user sets up cylinder repeats for a machine",
+      "estimation engine selects best repeat for design dimensions",
+      "user enters cutoff and machine in estimation",
+      "AI suggests optimal repeat for minimum waste",
+      "Esko export generates repeat parameter"
+    ],
+    "ai_use": "CRITICAL — the core of the estimation repeat calculation. Retrieved every time the estimation engine needs to select a cylinder repeat. All available repeats for each machine are fixed multiples of gear pitch × tooth count. The AI must use this to select the best repeat.",
+    "text": "In any printing process, each color station must register properly with the others. To prevent smearing, the surface speed of the plate cylinder, anilox roll and impression cylinder must be identical; therefore the three rolls are geared together. The plate cylinder diameter governs the repeat length: the smaller the cylinder diameter, the shorter the repeat length; the larger the diameter, the longer the repeat. The available repeat lengths for any press are determined by the gear pitch — the spacing of gear teeth measured around the pitch circle. Each repeat is: Repeat Length = Gear Pitch × Number of Teeth. In US presses using 1/4 inch (0.25 inch) circular pitch: Repeat = 0.25 × Tooth Count. In metric presses: Module = Metric Pitch Diameter (mm) / Number of Teeth; Repeat = π × Pitch Diameter = π × Module × Tooth Count. Because gear tooth counts must be whole numbers, available repeats are discrete steps — you cannot use an arbitrary repeat, only specific repeat values that correspond to available gear/tooth combinations. For the estimation engine: (1) Each machine has a defined gear pitch and a list of available tooth counts. (2) Available repeats = gear_pitch × each available tooth count. (3) For a given design cutoff (height), find the smallest available repeat ≥ design_cutoff. (4) Calculate ups around = floor(repeat / cutoff). (5) Waste % = (repeat - ups_around × cutoff) / repeat × 100. (6) Also evaluate if a larger repeat gives significantly more ups around, which could offset the larger repeat cost. The pitch diameter of the plate cylinder gear must equal the diameter of the top of the printing plate mounted to the plate cylinder. The pitch diameter of the anilox roll gear must be identical to the outer diameter of the anilox roll. The pitch diameter of the impression roll gear must equal the impression roll diameter plus twice the substrate thickness.",
+    "cross_references": ["V1-010", "V1-012", "V1-006"]
+  },
+
+  {
+    "id": "V1-012",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Impression Cylinder — Function, TIR, and Station Control",
+    "subtopic": "Impression cylinder role, total indicated runout (TIR) tolerances, impression setting procedure",
+    "tags": ["impression cylinder", "TIR", "total indicated runout", "impression setting", "station control", "register", "concentricity", "CI press", "nip", "substrate support"],
+    "app_modules": ["press_characterization", "damage_log", "production_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user logs plate damage from mechanical cause",
+      "AI diagnoses register-related damage reason",
+      "press characterization data entry",
+      "user asks about impression control"
+    ],
+    "ai_use": "Retrieved when AI diagnoses mechanical press issues contributing to plate damage or print defects. TIR tolerance values are used to classify whether a mechanical issue is within acceptable limits.",
+    "text": "The impression cylinder is smooth, highly polished and supports the substrate when it contacts the printing plate. On most stack and in-line presses the impression cylinder is a plain steel roller that supports the web within each print station. On a CI press, the impression cylinder is a single large drum with an arrangement of satellite print stations. Total Indicated Runout (TIR): The TIR of the impression cylinder support surface affects print quality. TIR better than 0.0005 inch (0.012mm) are common on high-quality presses. The surface speed of the substrate on the impression cylinder must match the surface speed of the printing plate and the anilox roll — otherwise slurring, halos, smearing and reduced plate life will result. For high-quality printing, the accuracy of cylinder diameters, concentricity, gearing and bearing fit cannot be overstressed. Station control — impression setting: The setting of impressions of the anilox roll to the plate cylinder, and plate contact with the web, requires fine control. Most press manufacturers design the adjustment through very finely threaded screws. With fine-thread adjustment it is easier to set impression for tone work. CRITICAL RULE: When the print cylinder is stationary and impression is OFF, the fountain/anilox will separate from the plate cylinder and the plate cylinder from the web, both by roughly 1/32 inch. If impression settings were made with impression OFF and then impression is activated, the plate cylinder moves 1/32 inch toward the impression cylinder — this would damage the plate. Therefore station setups MUST be done when impressions are set to the ON position. If ink has been applied to plates before the press is stopped, it may be necessary to clean dried ink from the plates before restarting.",
+    "cross_references": ["V1-009", "V1-011", "V6-003"]
+  },
+
+  {
+    "id": "V1-013",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Anilox Roll — Function, Cell Structure, and Ink Volume",
+    "subtopic": "Anilox cell geometry, BCM measurement, cell count selection, doctor blade requirements",
+    "tags": ["anilox roll", "anilox cell", "BCM", "billion cubic microns", "cell volume", "cell count", "lines per inch", "LPI", "doctor blade", "ink metering", "chrome anilox", "ceramic anilox", "laser engraved", "ink transfer"],
+    "app_modules": ["press_characterization", "machine_settings", "damage_log", "production_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user configures press characterization anilox parameters",
+      "AI diagnoses dot gain damage",
+      "user logs anilox damage reason",
+      "AI suggests anilox BCM for process vs line work",
+      "user asks about anilox selection"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI analyzes dot gain damage patterns, validates anilox selection for a job type, or configures press characterization. Dot gain is directly linked to anilox BCM — over-inking causes dot spread and 'Screen Dot Gain More' damage entries.",
+    "text": "The purpose of the anilox roll is to transfer a measured, controlled amount of ink to the surface of the printing plate. The surface of the anilox roll is covered with tiny engraved cells spaced from 80 to 1,200 per linear inch. The amount of ink delivered to the plates is metered by the screen size of the cells. The coarser the cell count, the larger and deeper the cells; conversely, the higher the screen count, the smaller the cells. The volume of ink in the cells is measured in billion cubic microns (BCM) per square inch. Example: a 200-line anilox (200 cells/inch) has 200 × 200 = 40,000 cells per square inch. A 400-line anilox has 400 × 400 = 160,000 cells per square inch. As cell count increases, cell volume decreases. Anilox construction types: (1) Plain steel, chrome-matte finished — earliest type, inconsistent; (2) Chrome-plated mechanically engraved cells — standard for many years; (3) Ceramic-coated mechanically engraved — improved wear life; (4) Ceramic-coated laser-engraved — current premium standard. Cell counts up to 1,200 per linear inch; consistent cell volumes; longest roll life. For process printing (halftones, CMYK): high cell count 600-800 cells/inch, lower BCM needed to avoid over-inking and dot gain. For line work (solids, text): lower cell count 400-550 cells/inch, higher BCM for full ink coverage on solids. Doctor blade requirements: The blade should make contact at a 30° angle with the tangent point of the anilox roll. The TIR of the anilox must not exceed 0.0005 inch. The anilox roll in the ink distribution system must continue rotating when the press is in non-printing mode — if stopped, ink dries in cells and controlled transfer is lost. Anilox damage is a documented cause of plate damage — 'Anilox damaged the plate' appears in damage records when anilox surface defects cause mechanical plate damage.",
+    "cross_references": ["V1-014", "V1-012", "V5-001"]
+  },
+
+  {
+    "id": "V1-014",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Inking Systems — Two-Roll, Doctor Blade, and Chambered Doctor Blade",
+    "subtopic": "Three inking system configurations used in flexographic presses",
+    "tags": ["inking system", "fountain roll", "doctor blade", "chambered doctor blade", "two-roll system", "reverse angle blade", "viscosity control", "ink metering", "enclosed blade", "chambered system"],
+    "app_modules": ["press_characterization", "machine_settings", "knowledge_chat"],
+    "trigger_actions": [
+      "user configures press inking system type",
+      "AI explains ink viscosity requirements by system type",
+      "user asks about chambered blade vs open fountain"
+    ],
+    "ai_use": "Retrieved when AI configures press parameters or explains ink delivery system differences. Chambered doctor blade (enclosed system) is standard on modern wide-web CI presses (BOBST, UTECO, CARINT, M6).",
+    "text": "Three inking system configurations are used in flexographic presses: (1) Two-Roll Ink-Metering System: Consists of four rolls — ink-fountain roll, anilox roll, plate cylinder and impression cylinder. The fountain roll rotates in a reservoir of flexo ink, picking up ink and delivering it to the anilox roll. The fountain roll is driven slower than the anilox roll — this wiping action doctors the ink to an even film. The fountain roll is subjected to fairly high nip pressures. Ink on the land areas of the anilox must be removed by the fountain roll's wiping action, leaving only cell-carried ink to transfer to the plate. (2) Two-Roll with Doctor Blade: Same as above plus a doctor blade on the anilox roll. The doctor blade removes excess ink from the anilox land areas more precisely than the fountain roll alone. The blade should make contact at 30° angle to the anilox tangent point. Useful for halftone screens and process colors. (3) Chambered Doctor Blade System (most common on modern wide-web CI presses): Two doctor blades — a reverse-angle metering blade and a trailing containment blade — form an enclosed box against the anilox roll, sealed at both ends with flexible sealing material. Ink is pumped into the chamber (typically at the middle for wide presses). Advantages: entire inking system from ink kit to anilox never exposed to air; ink volume through the pumped system is reduced; tight viscosity control is possible; minimal ink skin formation. Standard on high-speed, wide-web presses and corrugated post-print presses. Automatic wash-up systems are typically integrated with chambered systems on modern presses.",
+    "cross_references": ["V1-013", "V6-001"]
+  },
+
+  {
+    "id": "V1-015",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Stickyback — Types and Selection for Plate Mounting",
+    "subtopic": "Solid vinyl vs cushion foam stickyback — selection criteria and effect on print quality",
+    "tags": ["stickyback", "mounting tape", "cushion foam", "solid vinyl", "plate mounting", "impression", "dot gain", "compressible", "mounting adhesive", "plate cylinder"],
+    "app_modules": ["job_entry", "estimation", "esko_export", "press_characterization", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user specifies stickyback in job parameters",
+      "Esko export requires stickyback thickness",
+      "AI advises stickyback type for job content",
+      "user asks about impression-related dot gain",
+      "damage reason includes mounting issue"
+    ],
+    "ai_use": "Retrieved when AI validates stickyback selection for a job or calculates cylinder undercut. Wrong stickyback causes over/under impression leading to dot gain (soft) or poor ink transfer (hard) — both documented damage categories.",
+    "text": "Stickyback is the double-sided adhesive tape used to mount photopolymer or rubber printing plates to the plate cylinder. It was developed in 1975 when more aggressive adhesives became necessary to keep polyester plate backings from pulling free. Several companies came out with cushion-foam stickyback at that time. Two main types of stickyback exist: (1) Solid Vinyl Stickyback (Hard): A firm, non-compressible double-sided adhesive tape. Recommended for: line work — clean edges on text, reverses and barcodes; solid area printing where controlled ink coverage is critical; situations where consistent repeat-to-repeat impression is required. Does not compress under impression so dot size is controlled and dot gain is minimized. (2) Cushion Foam Stickyback (Soft): A compressible foam-based double-sided tape. Recommended for: solids and large area vignettes — the foam absorbs impression variation and gives more uniform ink coverage across uneven surfaces; rough or textured substrates where the foam compensates for surface irregularity. Risk: the compressibility of the foam can increase dot gain in halftone areas — dots spread more because the plate is pushed deeper into the substrate on each impression. Stickyback thickness directly affects cylinder undercut: Total undercut required = plate caliper + stickyback thickness. Using wrong stickyback thickness means the plate sits at the wrong printing diameter, causing incorrect impression and registration errors. Typical stickyback thickness: 0.2mm to 0.5mm. Stickyback adhesive strength must be matched to plate type — photopolymers and rubber plates may require different adhesive grades.",
+    "cross_references": ["V1-002", "V1-010", "V4-005"]
+  },
+
+  {
+    "id": "V1-016",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Web Press Sections — Unwind, Print, Drying, Rewind",
+    "subtopic": "Four sections of a flexographic web press and their functions",
+    "tags": ["web press", "unwind", "infeed", "print section", "drying section", "rewind", "web tension", "inter-station dryer", "hot air dryer", "after-dryer", "web guide", "auto splice"],
+    "app_modules": ["machine_settings", "job_entry", "production_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user configures machine settings",
+      "AI explains press operation to operator",
+      "production log includes drying issue"
+    ],
+    "ai_use": "Background operational knowledge — retrieved when AI needs to explain press sections to operators or validate machine configuration entries",
+    "text": "Flexographic web-fed presses consist of four main sections: (1) Unwind and In-feed Section: The roll stock to be printed must be held under control so the web unwinds with proper alignment and sufficient tension to prevent slack and wrinkles. If web tension is too great, stretching and breakage occur — critical for extensible films. An effective unwind and infeed system includes: multiple unwind positions; rotating turrets for easier reloading; semi-automatic chucking; precision bearings; automatic side-guide control; automatic tension control with tension-sensing devices; driven in-feed rolls; and automatic (flying) roll splicing. (2) Printing Section: A single-color station consists of a fountain roll (or wipe roll), anilox roll, plate cylinder and impression roll. Most presses are multicolor with two to eight stations. (3) Drying Section: Includes between-color drying capacity to print color-on-color. An after-dryer removes remaining liquid vehicle before winding. The most common method is high-velocity heated air, although infrared heating may also be used. Between-station dryers are critical for wet-on-dry printing — each color must be dry before the next color station prints over it. (4) Out-feed and Rewind Section: The rewind shaft must be driven (opposite of unwind which is braked). Web tension must be controlled and limited to the minimum necessary to keep the substrate level, unwrinkled and taut. Rewind section features: multiple rewind positions; rotating turrets for unloading; anti-friction bearings; web-tension sensing devices; tension controls programmed to reduce tension as roll diameter increases; driven out-feed rolls; chill rolls; automatic transfer; slitting devices; static eliminators; and moving web-inspection devices.",
+    "cross_references": ["V1-009", "V6-001"]
+  },
+
+  {
+    "id": "V1-017",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Mounting and Proofing Devices",
+    "subtopic": "Off-press plate mounting and proofing equipment — purpose, registration systems",
+    "tags": ["mounting", "proofing", "off-press mounting", "pin register", "optical registration", "video microscope", "mounter-proofer", "register", "color proof", "sleeve mounting"],
+    "app_modules": ["job_entry", "prepress_checklist", "production_log", "knowledge_chat"],
+    "trigger_actions": [
+      "job status advances to MOUNTED",
+      "prepress checklist step — mounting check",
+      "AI validates mounting registration",
+      "damage log includes mounting-related damage"
+    ],
+    "ai_use": "Retrieved when AI validates prepress workflow completion at mounting stage or diagnoses mounting-related damage (e.g. folded plate during demounting, register issue cut the plate)",
+    "text": "Mounting and proofing devices are a basic requirement for good flexographic printing practices. These machines provide a means for mounting multicolor jobs in exact register. They are also used to make-ready the printing plates to achieve uniform impression across and around the cylinder before installing the job in the press. Full-color proofs can be made that graphically indicate color trapping, print copy, print positioning and plate height uniformity. The proof can be folded into a mockup of the finished job to confirm all copy is in the right place. Mounting and proofing registration systems are generally: (1) Optical — using a split-mirror principle that superimposes the image of the plate being mounted over the proofed image of the previously mounted key plate; (2) Punched hole and pin — plates are punched with holes at precise reference points that fit over accurately positioned pins on the cylinder; (3) Video microscope — electronic camera and monitor system for precise alignment. Mounting plates on sleeves enables jobs to be remounted on press quickly and with excellent, repeatable registration. The purpose of mounting and proofing is to prove that the job is press-ready: it is properly laid out and positioned to conform to end-use specifications; the correct copy is mounted on an approved color cylinder in appropriate register; plates, cylinders, gears and bearings are sufficiently mechanically accurate to perform within acceptable standards. Minimum checklist for documenting a print job: (1) Plate type, caliper and plate condition; (2) Cylinder ID and TIR (total indicated runout) of each cylinder; (3) Mounting tape used for each color; (4) Any makeready done for each color; (5) Problems encountered and solutions.",
+    "cross_references": ["V1-002", "V1-010", "V4-005", "V4-006"]
+  },
+
+  {
+    "id": "V1-018",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Design Rolls and Sleeve Technology",
+    "subtopic": "Design rolls for seamless printing, sleeve plate cylinders — advantages for repeat flexibility",
+    "tags": ["design roll", "sleeve", "seamless", "continuous repeat", "sleeve cylinder", "repeat flexibility", "laser engraved roll", "photopolymer roll", "giftwrap", "continuous pattern"],
+    "app_modules": ["machine_settings", "job_entry", "estimation", "knowledge_chat"],
+    "trigger_actions": [
+      "job type is continuous pattern or giftwrap",
+      "user asks about sleeve vs cylinder",
+      "machine has sleeve capability configured"
+    ],
+    "ai_use": "Retrieved when AI explains sleeve advantages or when job involves seamless/continuous repeat designs",
+    "text": "Design rolls are mainly used to produce continuous-repeat designs such as giftwrap, wallpaper, floor coverings and decorative patterns. The procedure involves vulcanizing rubber to a bare cylinder and grinding the rubber to a desired diameter for the exact print repeat length needed, then hand-cutting the face of the rubber to remove the nonprinting areas. A far more popular method laser-engraves the image into a ground rubber roll directly from computer-generated artwork. Seamless imaged photopolymer rolls are also available. Sleeve technology: Sleeves slide onto specially bored cylinders by allowing high-pressure air to enter through the side and exit through holes in the face of the cylinder. The introduction of air slightly expands the resilient sleeve and permits it to float into position. When the air is released, the sleeve grips the mandrel firmly. Sleeves come in a variety of materials including metal and composites, and different constructions including varying wall thickness and cushioned sleeves. Key advantages of using sleeves: (1) Quick on-press plate remounting when a job is rerun — sleeve can be stored with plates mounted and reused directly on press; (2) Flexibility of different repeat lengths with the same gearing — different diameter sleeves give different repeats without changing the mandrel; (3) Ability to change to a thinner plate using the same undercut plate cylinder — a different-diameter sleeve compensates for the plate thickness difference.",
+    "cross_references": ["V1-010", "V1-011"]
+  },
+
+  {
+    "id": "V1-019",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Flexo Imposition — Number of Ups Calculation",
+    "subtopic": "Calculating ups across web width and around cylinder repeat for packaging estimation",
+    "tags": ["imposition", "ups", "number of ups", "across the web", "around the cylinder", "reel width", "usable width", "cutoff", "repeat", "waste", "efficiency", "packaging imposition"],
+    "app_modules": ["estimation", "esko_export", "knowledge_chat"],
+    "trigger_actions": [
+      "estimation engine calculates imposition",
+      "user enters design dimensions in estimation",
+      "AI optimizes repeat selection for minimum waste",
+      "Esko export requires ups across and around"
+    ],
+    "ai_use": "CRITICAL — the core imposition calculation. Retrieved every time estimation engine runs imposition. AI must calculate and optimize ups across web and around cylinder to minimize substrate waste and maximize output per press revolution.",
+    "text": "Imposition in flexographic packaging is the process of determining how many copies of the design fit on the press web per cylinder revolution. It has two dimensions: (1) Across the web (cross-web direction): Ups across = floor(usable_web_width / design_width). The usable web width is the reel width minus edge trim allowance (typically 10-20mm total both edges). For a design 100mm wide on a web with 850mm usable width: Ups across = floor(850 / 100) = 8 ups across. (2) Around the cylinder (repeat direction): The repeat must be one of the available cylinder repeats for the machine (gear pitch × tooth count). Ups around = floor(chosen_repeat / design_cutoff). For a design cutoff of 150mm and a chosen repeat of 450mm: Ups around = floor(450 / 150) = 3 ups around. Total ups = Ups across × Ups around = 8 × 3 = 24 total impressions per revolution. Waste calculation: Repeat waste % = (repeat - ups_around × cutoff) / repeat × 100. Optimization logic: For each available repeat ≥ design_cutoff, calculate total ups and waste %. Select the repeat that gives the best balance of maximum total ups and minimum waste. A larger repeat may give more ups around that more than compensates for the larger cylinder cost. Always present the estimation user with the best 2-3 repeat options ranked by efficiency. Plate area calculation: The plate must cover the full imposition across the web and around the repeat. Plate area = (ups_across × design_width × ups_around × cutoff) in cm². This is the area of raw plate material consumed per color per job.",
+    "cross_references": ["V1-011", "V1-006", "V1-010"]
+  },
+
+  {
+    "id": "V1-020",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 1,
+    "chapter": "Introduction",
+    "topic": "Flexo Press as Coating Station — Varnish and Adhesive Applications",
+    "subtopic": "Using flexo print units for OPV coating and adhesive application inline",
+    "tags": ["coating", "overprint varnish", "OPV", "adhesive coating", "inline coating", "lacquer", "protective coating", "flexo coating station"],
+    "app_modules": ["estimation", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "estimate includes OPV or coating line item",
+      "job includes varnish in color count",
+      "AI checks if coating cost is included in estimate"
+    ],
+    "ai_use": "Retrieved when AI validates estimate completeness — coated jobs must include varnish plate cost, varnish material cost, and confirm the press has a coating station. AI flags missing coating line items.",
+    "text": "Coating is the process of laying down overprint varnishes (OPV) on top of printing or applying adhesives to substrate surfaces. The flexographic printing process, properly adapted, can be used as a coating station. This is achieved by replacing the printing plate with a smooth-faced blanket plate on the plate cylinder. The anilox roll meters the coating material and transfers it to the blanket, which applies a uniform coating layer to the substrate. Applications include: (1) Overprint Varnish (OPV) — a clear protective coating applied over the printed surface to improve rub resistance, gloss, and moisture resistance. OPV is always the last unit in the press sequence. (2) Primer/corona treatment alternative — some substrates benefit from a primer coating applied as the first unit before printing to improve ink adhesion. (3) Cold seal adhesive — applied to packaging that requires peel-seal without heat, such as confectionery wrappers and ice cream packaging. Cold seal is typically applied on a reverse-side (non-printed) unit. (4) Lamination adhesive — applied between substrate plies in inline lamination systems. When estimating jobs with OPV or coating, the following cost items must be included: coating plate (blanket plate) cost, varnish or adhesive material cost per kg, application coverage area (g/m²), dryer energy for curing the coating, and press time for the coating unit setup.",
+    "cross_references": ["V1-003", "V1-007"]
+  }
+]

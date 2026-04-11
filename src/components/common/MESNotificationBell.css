@@ -1,0 +1,69 @@
+.mes-notif-bell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mes-notif-bell:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.mes-notif-bell.is-trip-highlight {
+  background: rgba(24, 144, 255, 0.12);
+}
+
+.mes-notif-bell.is-trip-highlight .mes-notif-icon {
+  color: #1890ff;
+}
+
+.mes-notif-icon {
+  font-size: 18px;
+}
+
+.mes-notif-dropdown {
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.mes-notif-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mes-notif-loading {
+  padding: 20px;
+  text-align: center;
+}
+
+.mes-notif-item {
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.mes-notif-item.is-unread {
+  background: #f6ffed;
+}
+
+.mes-notif-item:hover {
+  background: #fafafa;
+}
+
+.mes-notif-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}

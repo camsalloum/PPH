@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>SALES VOLUME PERFORMANCE REPORT - Q1 2025</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        :root {
+            --primary-color: #003366;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #f1c40f;
+            --danger-color: #e74c3c;
+            --light-bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: var(--light-bg);
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--primary-color);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin: 0;
+            padding: 10px 0;
+        }
+
+        .header-logo {
+            max-height: 100px;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            margin: 40px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background-color: #f0f8ff;
+        }
+
+        .positive {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .negative {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+
+        .warning {
+            color: var(--warning-color);
+            font-weight: bold;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 600px;
+            margin: 20px 0;
+        }
+
+        .metric-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 0 -10px;
+        }
+
+        .metric-card {
+            flex: 1 1 200px;
+            padding: 20px;
+            margin: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 1em;
+        }
+
+        .action-items {
+            list-style: none;
+            padding: 0;
+        }
+
+        .action-items li {
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .action-items strong {
+            color: var(--primary-color);
+        }
+
+        .tab-container {
+            margin: 20px 0;
+        }
+
+        .tab-instructions {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 12px 25px;
+            margin: 0 5px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-bottom: 3px solid transparent;
+            border-radius: 5px 5px 0 0;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-button:hover {
+            background: #e0e0e0;
+            transform: translateY(-3px);
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+        }
+
+        .tab-button.active {
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+            background: #e6f7ff;
+            font-weight: bold;
+        }
+
+        .tab-button:after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--primary-color);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tab-button.active:after {
+            opacity: 1;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media screen and (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .metric-card {
+                flex: 1 1 100%;
+                margin: 10px 0;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAKBAzkDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAozTHkSNcuwUepqFr+0X71xGP8AgVFgLNFUH1nTY/v3sK/Vqqv4r0GM4fVbVfrJT5ZdhXRs0Vhf8Jl4c/6DNp/38FOXxd4ec4XV7Q/SQU+SXYLo26Kzo9d0uX/V30DfRqnXULR/u3EZ+hpcrC6LVFICCAQeKWkMKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAEpryLGMsQBVW91GCyjLSMBivMPF3xDSEPHBID6VrToym9CJTUTuNa8RWNpCRK4IHYNXmuu/EG0iD+SG49DXmOq+JbzUZWLSMAT2asVndz8zFvrXp0sIorU5J129jr77xzcXOfLkYA+tYdxrl1MCfMOay6TNdUacV0MHVky1/aN3nJkqzHrFxGQQ9ZtFVyoXOzqbHxld2zANKcV22hfECAugnLH8a8fp6yMhBDEfQ1lOhGRcarR9Y6P4ps9QiQK4HHc10KSK4ypBHtXyPpPiK60+ZWEj4B6bq9o8H+PY7xI45pBn615tfCOOqOunWUj1MUVDb3CXMSujAgipq4tjoCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooATpWZq2rw6dbs7sMj3qfUr6OytWkdgMCvBvHXjN7qd4YnyvIODW9Ci6jM6lRRQvjPx9JcSvDbyEcmvNLm7lunLyNkmo5ZWmcsxJz6mmV7VOkoLQ86dRyYUlGaWtTMSjFLRQAlLRRQAc0lLRQAVcsNRnsJleJ8YqnR2pNJqzGm0fQfgHxiLuJIZXyQAOTXqMbh0DCvkXw5q8ml36OrHBbpmvpLwhry6pYISwycCvIxdDlfMj0KNTmWp1dFIKWuE6AooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigApkjiNCxPAp9cv4y1ldN0uQh8PjpmqhHmlYmTsrnB/EPxf5YeCNzkHHBrxK6uGuJmdjnJrR17U31C/kcsSCfWsivdoUlCJ51WpzMTNLSd6Wt7GIlLRRQAUUUUAFFFFABRRRQAUUUUAGSCCOvavU/hjrskNxFA78eleWVueF79rTVYznArGtBSjY1pStI+tbaUS26uDwRU1Yfhq7FzpkRBz8grcrwJKzsemndBRRRSGFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQBHLIsUbOx4AJrwz4m6/wCZO0KN8pBFex69dLbaZKxbB2mvlzxVfm81KQls4Y13YKnzSuc2IlZGAzFmJPWm0tFewkcAneloooEFFFFABRRRQAUUUUAFFFFABRRQaACp7OTyrlWzjmoBQTyMetJ6opbn058PrvztPRc9Eru68p+FsxazwT0WvVR0rwcQrTZ6dP4RaKKKwNAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKQ9DQBwPxJ1E2emnBxnivm68k825kYnqxr2/4sXWbPZn+KvCnJLt9a9nBxtA4MRK7sJRRRXacoUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUncfWlpUXe4FJjW5738Kv+PY/SvWx0ryv4WwFLbkcEV6pXhYn4z1KXwhRRRXOaBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAU1/un6U6mv8AdP0o6geI/FQnYw7bq8Zb7x+tezfFQHaT/tV4w33j9a9zC/AediPiCiiiuo5wooooAKKKKACiiigAooooAKKKKACiiigBKs2UZluVUVXrb8M2ZutSRQM9KibsmVBXZ9A/D60MOnoSP4RXd1h+GbQW2lxDHO2tyvAqu8mepBWQUUUVmWFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABSEZGPalooA8d+LFqRabx3avCm+8w96+lfiRp7XWlkhemTXzZLxcSqezEV7WDleBwYhWY2iiiuw5QooooAKKKKACiiigAooooAKKKKACiiigAAycV6b8NdHae+ilZePXFefabaNd3caKM5NfR3w80NbHTUZ0ww9q5MXU5Y2OmhC7udvbQiCBUHYVNQKK8Q9AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAydetFutPkUrn5DXy34r006fqzqqYDMT0r62mQSRspHUGvE/iZ4ab554o+g613YOpyysznrwujxiilZGjYqw+YU2vXR5wtFFFMAooooAKKKKACiiigAooooAKVVLHAHNIMkgd66nwr4bm1W7T5MqfaonJRVyoRcnY6b4e+FmurhZnTgEEZFe/2VstrbJGqgYHasbwxocWlWCDZh8Vcv9etLBtruMj3rxa9R1ZaHpU4qCNaiuYbxrp6/wDLQfnVdvH2mKcGQfnWXsp9i+dHX0Vxj/EPS0GTIPzqL/hZWkj/AJain7GfYXOjuKK4b/hZWk/89B+dH/CytJ/56D86PYT7Bzx7nc0Vw3/CytJ/56D86P8AhZWk/wDPQfnR7CfYOePc7miuG/4WVpP/AD0FH/CytJ/56D86PYT7Bzx7nc0VxSfEXS36SD86k/4WBpnaQfnR7GfYOdHY0VysfjjTnHEg/OrMfi2xk6OKn2U10HzI6GisZPEVm/R6mTWrV+j0uSQ+ZGnRVWO/t5BkOKlFxEejj86XKwuiWimCVD0YU+kMKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA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ACiiigAooooASuK8e6yun6VKd+CPeuxnkEcLNnoK8G+Kmsee0tuG454zXRhqfPMyqy5Ynl+oXDXWoTSs5YM2Rmq1IOlLXupWVjzG7u4UUZopiCr+iae+qaoltEpZsg4FZ56GvVvhB4fEuqR6i6cY64rKtPki2bUoc0j2rw5YJp+i2saoFYRgGtamhQoCjoKdXz8nd3PSSsgooopDCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAM/UtHs9ThaOeBHJHVhXgvj34eSaTK91bKzxfeO0cCvonvVPUtPh1OxltZ13JIMEV0UK8qb8jOpTUkfGwOQKWuz8f+EP+Ee1SU20e21BwoxXF17dOanG6PNnHldhaM4ORRRV2ILthql1Yzh0lcD0Br1bwj8RChSG4fr3Y145So7RSCRD8w6VjUoxmtTWnUcT7C0zWLfUIVZHUk+laY5Ga+YvDHj640mWNJ5TsyBxXvPh3xLb6tbKyuCSB3ryK2HdNnfTqKR0tFICCODS1zGoUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFIaAFqneX8NpGWdwMDvVPWdct9Mt2dnGR714l4t+IMlxLJFBKccit6NCU2ZzqKKOr8YfENLXfFbsGPbBrxrWvEF1q0pLSOBnpms+7vJbuQvI2Sar169KhGmjgqVnIPeijrRXQYhSYpaKAEpaKKACiiigAooooAKKKKAENamg2LX2pwoB1aswdfxr0v4baC1xdpOV4VqyrT5YtmlON5Hsng/SVsNMiBXBArp6itohFCqipe9eBOXNK56kVZC0UUVIwooooAKKKKACiiigAooooAKKKKACiikJwMmgDF8SXy2enSktg7TXy74p1B7/V2kLEjJ4r2T4m68YbYxI/JBFeByOzyMzHnNevgqdlzHFiJ9BtJS0V3nGFJRRQBPZQG5voYQOXbGK+nfh7og0rQYgy4f3FeF/DzQpNX1uKZVysMmWyK+oYYlhhVEGABXmY6r9lHdhoaXJM0tJilrzDrCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigApOlHeigDj/AIgeHF1vRHVEHmDLZAr5gu4Tb3s0JGNjFa+z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gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACmnrTqaetABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUGgBKqajepp9jJcyHAUVbrz74o64LDR5rYMA7LkCtKUOeSRMnZXPDfGuqNqfiS6cNmMtkCuepZJDNK0jHk02vfhHlikeVN3dxaKDRVkhRRRQAUUUUAFFFFABRRRQAVq+HNKfWNWjtkGc47Vk8np1r2P4P+GmaWLVZI+OnNY158kGzajDmkeu+HNOTTdIt4guGCAGtakAA4A49KWvAbu7npJWQUUUUhhRRRQAq0tItLQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFNPWnU09aACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAjlcRQu56KpNfN3xT19tU11Uif92oKsK9w8Z62uj6NIxIBkUrzXyreTNcXs8rMWLSMRk+9ejgad/eObETsrEHYUtFFeqeeFFFFABRRRQAUUUUAFFFIaAFoopCcCgC/o1k9/qtvCq5DPg8V9U+EtKXR9Ejt1XaOtePfCHw4Ly6nuZ1/wBWQy5Fe+hQqgAcAV5OOq3fKehh4WVxw70Ugpa886QooooAKKKKAFWlpFpaACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigApp606mnrQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFHTmig9KAPC/i7rs8xNlDFKdj9lJryDybgnJtpuf8AYNfXF54Ysb6ZpZlVmPqtVv8AhC9L/wCeUf8A3xXo0sXGEbWOapRcnc+UPJuP+fab/vg0eTcf8+0v/fBr6v8A+EL0z/nlH/3wKX/hC9M/55R/981p9fXYz+rHyf5Nx/z7S/8AfBo8m4/59pf++DX1f/whemf88o/++BR/whemf88o/wDvgU/r67B9WPlDybj/AJ9pf++DR5Nx/wA+0v8A3wa+r/8AhC9M/wCeUf8A3wKP+EL0z/nlH/3wKPr67B9WPlDybj/n2l/74NHk3H/PtL/3wa+r/wDhC9M/55R/98Cj/hC9M/55R/8AfAo+vrsH1Y+UPJuP+faX/vg0eTcf8+0v/fBr6v8A+EL0z/nin/fAo/4QvTP+eUf/AHwKX1+PYPqx8oeRcf8APtN/3wanstNur+7WBYJQT3KGvqj/AIQvS/8Ankn/AHxUtt4S022nEqRR5H+yKTx6a2GsNZkXgzRYNJ0K3KR7ZHjG8+pro8UiIsaBFGABxTq82cnJ3Z1pWVgAoooqRhRRRQAUUUUAKtLSLS0AFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABTT1p1NPWgAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAEoNLiigAFFFFABRRRQAUUUUAFFFFABQaKKAG96U0tFABRRRQAUUUUAFFFFABRRRQAq0tItLQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFNPWnU09aACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigBVpaRaWgAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKaetFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAq0tFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/9k=" alt="Company Logo" class="header-logo">
+            <h1>SALES VOLUME PERFORMANCE REPORT</h1>
+            <p><strong>Christopher - Q1 2025</strong></p>
+        </div>
+
+        <div class="section">
+            <h2>1. Executive Summary</h2>
+            <p>This report analyzes actual Q1 2025 sales volume performance versus Q1 2024 and against the 2025 annual budget targets.</p>
+            <div class="metric-row">
+                <div class="metric-card">
+                    <div class="metric-label">Total Volume Q1 2025</div>
+                    <div class="metric-value">231,957 kg</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">YoY Growth</div>
+                    <div class="metric-value positive">+51%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Budget Achievement</div>
+                    <div class="metric-value warning">23%</div>
+                    <div class="metric-label">(vs 25% quarterly target)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Performance Dashboard</h2>
+            <div class="tab-container">
+                <p class="tab-instructions">Click on the tabs below to switch between different performance views</p>
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="openTab(event, 'yoy-growth')">YoY Growth View</button>
+                    <button class="tab-button" onclick="openTab(event, 'budget-achievement')">Budget Achievement View</button>
+                </div>
+                
+                <div id="yoy-growth" class="tab-content active">
+                    <div class="chart-container">
+                        <canvas id="yoyGrowthChart"></canvas>
+                    </div>
+                </div>
+                
+                <div id="budget-achievement" class="tab-content">
+                    <div class="chart-container">
+                        <canvas id="budgetAchievementChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Detailed Performance Analysis</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product Category</th>
+                        <th>Q1 2024 (kg)</th>
+                        <th>YoY %</th>
+                        <th>Q1 2025 (kg)</th>
+                        <th>2025 Budget (kg)</th>
+                        <th>Budget Achieved %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Commercial Items Plain</td>
+                        <td>1,420</td>
+                        <td class="positive">73%</td>
+                        <td>2,451</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Industrial Items Plain</td>
+                        <td>20,489</td>
+                        <td class="negative">-19%</td>
+                        <td>16,640</td>
+                        <td>65,000</td>
+                        <td class="positive">26%</td>
+                    </tr>
+                    <tr>
+                        <td>Industrial Items Printed</td>
+                        <td>6,200</td>
+                        <td class="positive">39%</td>
+                        <td>8,588</td>
+                        <td>30,000</td>
+                        <td class="positive">29%</td>
+                    </tr>
+                    <tr>
+                        <td>Laminates</td>
+                        <td>7,776</td>
+                        <td class="positive">1321%</td>
+                        <td>110,529</td>
+                        <td>240,000</td>
+                        <td class="positive">46%</td>
+                    </tr>
+                    <tr>
+                        <td>Mono Layer Printed</td>
+                        <td>1,059</td>
+                        <td class="negative">-1%</td>
+                        <td>1,051</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Shrink Film Plain</td>
+                        <td>5,036</td>
+                        <td class="positive">49%</td>
+                        <td>7,500</td>
+                        <td>50,000</td>
+                        <td class="negative">15%</td>
+                    </tr>
+                    <tr>
+                        <td>Shrink Film Printed</td>
+                        <td>92,036</td>
+                        <td class="negative">-48%</td>
+                        <td>47,459</td>
+                        <td>450,000</td>
+                        <td class="negative">11%</td>
+                    </tr>
+                    <tr>
+                        <td>Shrink Sleeves</td>
+                        <td>7,517</td>
+                        <td class="positive">203%</td>
+                        <td>22,804</td>
+                        <td>80,000</td>
+                        <td class="positive">29%</td>
+                    </tr>
+                    <tr>
+                        <td>Wide Film</td>
+                        <td>1,118</td>
+                        <td class="positive">240%</td>
+                        <td>3,798</td>
+                        <td>15,000</td>
+                        <td>25%</td>
+                    </tr>
+                    <tr>
+                        <td>Labels</td>
+                        <td>11,221</td>
+                        <td class="negative">-1%</td>
+                        <td>11,137</td>
+                        <td>70,000</td>
+                        <td class="negative">16%</td>
+                    </tr>
+                    <tr style="font-weight: bold; background-color: #f9f9f9;">
+                        <td>Total</td>
+                        <td>153,872</td>
+                        <td class="positive">51%</td>
+                        <td>231,957</td>
+                        <td>1,000,000</td>
+                        <td class="warning">23%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>4. Key Findings</h2>
+            <ul class="action-items">
+                <li>
+                    <strong>Star Performer: Laminates</strong>
+                    <p>Extraordinary YoY growth of 1321%, achieving 46% of annual budget in Q1 alone.</p>
+                </li>
+                <li>
+                    <strong>Growth Categories</strong>
+                    <p>Shrink Sleeves (203%), Wide Film (240%), and Commercial Items Plain (73%) showing strong growth momentum.</p>
+                </li>
+                <li>
+                    <strong>Critical Concerns</strong>
+                    <p>Shrink Film Printed: Significant 48% YoY decline and only 11% of annual budget achievement.</p>
+                </li>
+                <li>
+                    <strong>Underperforming Categories</strong>
+                    <p>Shrink Film Plain (15%) and Labels (16%) significantly below quarterly target.</p>
+                </li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>5. Customer Performance Analysis</h2>
+            <div class="chart-container">
+                <canvas id="customerChart"></canvas>
+            </div>
+            <h3>Key Customer Insights</h3>
+            <ul class="action-items">
+                <li>
+                    <strong>Major Volume Gains</strong>
+                    <p>TAYSEER ARAR IND OF DAIRY PROPO: Significant new business with volume increase from 0 kg in 2024 to 109,050 kg in 2025.</p>
+                </li>
+                <li>
+                    <strong>Significant Volume Declines</strong>
+                    <p>NATIONAL CANNED FOOD PROD & TRADING: 63% volume reduction from 74,480 kg in 2024 to 27,753 kg in 2025.</p>
+                </li>
+                <li>
+                    <strong>Growth Opportunities</strong>
+                    <p>NATIONAL DAIRY LOCAL AIN CITY: 82% growth from 7,272 kg in 2024 to 13,263 kg in 2025.</p>
+                </li>
+                <li>
+                    <strong>Performance Concerns</strong>
+                    <p>NESTLE entities showing decline: DUBAI MANUFACTURING (-26%) and WATERS FACTORY (-30%).</p>
+                </li>
+                <li>
+                    <strong>New Customers</strong>
+                    <p>Rajyog Water Bottling LLC (9,534 kg) and Al Ahlia converting Industries (7,496 kg): New business acquired in 2025.</p>
+                </li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>6. Recommendations & Action Plan</h2>
+            <ol>
+                <li><strong>Urgent Focus on Shrink Film Printed</strong>
+                    <ul>
+                        <li>Investigate root causes for 48% YoY decline</li>
+                        <li>Develop recovery plan to improve from 11% budget achievement</li>
+                        <li>Review top client relationships and competitors</li>
+                    </ul>
+                </li>
+                <li><strong>Leverage Laminates' Success</strong>
+                    <ul>
+                        <li>Analyze success factors driving 1321% growth</li>
+                        <li>Apply winning strategies to other categories</li>
+                        <li>Maintain momentum toward exceeding annual target</li>
+                    </ul>
+                </li>
+                <li><strong>Improve Underperforming Categories</strong>
+                    <ul>
+                        <li>Develop specific action plans for Shrink Film Plain and Labels</li>
+                        <li>Address slight declines in Industrial Items Plain and Mono Layer Printed</li>
+                    </ul>
+                </li>
+                <li><strong>Customer Strategy</strong>
+                    <ul>
+                        <li>Develop retention plan for NATIONAL CANNED FOOD PROD & TRADING to reverse 63% volume decline</li>
+                        <li>Strengthen relationship with NESTLE entities to address 26-30% volume reductions</li>
+                        <li>Further enhance relationship with TAYSEER ARAR to maintain large volume business</li>
+                        <li>Leverage successful growth with NATIONAL DAIRY LOCAL AIN CITY (+82%) as model for other accounts</li>
+                    </ul>
+                </li>
+                <li><strong>Q2 2025 Focus Areas</strong>
+                    <ul>
+                        <li>Set aggressive recovery targets for Shrink Film Printed</li>
+                        <li>Implement growth strategies for categories below 20% achievement</li>
+                        <li>Maintain momentum of high-performing categories</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>7. Q2 2025 Required Growth Targets</h2>
+            <div class="chart-container">
+                <canvas id="q2TargetsChart"></canvas>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product Category</th>
+                        <th>Q1 2025 Actual (kg)</th>
+                        <th>Q2 2025 Target (kg)</th>
+                        <th>Required Growth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Shrink Film Printed</td>
+                        <td>47,459</td>
+                        <td>112,541</td>
+                        <td class="negative">137%</td>
+                    </tr>
+                    <tr>
+                        <td>Labels</td>
+                        <td>11,137</td>
+                        <td>17,500</td>
+                        <td class="warning">57%</td>
+                    </tr>
+                    <tr>
+                        <td>Shrink Film Plain</td>
+                        <td>7,500</td>
+                        <td>12,500</td>
+                        <td class="warning">67%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Tab functionality
+        function openTab(evt, tabName) {
+            var i, tabcontent, tabbuttons;
+            
+            // Hide all tab content
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].className = tabcontent[i].className.replace(" active", "");
+            }
+            
+            // Remove active class from all tab buttons
+            tabbuttons = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].className = tabbuttons[i].className.replace(" active", "");
+            }
+            
+            // Show the current tab and add active class to the button
+            document.getElementById(tabName).className += " active";
+            evt.currentTarget.className += " active";
+        }
+
+        // YoY Growth Chart
+        const yoyCtx = document.getElementById('yoyGrowthChart').getContext('2d');
+        new Chart(yoyCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Laminates', 'Wide Film', 'Shrink Sleeves', 'Commercial Items Plain', 'Shrink Film Plain', 'Industrial Items Printed', 'Industrial Items Plain', 'Mono Layer Printed', 'Labels', 'Shrink Film Printed'],
+                datasets: [{
+                    label: 'Year-over-Year Growth (%)',
+                    data: [1321, 240, 203, 73, 49, 39, -19, -1, -1, -48],
+                    backgroundColor: function(context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value > 0 ? '#2ecc71' : '#e74c3c';
+                    },
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Growth Rate (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Growth by Product Groups'
+                    },
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.x !== null) {
+                                    label += context.parsed.x + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        align: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value > 100 ? 'start' : 'end';
+                        },
+                        anchor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value > 100 ? 'end' : 'end';
+                        },
+                        offset: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value > 100 ? 10 : 4;
+                        },
+                        formatter: function(value) {
+                            return value + '%';
+                        },
+                        color: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value > 100 ? '#fff' : '#333';
+                        },
+                        backgroundColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value > 100 ? 'rgba(0,0,0,0.7)' : null;
+                        },
+                        borderRadius: 4,
+                        padding: {
+                            top: 3,
+                            right: 5,
+                            bottom: 3,
+                            left: 5
+                        },
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        // Budget Achievement Chart
+        const budgetCtx = document.getElementById('budgetAchievementChart').getContext('2d');
+        new Chart(budgetCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Laminates', 'Shrink Sleeves', 'Industrial Items Printed', 'Industrial Items Plain', 'Wide Film', 'Labels', 'Shrink Film Plain', 'Shrink Film Printed'],
+                datasets: [{
+                    label: 'Budget Achievement (%)',
+                    data: [46, 29, 29, 26, 25, 16, 15, 11],
+                    backgroundColor: function(context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value >= 25 ? '#2ecc71' : (value >= 20 ? '#f1c40f' : '#e74c3c');
+                    },
+                    borderWidth: 1
+                }, {
+                    label: 'Q1 Target (25%)',
+                    data: [25, 25, 25, 25, 25, 25, 25, 25],
+                    type: 'line',
+                    borderColor: '#3498db',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Achievement Percentage (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Q1 2025 Budget Achievement by Category'
+                    },
+                    datalabels: {
+                        align: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 25 ? 'center' : 'end';
+                        },
+                        anchor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 25 ? 'center' : 'end';
+                        },
+                        formatter: function(value, context) {
+                            // Only show labels for the bar dataset, not the line
+                            if (context.datasetIndex === 0) {
+                                return value + '%';
+                            } else {
+                                return null;
+                            }
+                        },
+                        color: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 25 ? '#fff' : '#333';
+                        },
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        // Q2 Targets Chart
+        const q2Ctx = document.getElementById('q2TargetsChart').getContext('2d');
+        new Chart(q2Ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Shrink Film Printed', 'Shrink Film Plain', 'Labels'],
+                datasets: [{
+                    label: 'Q1 2025 Actual (kg)',
+                    data: [47459, 7500, 11137],
+                    backgroundColor: '#3498db',
+                    borderWidth: 1
+                }, {
+                    label: 'Q2 2025 Target (kg)',
+                    data: [112541, 12500, 17500],
+                    backgroundColor: '#2ecc71',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Volume (kg)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Q2 2025 Growth Targets for Key Categories'
+                    },
+                    datalabels: {
+                        align: 'center',
+                        anchor: 'center',
+                        formatter: function(value) {
+                            return value.toLocaleString();
+                        },
+                        color: '#fff',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        // Customer Analysis Chart
+        const customerCtx = document.getElementById('customerChart').getContext('2d');
+        new Chart(customerCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    'TAYSEER ARAR IND OF DAIRY PROPO',
+                    'NATIONAL CANNED FOOD PROD & TRADING',
+                    'NATIONAL DAIRY LOCAL AIN CITY',
+                    'NESTLE DUBAI MANUFACTURING LLC',
+                    'NESTLE WATERS FACTORY H&O LLC',
+                    'Rajyog Water Bottling LLC',
+                    'Al Ahlia converting Industries',
+                    'NATIONAL FOOD PRODUCTS COMPANY',
+                    'AL PINA PURE DRINKING WATER LLC',
+                    'CROWN FOOD INDUSTRY (L.L.C.)'
+                ],
+                datasets: [{
+                    label: '2024 Volume (kg)',
+                    data: [0, 74480, 7272, 17389, 16123, 0, 0, 2854, 1241, 5036],
+                    backgroundColor: '#3498db',
+                    borderWidth: 1
+                }, {
+                    label: '2025 Volume (kg)',
+                    data: [109050, 27753, 13263, 12938, 11246, 9534, 7496, 5532, 5517, 5040],
+                    backgroundColor: '#e74c3c',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                height: 600,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Volume (kg)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Top 10 Customer Volume Comparison: 2024 vs 2025'
+                    },
+                    datalabels: {
+                        align: 'end',
+                        anchor: 'end',
+                        formatter: function(value) {
+                            return value > 0 ? value.toLocaleString() : '';
+                        },
+                        color: '#333',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+    </script>
+</body>
+</html> 

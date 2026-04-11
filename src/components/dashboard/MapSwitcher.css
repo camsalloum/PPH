@@ -1,0 +1,107 @@
+
+.map-toggle-buttons {
+  text-align: center;
+  margin-bottom: 10px;
+}
+.map-toggle-buttons button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.map-toggle-buttons button.active {
+  background-color: #007bff;
+  color: white;
+  border: none;
+}
+.leaflet-container {
+  width: 100%;
+  height: 600px;
+}
+
+/* React Globe Styles */
+.sales-country-map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-header {
+  margin-bottom: 15px;
+}
+
+.map-header h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+}
+
+.map-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+  font-size: 18px;
+  color: #666;
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+@media (max-width: 768px) {
+  .map-toggle-buttons button {
+    margin: 0 4px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .leaflet-container {
+    height: 400px;
+  }
+
+  .legend {
+    gap: 10px;
+  }
+
+  .legend-item {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-toggle-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .map-toggle-buttons button {
+    margin: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .leaflet-container {
+    height: 300px;
+  }
+}

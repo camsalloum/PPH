@@ -1,0 +1,637 @@
+# FLEXIBLE PACKAGING ERP - COMPLETE IMPLEMENTATION GUIDE
+**Sistrade-Inspired System | Customer Contact → Product Delivery**
+
+## Tech Stack
+- **Frontend:** React 18+ TypeScript, Tailwind CSS, shadcn/ui
+- **Backend:** Node.js, Express, TypeScript  
+- **Database:** PostgreSQL 15+
+- **Auth:** JWT + Refresh Tokens
+- **Real-time:** Socket.io
+- **State:** Redux Toolkit
+
+---
+
+## DEVELOPMENT SEQUENCE: 32 MODULES
+
+### **PHASE 1: FOUNDATION (Weeks 1-4)**
+
+#### **Module 1: Authentication & User Management** [Week 1]
+**Flow Position:** System Foundation  
+**Database:**
+```sql
+users (id, email, password_hash, role, business_units[], permissions, is_active)
+refresh_tokens, audit_log
+```
+**Features:** JWT auth, role-based access, multi-business unit support, audit logging  
+**Roles:** admin, sales_manager, sales_rep, production_manager, quality_manager, operator, bu_manager
+
+---
+
+#### **Module 2: Dashboard & Navigation** [Week 2]
+**Flow Position:** System Foundation  
+**Database:**
+```sql
+notifications (user_id, title, message, type, is_read)
+user_preferences (dashboard_layout, theme, timezone)
+```
+**Features:** Role-based KPIs, real-time alerts, customizable dashboards  
+**KPIs:** Revenue, OEE, defect rate, on-time delivery, pipeline value
+
+---
+
+#### **Module 3: Master Data Management** [Week 3-4]
+**Flow Position:** System Foundation  
+**Database:**
+```sql
+business_units (name, type, is_active)
+departments, locations, currencies, units_of_measure
+tax_configurations, payment_terms
+```
+**Features:** Hierarchical organization structure, multi-currency, multi-location
+
+---
+
+### **PHASE 2: CRM & SALES (Weeks 5-10) - CUSTOMER CONTACT**
+
+#### **Module 4: Lead Management** [Week 5]
+**Flow Position:** First Customer Contact  
+**Database:**
+```sql
+leads (lead_number, company_name, contact, source, status, probability, assigned_to)
+lead_interactions (type, description, outcome, next_action_date)
+```
+**Features:** Lead capture, qualification, conversion tracking, source analytics  
+**AI:** Lead scoring, conversion probability, optimal follow-up timing
+
+---
+
+#### **Module 5: Customer Management (CRM)** [Week 6]
+**Flow Position:** Customer Onboarding  
+**Database:**
+```sql
+customers (customer_code, company_name, credit_limit, payment_terms, rating, tags)
+customer_contacts (name, role, can_approve_samples, can_place_orders)
+customer_addresses (type, is_default)
+```
+**Features:** Complete customer profiles, credit management, contact hierarchy  
+**AI:** Churn prediction, credit risk scoring
+
+---
+
+#### **Module 6: Product Catalog & Specifications** [Week 7]
+**Flow Position:** Product Information  
+**Database:**
+```sql
+product_categories, products (product_code, structure_type, certifications)
+product_specifications (parameter, value, tolerance, test_method)
+product_structure (layer_number, material, thickness, function)
+raw_materials (category, supplier, standard_cost, reorder_level)
+```
+**Features:** Multi-layer structures, technical specifications, BOM management  
+**Product Types:** Pouches, roll stock, bags, labels, wrappers
+
+---
+
+#### **Module 7: Inquiry Management** [Week 8]
+**Flow Position:** Customer Inquiry Received  
+**Database:**
+```sql
+inquiries (inquiry_number, customer_id, product_type, quantity, required_by, status)
+inquiry_attachments, inquiry_timeline
+```
+**Features:** Inquiry tracking, requirement capture, feasibility assessment  
+**Status Flow:** new → under_review → sample_requested → quotation_sent → won/lost
+
+---
+
+#### **Module 8: Sample Request & Management** [Week 9]
+**Flow Position:** Sample Development  
+**Database:**
+```sql
+sample_requests (sample_number, inquiry_id, structure_details, dimensions, printing_colors)
+sample_specifications (parameter, target_value, tolerance)
+sample_approvals (approval_stage, status, comments)
+sample_production (business_unit_id, status, actual_cost)
+```
+**Features:** Multi-stage approvals, feasibility checks, cost tracking  
+**Approval Flow:** technical → customer → final  
+**AI:** Feasibility prediction, cost estimation
+
+---
+
+#### **Module 9: Quotation & Pricing** [Week 10]
+**Flow Position:** Price Quote  
+**Database:**
+```sql
+quotations (quote_number, inquiry_id, total_value, validity_days, status)
+quotation_items (product_id, quantity, unit_price, lead_time_days)
+quotation_costing (material_cost, plate_cost, cylinder_cost, machine_cost, markup)
+quotation_versions (version_number, changes)
+```
+**Features:** Multi-item quotes, cost breakdown, version control, PDF generation  
+**Costing:** Material + Setup (plates/cylinders) + Machine hours + Overhead + Margin  
+**AI:** Dynamic pricing, competitor analysis, win probability
+
+---
+
+### **PHASE 3: ORDER MANAGEMENT (Weeks 11-13) - ORDER CONFIRMATION**
+
+#### **Module 10: Sales Order Management** [Week 11-12]
+**Flow Position:** Order Placement  
+**Database:**
+```sql
+sales_orders (order_number, customer_id, order_date, delivery_date, status, payment_terms)
+order_items (product_id, quantity, unit_price, specifications, artwork_url)
+order_approvals (approval_type, approved_by, approved_at)
+order_timeline (event_type, description, timestamp)
+```
+**Features:** Multi-item orders, custom specifications, approval workflow, order tracking  
+**Status Flow:** draft → pending_approval → approved → in_production → dispatched → delivered  
+**Approvals:** Credit check, technical feasibility, management approval
+
+---
+
+#### **Module 11: Design & Artwork Management** [Week 13]
+**Flow Position:** Design Approval  
+**Database:**
+```sql
+artworks (artwork_code, order_id, design_file_url, version, status)
+artwork_approvals (customer_contact_id, approval_status, comments, approved_at)
+design_specifications (colors[], pantone_codes[], bleed, safe_area)
+```
+**Features:** Version control, customer approval workflow, print-ready validation  
+**File Types:** AI, PDF, EPS with color separation
+
+---
+
+### **PHASE 4: BUSINESS UNITS - INTERNAL SUPPLIERS (Weeks 14-21)**
+
+#### **Module 12: Plate Production Management** [Week 14-15]
+**Flow Position:** Pre-production - Printing Plates  
+**Database:**
+```sql
+plates (plate_number, order_id, plate_type, size, thickness, exposure_time)
+plate_jobs (job_number, status, assigned_to, started_at, completed_at)
+plate_specifications (line_screen, dot_shape, hardness)
+plate_inventory (plate_id, location, usage_count, condition)
+```
+**Features:** Job tracking, exposure parameters, QC checklist, inventory management  
+**Types:** Flexographic photopolymer plates, letterpress plates  
+**QC:** Thickness, hardness, dot reproduction, resolution  
+**AI:** Optimal exposure settings, plate life prediction
+
+---
+
+#### **Module 13: Cylinder Engineering** [Week 16]
+**Flow Position:** Pre-production - Gravure Cylinders  
+**Database:**
+```sql
+cylinders (cylinder_number, order_id, diameter, face_length, shaft_type)
+cylinder_jobs (engraving_type, cell_geometry, coating_type, status)
+anilox_rollers (line_count, volume, pattern)
+cylinder_maintenance (maintenance_type, next_due_date)
+```
+**Features:** Engraving job management, maintenance tracking, lifecycle management  
+**Types:** Gravure cylinders, anilox rollers, embossing cylinders  
+**Processes:** Copper plating, engraving (laser/chemical), chrome plating, proofing  
+**AI:** Cell geometry optimization, maintenance prediction
+
+---
+
+#### **Module 14: Ink Production & Formulation** [Week 17-18]
+**Flow Position:** Pre-production - Ink Preparation  
+**Database:**
+```sql
+ink_formulations (formula_code, ink_type, substrate_type, color_code)
+formula_components (component_id, percentage, mixing_order)
+ink_batches (batch_number, order_id, quantity_kg, viscosity, ph)
+color_matching (standard_color, tolerance, measurement_data)
+ink_inventory (formula_code, quantity_available, expiry_date)
+```
+**Features:** Recipe management, color matching, batch production, QC testing  
+**Types:** Solvent-based, water-based, UV-curable  
+**QC:** Viscosity, pH, color strength, gloss, adhesion  
+**AI:** Formula optimization, color prediction from spectral data
+
+---
+
+#### **Module 15: Film Extrusion Management** [Week 19-21]
+**Flow Position:** Raw Material Production  
+**Database:**
+```sql
+extrusion_lines (line_name, layers, max_width, output_capacity)
+extrusion_jobs (job_number, structure_type, total_thickness, status)
+layer_configurations (layer_number, resin_type, percentage, thickness)
+extrusion_parameters (temperature_profile, screw_speed, line_speed, blow_ratio)
+film_quality_tests (test_type, value, specification, status)
+film_inventory (roll_number, width, length, weight, location)
+```
+**Features:** Multi-layer blown film, process parameter control, quality testing  
+**Structures:** Monolayer, 3-layer (A/B/A), 5-layer (A/B/C/B/A), 7-layer, 11-layer  
+**Materials:** LDPE, LLDPE, HDPE, PP, EVOH, PA, tie layers  
+**QC:** Thickness profile, dart impact, tensile strength, seal strength, haze, gloss  
+**AI:** Layer thickness optimization, defect detection, process parameter optimization
+
+---
+
+### **PHASE 5: PRODUCTION PLANNING (Weeks 22-26)**
+
+#### **Module 16: Material Requirements Planning (MRP)** [Week 22]
+**Flow Position:** Production Planning  
+**Database:**
+```sql
+bom_headers (product_id, bom_version, is_active)
+bom_items (component_id, quantity, unit, waste_percentage, lead_time)
+material_requirements (order_id, component_id, required_quantity, available_quantity)
+purchase_requisitions (pr_number, status, required_by_date)
+```
+**Features:** BOM explosion, net requirements calculation, auto PR generation  
+**Components:** Substrates, inks, adhesives, solvents, plates, cylinders, cores, packaging  
+**AI:** Demand forecasting, optimal order quantities, supplier selection
+
+---
+
+#### **Module 17: Production Scheduling Engine** [Week 23-24] ⚡ **CRITICAL**
+**Flow Position:** Production Planning  
+**Database:**
+```sql
+production_lines (line_name, type, capabilities, capacity)
+work_centers (center_name, business_unit, machines[])
+production_schedule (job_id, line_id, start_time, end_time, sequence_number)
+setup_requirements (job_id, setup_type, duration_minutes, resources[])
+```
+**Features:** AI-powered auto-scheduling, Gantt visualization, drag-drop rescheduling  
+**Constraints:** Machine capabilities, setup times, cylinder availability, material availability, due dates  
+**Optimization:** Minimize setup time, maximize throughput, meet deadlines  
+**AI:** Reinforcement learning for optimal sequencing, predictive disruption handling
+
+---
+
+#### **Module 18: Purchasing & Procurement** [Week 25]
+**Flow Position:** Material Procurement  
+**Database:**
+```sql
+suppliers (supplier_code, rating, payment_terms, lead_time)
+purchase_orders (po_number, supplier_id, total_value, delivery_date, status)
+po_items (material_id, quantity, unit_price, delivery_date)
+goods_receipts (gr_number, po_id, received_quantity, quality_status)
+```
+**Features:** PO generation, supplier management, GRN processing, three-way matching  
+**AI:** Supplier performance scoring, price negotiation insights
+
+---
+
+#### **Module 19: Inventory Management** [Week 26]
+**Flow Position:** Stock Management  
+**Database:**
+```sql
+warehouses (warehouse_code, location, type)
+storage_locations (location_code, warehouse_id, capacity)
+inventory_transactions (transaction_type, material_id, quantity, location)
+stock_levels (material_id, location_id, quantity, reserved_quantity)
+lot_tracking (lot_number, material_id, received_date, expiry_date)
+```
+**Features:** Multi-location, lot tracking, FIFO/FEFO, min-max planning, cycle counting  
+**Transaction Types:** Receipt, issue, transfer, adjustment  
+**AI:** Optimal stock levels, reorder point optimization, expiry prediction
+
+---
+
+### **PHASE 6: PRODUCTION EXECUTION (Weeks 27-32) - MANUFACTURING**
+
+#### **Module 20: Job Order Management** [Week 27]
+**Flow Position:** Production Authorization  
+**Database:**
+```sql
+job_orders (job_number, sales_order_id, product_id, quantity, status)
+job_routing (operation_number, work_center, setup_time, run_time)
+job_materials (material_id, required_quantity, issued_quantity)
+job_documents (tds_url, artwork_url, work_instructions_url)
+```
+**Features:** Job creation from sales order, routing definition, material allocation, job costing  
+**Status Flow:** created → materials_allocated → scheduled → in_production → completed
+
+---
+
+#### **Module 21: Technical Data Sheet (TDS) Generator** [Week 28]
+**Flow Position:** Production Instructions  
+**Database:**
+```sql
+tds_templates (product_type, template_data)
+tds_documents (job_id, structure, printing_params, machine_settings)
+printing_parameters (substrate, ink_type, anilox_spec, printing_speed, tension)
+lamination_parameters (adhesive_type, temperature, pressure, speed)
+slitting_parameters (width, tolerance, core_diameter)
+```
+**Features:** Auto-generate from product specs, cylinder calculations, QC checkpoints  
+**Content:** Structure, materials, machine settings, quality standards, safety requirements  
+**AI:** Optimal process parameters based on historical data
+
+---
+
+#### **Module 22: Manufacturing Execution System (MES)** [Week 29-30] ⚡ **CRITICAL**
+**Flow Position:** Production Floor  
+**Database:**
+```sql
+machine_status (machine_id, status, current_job_id, operator_id, updated_at)
+production_logs (job_id, machine_id, start_time, end_time, good_quantity, waste_quantity)
+downtime_records (machine_id, reason, duration_minutes, resolved_at)
+operator_assignments (operator_id, machine_id, shift, date)
+quality_checkpoints (job_id, checkpoint_type, status, measured_value)
+```
+**Features:** Real-time production tracking, downtime logging, OEE calculation, operator interface  
+**Machines:** Printing press, laminator, slitter, pouch maker, extruder  
+**OEE = Availability × Performance × Quality**  
+**AI:** Real-time quality prediction, anomaly detection, predictive maintenance alerts
+
+---
+
+#### **Module 23: Quality Control & Inspection** [Week 31]
+**Flow Position:** Quality Assurance  
+**Database:**
+```sql
+inspection_plans (product_id, inspection_type, frequency, sample_size)
+inspections (inspection_number, job_id, inspector_id, status)
+inspection_results (parameter, measured_value, specification, status)
+non_conformances (nc_number, severity, root_cause, corrective_action)
+certificates_of_analysis (coa_number, job_id, test_results, approved_by)
+```
+**Features:** Inspection checklists, sampling plans, NCR management, COA generation  
+**Types:** Incoming, in-process, final, customer witness  
+**Tests:** Dimensions, print quality, seal strength, barrier properties, appearance  
+**AI:** Defect classification from images, root cause analysis
+
+---
+
+#### **Module 24: Customer Complaints & CAPA** [Week 32]
+**Flow Position:** Post-Production Quality  
+**Database:**
+```sql
+complaints (complaint_number, customer_id, severity, description, status)
+complaint_investigation (root_cause, analysis, evidence_files)
+corrective_actions (action_description, responsible_person, due_date, status)
+preventive_actions (action_description, implementation_date)
+```
+**Features:** Complaint registration, investigation workflow, CAPA tracking, trend analysis  
+**Status Flow:** received → investigating → action_planned → implemented → closed  
+**AI:** Pattern recognition, root cause suggestions
+
+---
+
+### **PHASE 7: DISPATCH & DELIVERY (Weeks 33-35) - PRODUCT DELIVERY**
+
+#### **Module 25: Finished Goods Warehouse** [Week 33]
+**Flow Position:** Finished Goods Storage  
+**Database:**
+```sql
+fg_inventory (job_id, location, quantity, status)
+packing_instructions (order_id, packing_type, special_requirements)
+packing_list (packing_number, order_id, packages[], gross_weight, dimensions)
+```
+**Features:** FG receipt from production, storage allocation, pick list generation  
+**AI:** Optimal storage location, expiry management
+
+---
+
+#### **Module 26: Dispatch & Logistics** [Week 34]
+**Flow Position:** Order Dispatch  
+**Database:**
+```sql
+delivery_schedules (order_id, planned_date, vehicle_id, route)
+delivery_notes (dn_number, order_id, packages[], transporter, vehicle_number)
+proof_of_delivery (dn_id, received_by, signature, timestamp, photos)
+freight_charges (dn_id, distance_km, freight_cost, billing_status)
+```
+**Features:** Route planning, vehicle loading, POD capture, freight billing  
+**AI:** Route optimization, delivery time prediction, load optimization
+
+---
+
+#### **Module 27: Invoicing & Accounts Receivable** [Week 35]
+**Flow Position:** Billing  
+**Database:**
+```sql
+invoices (invoice_number, order_id, invoice_date, due_date, total_amount, status)
+invoice_items (product_description, quantity, unit_price, tax_amount)
+payments (payment_id, invoice_id, amount, payment_date, method)
+credit_notes (cn_number, invoice_id, reason, amount)
+```
+**Features:** Auto-invoice from delivery, tax calculation, payment tracking, aging reports  
+**Status Flow:** draft → approved → sent → partially_paid → paid  
+**AI:** Payment default prediction, optimal credit limits
+
+---
+
+### **PHASE 8: SUPPORT MODULES (Weeks 36-40)**
+
+#### **Module 28: Maintenance Management** [Week 36]
+**Flow Position:** Equipment Management  
+**Database:**
+```sql
+equipment_master (equipment_id, type, installation_date, specs)
+maintenance_plans (equipment_id, type, frequency, checklist)
+maintenance_work_orders (wo_number, equipment_id, priority, scheduled_date)
+spare_parts_inventory (part_id, equipment_id, quantity, location)
+```
+**Features:** Preventive maintenance scheduling, breakdown management, spare parts  
+**Types:** Preventive, corrective, predictive  
+**AI:** Failure prediction, optimal maintenance intervals
+
+---
+
+#### **Module 29: Document Management** [Week 37]
+**Flow Position:** Document Control  
+**Database:**
+```sql
+documents (document_id, type, version, status, approval_required)
+document_access (user_id, document_id, permission_level)
+document_versions (version_number, changes, uploaded_by, timestamp)
+```
+**Features:** Version control, approval workflow, access control, search  
+**Types:** TDS, specifications, work instructions, certificates, contracts
+
+---
+
+#### **Module 30: Reports & Analytics** [Week 38-39]
+**Flow Position:** Business Intelligence  
+**Database:**
+```sql
+report_definitions (report_code, parameters, query, schedule)
+report_subscriptions (user_id, report_code, frequency, recipients[])
+dashboards (dashboard_name, widgets[], filters)
+```
+**Features:** Pre-built reports, custom report builder, scheduled reports, dashboards  
+**Categories:** Sales, production, quality, inventory, financial, executive  
+**AI:** Automated insights, anomaly highlighting, predictive analytics
+
+---
+
+#### **Module 31: Cost Accounting & Analysis** [Week 40]
+**Flow Position:** Financial Analysis  
+**Database:**
+```sql
+cost_centers (cost_center_code, business_unit, budget)
+job_costing (job_id, material_cost, labor_cost, overhead_cost, total_cost)
+variance_analysis (job_id, estimated_cost, actual_cost, variance_amount)
+profitability_analysis (order_id, revenue, total_cost, profit_margin)
+```
+**Features:** Job costing, standard vs actual cost analysis, profitability reports  
+**AI:** Cost prediction, margin optimization recommendations
+
+---
+
+#### **Module 32: System Configuration & Admin** [Week 40]
+**Flow Position:** System Management  
+**Database:**
+```sql
+system_settings (setting_key, setting_value, category)
+number_series (entity_type, prefix, next_number, format)
+approval_workflows (entity_type, approval_stages[], conditions)
+email_templates (template_code, subject, body, variables[])
+```
+**Features:** General settings, number series, workflow config, email templates, user management  
+
+---
+
+## DEPLOYMENT STRATEGY: MODULE-BY-MODULE
+
+### How to Deploy Incrementally to GoDaddy
+
+**Step 1: Setup (One Time)**
+```bash
+# On your PC
+git init
+git remote add origin <your-repo-url>
+
+# On GoDaddy VPS (SSH)
+cd /var/www
+git clone <your-repo-url> flexpack-erp
+cd flexpack-erp
+npm install
+npm run build
+```
+
+**Step 2: Deploy Each Module**
+```bash
+# On PC - after completing a module
+git add .
+git commit -m "feat: add Module X - [functionality]"
+git push origin main
+
+# On GoDaddy VPS
+cd /var/www/flexpack-erp
+git pull origin main
+npm install  # if new dependencies
+npm run migrate  # run database migrations
+pm2 restart flexpack-erp  # restart app
+```
+
+**Database Migration Pattern:**
+```bash
+# Create migration for each module
+npm run migration:create -- add_module_X_tables
+
+# In migration file
+exports.up = (pgm) => {
+  pgm.createTable('new_table', { ... });
+  pgm.addColumn('existing_table', 'new_column', { ... });
+};
+
+exports.down = (pgm) => {
+  pgm.dropTable('new_table');
+  pgm.dropColumn('existing_table', 'new_column');
+};
+
+# Run migration
+npm run migrate up
+```
+
+---
+
+## AI ENHANCEMENTS SUMMARY
+
+**Module 4 (Leads):** Lead scoring, conversion probability  
+**Module 5 (CRM):** Churn prediction, credit risk  
+**Module 8 (Samples):** Feasibility prediction, cost estimation  
+**Module 9 (Quotations):** Dynamic pricing, win probability  
+**Module 12 (Plates):** Optimal exposure settings  
+**Module 13 (Cylinders):** Cell geometry optimization  
+**Module 14 (Inks):** Formula optimization, color matching  
+**Module 15 (Extrusion):** Layer optimization, defect detection  
+**Module 16 (MRP):** Demand forecasting  
+**Module 17 (Scheduling):** Reinforcement learning for optimal sequencing  
+**Module 22 (MES):** Real-time quality prediction, anomaly detection  
+**Module 23 (Quality):** Image-based defect classification  
+
+---
+
+## CRITICAL SUCCESS FACTORS
+
+1. **Start Simple:** Deploy core modules first (Auth, Dashboard, CRM)
+2. **Test Thoroughly:** Each module must work before moving to next
+3. **Database Backups:** Before every deployment
+4. **User Training:** After each major module deployment
+5. **Data Migration:** Plan for importing existing customer/product data
+6. **Performance:** Optimize queries, add indexes
+7. **Security:** Input validation, SQL injection prevention, XSS protection
+8. **Documentation:** API docs, user manuals, technical specs
+
+---
+
+## SAMPLE VSCODE AGENT PROMPT TEMPLATE
+
+```
+Create [Module Name] for flexible packaging ERP:
+
+CONTEXT:
+- This is module [X] of 32 in sequence
+- Dependent modules: [list]
+- User roles: [roles that will use this]
+- Business flow: [where this fits in process]
+
+BACKEND:
+1. Database Schema: [provide SQL]
+2. API Routes: [list all endpoints with descriptions]
+3. Business Logic: [key calculations/rules]
+4. Validations: [what to check]
+5. Notifications: [when to notify whom]
+
+FRONTEND:
+1. Pages: [list pages needed]
+2. Components: [reusable components]
+3. Forms: [fields and validation rules]
+4. Tables: [columns, filters, actions]
+5. Charts/Reports: [what visualizations]
+
+INTEGRATION:
+- Calls to: [which other modules]
+- Called by: [which modules call this]
+- Real-time updates: [via Socket.io if needed]
+
+AI FEATURES:
+- [specific AI/ML functionality for this module]
+
+Use TypeScript, React Hook Form, React Query, Tailwind CSS.
+Include error handling, loading states, and responsive design.
+Add comprehensive comments for business logic.
+```
+
+---
+
+## NEXT STEPS
+
+1. **Setup development environment** (PostgreSQL, Node.js, React)
+2. **Deploy Module 1** (Authentication) to GoDaddy
+3. **Test Module 1** thoroughly
+4. **Deploy Module 2** (Dashboard)
+5. **Continue module by module** following the sequence
+6. **After Module 9:** You have a working Sales/CRM system
+7. **After Module 20:** You can start production operations
+8. **After Module 27:** Complete order-to-delivery flow
+9. **Modules 28-32:** Add support functions as needed
+
+---
+
+**This guide provides the complete roadmap from customer contact to product delivery. Each module builds on previous ones and can be deployed incrementally to your GoDaddy VPS.**
+
+**Download this file and use the module-specific prompts with your VSCode agents to generate code systematically.**

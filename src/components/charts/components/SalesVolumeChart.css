@@ -1,0 +1,318 @@
+/* ========================================
+   SALES VOLUME CHART - CENTRALIZED STYLING
+   Single source of truth for live and export
+   ======================================== */
+
+/* Container */
+.sales-volume-chart-container {
+  position: relative;
+  width: 100%;
+  height: 96vh;
+  min-height: 720px;
+  max-height: 1200px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 0px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Ensure this wins even if .bar-chart-container rules are ordered later */
+.bar-chart-container.sales-volume-chart-container {
+  height: 96vh;
+  min-height: 720px;
+  max-height: 1200px;
+}
+
+/* Header Section */
+.sales-volume-chart-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.sales-volume-chart-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #444;
+  line-height: 36px;
+  text-align: center;
+}
+
+.sales-volume-chart-subtitle {
+  font-size: 18px;
+  font-weight: normal;
+  color: #888;
+  line-height: 24px;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.sales-volume-chart-note {
+  font-size: 14px;
+  font-weight: normal;
+  color: #666;
+  line-height: 20px;
+  text-align: center;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* Chart Area */
+.sales-volume-chart-area {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.sales-volume-chart {
+  width: 100%;
+  height: 100%;
+}
+
+/* No Data Message */
+.sales-volume-no-data {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Value Overlays - Labels */
+.sales-volume-overlay-label {
+  position: absolute;
+  left: 20px;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.sales-volume-overlay-label.purple {
+  color: #8e44ad;
+  bottom: 70px;
+}
+
+.sales-volume-overlay-label.green {
+  color: #2E865F;
+  bottom: 30px;
+}
+
+/* Value Overlays - Values */
+.sales-volume-overlay-value {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  text-align: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.sales-volume-overlay-value.purple {
+  color: #8e44ad;
+  bottom: 70px;
+}
+
+.sales-volume-overlay-value.green {
+  color: #2E865F;
+  bottom: 30px;
+}
+
+/* UAEDirhamSymbol inline display fix */
+.sales-volume-chart-subtitle .uae-dirham-symbol {
+  display: inline-block;
+  vertical-align: -0.1em;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.2em;
+}
+
+.sales-volume-overlay-label .uae-dirham-symbol {
+  display: inline-block;
+  vertical-align: -0.1em;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.2em;
+}
+
+/* Responsive Adjustments */
+/* Tablet landscape (1024px and below) */
+@media (max-width: 1024px) {
+  .sales-volume-chart-container {
+    height: 90vh;
+    min-height: 650px;
+    max-height: 1000px;
+  }
+
+  .bar-chart-container.sales-volume-chart-container {
+    height: 90vh;
+    min-height: 650px;
+    max-height: 1000px;
+  }
+
+  .sales-volume-chart-header {
+    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+
+  .sales-volume-chart-title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .sales-volume-chart-subtitle {
+    font-size: 17px;
+    line-height: 22px;
+  }
+
+  .sales-volume-chart-note {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .sales-volume-overlay-label,
+  .sales-volume-overlay-value {
+    font-size: 16px;
+  }
+
+  .sales-volume-overlay-label.purple {
+    bottom: 65px;
+  }
+
+  .sales-volume-overlay-label.green {
+    bottom: 28px;
+  }
+
+  .sales-volume-overlay-value.purple {
+    bottom: 65px;
+  }
+
+  .sales-volume-overlay-value.green {
+    bottom: 28px;
+  }
+}
+
+/* Mobile tablet portrait (768px and below) */
+@media (max-width: 768px) {
+  .sales-volume-chart-container {
+    height: 80vh;
+    min-height: 600px;
+    max-height: 900px;
+  }
+
+  .bar-chart-container.sales-volume-chart-container {
+    height: 80vh;
+    min-height: 600px;
+    max-height: 900px;
+  }
+
+  .sales-volume-chart-header {
+    margin-top: 16px;
+    margin-bottom: 8px;
+  }
+
+  .sales-volume-chart-title {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .sales-volume-chart-subtitle {
+    font-size: 16px;
+    line-height: 20px;
+  }
+
+  .sales-volume-chart-note {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .sales-volume-overlay-label,
+  .sales-volume-overlay-value {
+    font-size: 14px;
+  }
+
+  .sales-volume-overlay-label.purple {
+    bottom: 60px;
+  }
+
+  .sales-volume-overlay-label.green {
+    bottom: 25px;
+  }
+
+  .sales-volume-overlay-value.purple {
+    bottom: 60px;
+  }
+
+  .sales-volume-overlay-value.green {
+    bottom: 25px;
+  }
+}
+
+/* iPhone and small mobile (480px and below) */
+@media (max-width: 480px) {
+  .sales-volume-chart-container {
+    height: 70vh;
+    min-height: 500px;
+    max-height: 700px;
+    padding: 0;
+    border-radius: 4px;
+  }
+
+  .sales-volume-chart-header {
+    margin-top: 12px;
+    margin-bottom: 6px;
+  }
+
+  .sales-volume-chart-title {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .sales-volume-chart-subtitle {
+    font-size: 14px;
+    line-height: 18px;
+  }
+
+  .sales-volume-chart-note {
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  .sales-volume-overlay-label,
+  .sales-volume-overlay-value {
+    font-size: 12px;
+  }
+
+  .sales-volume-overlay-label {
+    left: 12px;
+  }
+
+  .sales-volume-overlay-label.purple {
+    bottom: 55px;
+  }
+
+  .sales-volume-overlay-label.green {
+    bottom: 22px;
+  }
+
+  .sales-volume-overlay-value {
+    width: 80px;
+  }
+
+  .sales-volume-overlay-value.purple {
+    bottom: 55px;
+  }
+
+  .sales-volume-overlay-value.green {
+    bottom: 22px;
+  }
+}

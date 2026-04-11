@@ -1,0 +1,15 @@
+{
+  "watch": ["routes", "middleware", "services", "config", "database"],
+  "ext": "js,json",
+  "ignore": [
+    "logs/*",
+    "uploads/*",
+    "data/*",
+    "node_modules/*",
+    "*.log",
+    "*.tmp"
+  ],
+  "delay": "1000",
+  "verbose": false,
+  "legacyWatch": true
+}

@@ -1,0 +1,461 @@
+.deployment-panel {
+  padding: 20px;
+}
+
+.deployment-header {
+  margin-bottom: 24px;
+}
+
+.deployment-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+}
+
+.deployment-description {
+  color: var(--text-secondary, #666);
+  margin: 0;
+}
+
+/* Status Card */
+.deployment-status-card {
+  background: var(--card-bg, #f8f9fa);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.deployment-status-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.status-grid {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-label {
+  color: var(--text-secondary, #666);
+  font-size: 14px;
+}
+
+.status-value {
+  font-weight: 500;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-badge.connected {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.disconnected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.configured {
+  background: #fff3cd;
+  color: #856404;
+}
+
+/* Test Connection Button */
+.btn-test {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--secondary-bg, #f0f0f0);
+  color: var(--text-primary, #333);
+  border: 1px solid var(--border-color, #ddd);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-test:hover:not(:disabled) {
+  background: var(--secondary-hover, #e0e0e0);
+}
+
+.btn-test:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Warning Box */
+.deployment-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.deployment-warning h4 {
+  margin: 0 0 8px 0;
+  color: #856404;
+  font-size: 15px;
+}
+
+.deployment-warning p {
+  color: #856404;
+  font-size: 13px;
+  margin: 0 0 8px 0;
+}
+
+.deployment-warning pre {
+  background: rgba(0,0,0,0.08);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin: 8px 0;
+  color: #856404;
+}
+
+/* Deploy Options (checkbox) */
+.deploy-options {
+  margin-bottom: 12px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Action Cards */
+.deployment-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.action-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.action-card.primary {
+  border-color: var(--primary-color, #3498db);
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.05) 0%, rgba(52, 152, 219, 0.1) 100%);
+}
+
+.action-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+
+.action-card p {
+  color: var(--text-secondary, #666);
+  font-size: 13px;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.btn-deploy {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-deploy:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-deploy.btn-primary {
+  background: var(--primary-color, #3498db);
+  color: white;
+}
+
+.btn-deploy.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover, #2980b9);
+}
+
+.btn-deploy.btn-secondary {
+  background: var(--secondary-bg, #f0f0f0);
+  color: var(--text-primary, #333);
+  border: 1px solid var(--border-color, #ddd);
+}
+
+.btn-deploy.btn-secondary:hover:not(:disabled) {
+  background: var(--secondary-hover, #e0e0e0);
+}
+
+/* Deployment Logs */
+.deployment-logs {
+  background: #1e1e1e;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3d3d3d;
+}
+
+.logs-header h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #fff;
+}
+
+.btn-clear-logs {
+  background: transparent;
+  border: 1px solid #555;
+  color: #aaa;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-clear-logs:hover {
+  background: #3d3d3d;
+  color: #fff;
+}
+
+.logs-container {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.log-entry {
+  display: flex;
+  gap: 8px;
+}
+
+.log-time {
+  color: #666;
+  flex-shrink: 0;
+}
+
+.log-message {
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-entry.log-success .log-message {
+  color: #4ec9b0;
+}
+
+.log-entry.log-error .log-message {
+  color: #f14c4c;
+}
+
+.log-entry.log-warning .log-message {
+  color: #cca700;
+}
+
+/* Manual Instructions */
+.deployment-manual {
+  background: var(--card-bg, #f8f9fa);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.deployment-manual h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+}
+
+.deployment-manual p {
+  color: var(--text-secondary, #666);
+  font-size: 14px;
+  margin: 0 0 12px 0;
+}
+
+.deployment-manual ol {
+  margin: 0 0 16px 0;
+  padding-left: 20px;
+}
+
+.deployment-manual li {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.deployment-manual code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+}
+
+.deployment-manual pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ====== Progress Bar ====== */
+.deploy-progress-section {
+  margin: 16px 0;
+  padding: 16px 20px;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.deploy-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.deploy-progress-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #1e293b);
+}
+
+.deploy-progress-pct {
+  font-size: 14px;
+  font-weight: 700;
+  color: #3b82f6;
+  min-width: 40px;
+  text-align: right;
+}
+
+.deploy-progress-bar-track {
+  width: 100%;
+  height: 12px;
+  background: var(--bg-secondary, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.deploy-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 6px;
+  transition: width 0.5s ease;
+  position: relative;
+}
+
+.deploy-progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: progress-shine 1.5s ease-in-out infinite;
+}
+
+.deploy-progress-bar-fill.complete {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.deploy-progress-bar-fill.complete::after {
+  animation: none;
+}
+
+@keyframes progress-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+@media (max-width: 768px) {
+  .deployment-panel {
+    padding: 12px;
+  }
+
+  .deployment-header h2 {
+    font-size: 20px;
+  }
+
+  .status-grid {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .deployment-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .logs-container {
+    font-size: 11px;
+    padding: 12px;
+  }
+
+  .deployment-manual pre {
+    font-size: 11px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .deployment-panel {
+    padding: 8px;
+  }
+
+  .action-card {
+    padding: 14px;
+  }
+
+  .deployment-warning {
+    padding: 12px 14px;
+  }
+}

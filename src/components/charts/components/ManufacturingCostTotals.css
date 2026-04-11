@@ -1,0 +1,150 @@
+/* Manufacturing Cost Totals Cards */
+.manufacturing-totals-card,
+.below-gp-expenses-totals-card {
+    padding: 12px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    min-width: 150px;
+    max-width: 180px;
+    flex: 1;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.manufacturing-totals-card:hover,
+.below-gp-expenses-totals-card:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.totals-scroll-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 5px;
+    margin-top: 20px;
+    margin-bottom: 0;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.totals-item-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.totals-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    margin: 0 2px;
+    min-width: 40px;
+    width: 40px;
+    min-height: 60px;
+    height: auto;
+    flex-shrink: 0;
+}
+
+.totals-card-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 8px;
+    margin-bottom: 0;
+    line-height: 1.2;
+    word-wrap: break-word;
+    overflow: visible;
+}
+
+.totals-card-value {
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+.totals-card-subtitle {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 0;
+    opacity: 1;
+}
+
+.totals-card-subvalue {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Variance badge styles - SINGLE SOURCE OF TRUTH */
+.variance-arrow {
+    font-size: 22px;
+    font-weight: bold;
+    line-height: 1;
+    margin: 0;
+}
+
+.variance-text {
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1.1;
+    margin: 0;
+}
+
+.variance-percent {
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1.1;
+    margin: 0;
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+    .totals-scroll-container {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        overflow-x: hidden;
+        overflow-y: visible;
+        white-space: normal;
+        padding: 0 0 12px 0;
+        gap: 16px;
+    }
+
+    .totals-item-wrapper {
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .manufacturing-totals-card,
+    .below-gp-expenses-totals-card {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .totals-connector {
+        min-width: 100%;
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        justify-content: center;
+        gap: 6px;
+    }
+}

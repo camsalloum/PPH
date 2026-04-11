@@ -1,0 +1,107 @@
+/**
+ * Professional User Management Styles
+ * Compact, clean, and efficient UI
+ */
+
+/* Main Container */
+.user-management-pro {
+  padding: 0;
+}
+
+/* Compact Permission Groups */
+.user-management-pro .ant-collapse-header {
+  padding: 8px 12px !important;
+  font-size: 13px;
+}
+
+.user-management-pro .ant-collapse-content-box {
+  padding: 12px !important;
+}
+
+/* Permission Checkboxes - Compact */
+.user-management-pro .ant-checkbox-wrapper {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Division Tab Buttons */
+.user-management-pro .ant-btn-group {
+  margin-bottom: 12px;
+}
+
+/* Stats Badges */
+.user-management-pro .ant-badge-count {
+  font-size: 11px;
+  min-width: 28px;
+  height: 18px;
+  line-height: 18px;
+}
+
+/* Card Headers - Compact */
+.user-management-pro .ant-card-head {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.user-management-pro .ant-card-head-title {
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+/* Table Rows */
+.user-management-pro .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+}
+
+/* Collapse Ghost Mode - Cleaner */
+.user-management-pro .ant-collapse-ghost > .ant-collapse-item {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.user-management-pro .ant-collapse-ghost > .ant-collapse-item:last-child {
+  border-bottom: none;
+}
+
+/* Dark theme support */
+.theme-dark .user-management-pro .ant-collapse-ghost > .ant-collapse-item {
+  border-bottom-color: #303030;
+}
+
+.theme-dark .user-management-pro .ant-card {
+  background: #1f1f1f;
+}
+
+/* Modal Responsive */
+@media (max-width: 992px) {
+  .user-management-pro .ant-col-8 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+@media (max-width: 576px) {
+  .user-management-pro .ant-col-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .user-management-pro .ant-card-head {
+    padding: 0 8px;
+  }
+
+  .user-management-pro .ant-card-head-title {
+    font-size: 13px;
+  }
+
+  .user-management-pro .ant-collapse-header {
+    padding: 6px 10px !important;
+    font-size: 12px;
+  }
+
+  .user-management-pro .ant-table-tbody > tr > td {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}

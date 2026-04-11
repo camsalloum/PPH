@@ -1,0 +1,34 @@
+# Artillery Smoke Test Configuration
+# Quick test to verify basic functionality
+# Usage: npx artillery run tests/load/smoke.yml
+
+config:
+  target: "http://localhost:3001"
+  phases:
+    - duration: 10
+      arrivalRate: 2
+      name: "Smoke test"
+  
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  
+  ensure:
+    p95: 200
+    maxErrorRate: 0
+
+scenarios:
+  - name: "Basic Health Check"
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/metrics"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/ready"
+          expect:
+            - statusCode: 200

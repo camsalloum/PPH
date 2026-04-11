@@ -1,0 +1,1930 @@
+/* KPI Executive Summary Styles - Enhanced Version */
+.kpi-dashboard {
+  background: var(--color-background, white);
+  min-height: 100vh;
+  padding: 24px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.kpi-dashboard > h2 {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.5rem;  /* Consistent with other pages - 24px */
+  margin-bottom: 8px;
+}
+
+/* KPI Header Period Styling - Clean and Simple */
+.kpi-period-header {
+  display: flex;
+  justify-content: center !important;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.kpi-period-header > span {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--color-text, #1f2937);
+}
+
+.kpi-period-vs {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--color-text, #1f2937);
+}
+
+
+.kpi-section {
+  background: var(--color-surface, #ffffff);
+  border-radius: 16px;
+  padding: clamp(16px, 2vw, 28px);
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.06));
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.kpi-section-title {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: var(--color-text, #1e293b);
+  margin-bottom: 28px;
+  text-align: center;
+  border-bottom: 3px solid var(--color-primary, #667eea);
+  padding-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  background: linear-gradient(135deg, var(--color-primary, #667eea), var(--color-highlight, #764ba2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.kpi-cards {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  gap: 20px;
+  align-items: stretch;
+  justify-items: center;
+  justify-content: center !important;
+  margin: 8px 0 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* When a row has fewer items than the one above, center them */
+/* This prevents a single orphaned card sitting on the far left */
+@supports (grid-template-columns: repeat(auto-fit, minmax(180px, 1fr))) {
+  .kpi-cards {
+    justify-content: center !important;
+  }
+}
+
+/* Ensure full-width cards span correctly */
+.kpi-cards .revenue-drivers {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+}
+
+.kpi-card {
+  background: var(--color-surface, white);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpi-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: var(--color-primary, rgba(102, 126, 234, 0.3));
+}
+
+.kpi-card.large {
+  grid-column: span 2;
+  min-height: 170px;
+}
+
+/* Full-width cards */
+.kpi-card.full-width {
+  grid-column: 1 / -1 !important;
+}
+
+/* Revenue drivers - full width with auto height */
+.kpi-card.revenue-drivers {
+  grid-column: 1 / -1 !important;
+  min-height: auto !important;
+}
+
+/* Top banner gradient - uses theme-aware CSS variable */
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background: var(--color-cardBanner, linear-gradient(to right, #1e3a8a, #3b82f6, #60a5fa));
+  border-radius: 12px 12px 0 0;
+}
+
+/* PROPER VISUAL HIERARCHY - UNIFORM FONT SYSTEM */
+
+.kpi-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+}
+
+/* LEVEL 1: CARD TITLES - LARGEST AND MOST PROMINENT */
+.kpi-label {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text, #444b54);
+  letter-spacing: 0.04em;
+  margin-top: 0;
+}
+
+/* LEVEL 2: CARD CONTENT - UNIFORM MEDIUM SIZE */
+.kpi-value {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: var(--color-text, #1f2937);
+  text-align: center;
+  margin-bottom: 12px;
+  line-height: 1.3;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* LEVEL 3: CARD TRENDS - SMALLEST */
+.kpi-trend {
+  font-size: 0.88em;
+  text-align: center;
+  color: var(--color-textSecondary, #6b7280);
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 4px 8px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+/* ===== MODERN CATEGORY CARDS - Creative Redesign ===== */
+
+/* Category Section Headers */
+.category-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.category-section-header .section-icon {
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.category-section-header .section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text, #374151);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.category-section-header.material .section-icon {
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
+}
+
+.category-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 16px;
+}
+
+/* Force all process cards in one row, all material cards in another row */
+.category-cards.process-row,
+.category-cards.material-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+  width: 100%;
+}
+
+.category-cards.process-row > .category-card-modern,
+.category-cards.material-row > .category-card-modern {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Modern Category Card Container */
+.category-card-modern {
+  background: var(--color-surface, #ffffff);
+  border-radius: 20px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 20px 25px -5px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  min-height: 260px;
+  max-width: 100%;
+}
+
+.category-card-modern:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+/* Gradient Header */
+.category-card-header {
+  padding: 20px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.category-card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.95;
+}
+
+/* Process Category Gradients */
+.category-card-modern.process-printed .category-card-header::before {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.category-card-modern.process-unprinted .category-card-header::before,
+.category-card-modern.process-plain .category-card-header::before {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* Material Category Gradients */
+.category-card-modern.material-pe .category-card-header::before {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.category-card-modern.material-nonpe .category-card-header::before,
+.category-card-modern.material-non-pe .category-card-header::before {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+/* Default gradient fallback */
+.category-card-modern .category-card-header::before {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.category-card-header-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.category-card-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin: 0;
+}
+
+.category-card-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+/* Main Content Area */
+.category-card-body {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 20px;
+  align-items: center;
+}
+
+/* Progress Ring Container */
+.progress-ring-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.progress-ring-bg {
+  fill: none;
+  stroke: var(--color-border, #e5e7eb);
+  stroke-width: 8;
+}
+
+.progress-ring-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease-in-out;
+  /* Fallback stroke color - will be overridden by url() if gradients are available */
+  stroke: #667eea;
+}
+
+/* Process ring colors - fallback + gradient for each */
+.category-card-modern.process-printed .progress-ring-fill {
+  stroke: #667eea; /* Fallback if gradient fails */
+  stroke: url(#gradient-printed);
+}
+
+.category-card-modern.process-unprinted .progress-ring-fill,
+.category-card-modern.process-plain .progress-ring-fill {
+  stroke: #f093fb; /* Fallback if gradient fails */
+  stroke: url(#gradient-unprinted);
+}
+
+/* Material ring colors - fallback + gradient for each */
+.category-card-modern.material-pe .progress-ring-fill {
+  stroke: #4facfe; /* Fallback if gradient fails */
+  stroke: url(#gradient-pe);
+}
+
+.category-card-modern.material-nonpe .progress-ring-fill,
+.category-card-modern.material-non-pe .progress-ring-fill {
+  stroke: #43e97b; /* Fallback if gradient fails */
+  stroke: url(#gradient-nonpe);
+}
+
+.progress-ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.progress-ring-percentage {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-text, #1f2937);
+  line-height: 1;
+  display: block;
+}
+
+.progress-ring-label {
+  font-size: 0.7rem;
+  color: var(--color-textSecondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Metrics Section */
+.category-metrics-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-metric-item {
+  background: var(--color-background, #f8fafc);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.05));
+}
+
+.category-metric-item:hover {
+  background: var(--color-surface, #ffffff);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateX(4px);
+}
+
+.metric-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--color-textSecondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text, #1f2937);
+}
+
+.metric-change {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.metric-change.positive {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+  color: #059669;
+}
+
+.metric-change.negative {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);
+  color: #dc2626;
+}
+
+.metric-change-icon {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+/* SVG Gradient Definitions - Hidden */
+.svg-gradients {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Responsive adjustments for modern cards */
+@media (max-width: 1200px) {
+  .category-cards.process-row,
+  .category-cards.material-row {
+    gap: 16px;
+  }
+  
+  .category-card-modern {
+    min-height: 240px;
+  }
+  
+  .category-card-body {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .progress-ring-container svg {
+    width: 110px;
+    height: 110px;
+  }
+}
+
+@media (max-width: 900px) {
+  .category-cards.process-row,
+  .category-cards.material-row {
+    flex-direction: column;
+  }
+  
+  .category-cards.process-row > .category-card-modern,
+  .category-cards.material-row > .category-card-modern {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .category-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-card-body {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  
+  .progress-ring-container {
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  
+  .category-metrics-grid {
+    width: 100%;
+  }
+}
+
+/* Legacy category card styles for backwards compatibility */
+.category-card {
+  background: var(--color-surface, white);
+  border-radius: 10px;
+  padding: 16px;
+  border-left: 4px solid var(--color-primary, #3b82f6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.category-title {
+  font-weight: 700;
+  color: var(--color-text, #2d3748);
+  margin-bottom: 10px;
+  font-size: 1.1em;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.category-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  font-size: 0.9em;
+}
+
+.category-metric {
+  color: var(--color-textSecondary, #4a5568);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-borderLight, rgba(59, 130, 246, 0.2));
+  font-weight: 500;
+}
+
+/* Responsive adjustments - Enhanced */
+@media (max-width: 1400px) {
+  .kpi-cards {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 18px;
+    width: 100%;
+    margin: 12px 0 0;
+  }
+  
+  .kpi-section {
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .kpi-cards {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 16px;
+    width: 100%;
+    margin: 12px 0 0;
+  }
+  
+  .kpi-card.large {
+    grid-column: span 1;
+  }
+  
+  .kpi-card {
+    min-height: 160px;
+    padding: 20px;
+  }
+  
+  .kpi-label {
+    font-size: 0.85em;
+  }
+  
+  .kpi-value {
+    font-size: 1.3em;
+  }
+  
+  .kpi-icon {
+    font-size: 2em;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .kpi-cards {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+    gap: 14px;
+    width: 100%;
+    margin: 12px 0 0;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Tablet landscape optimization */
+  .kpi-dashboard {
+    padding: 20px;
+  }
+  
+  .kpi-section {
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .kpi-cards {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    gap: 14px;
+    justify-content: center !important;
+  }
+  
+  .kpi-card {
+    padding: 18px;
+    min-height: 150px;
+  }
+  
+  .kpi-section-title {
+    font-size: 1.3em;
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+  }
+  
+  .kpi-period-header > span,
+  .kpi-period-vs {
+    font-size: 17px;
+  }
+  
+  .kpi-period-header {
+    justify-content: center; /* Maintain center alignment on tablet */
+  }
+}
+
+@media (max-width: 1000px) {
+  .kpi-cards {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 12px;
+    width: 100%;
+    margin: 12px 0 0;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .kpi-dashboard {
+    padding: 20px;
+  }
+  
+  .kpi-section {
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+  }
+  
+  .kpi-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    width: 100%;
+    margin: 12px 0 0;
+  }
+  
+  .kpi-card {
+    padding: 18px;
+    min-height: 160px;
+    border-radius: 10px;
+  }
+  
+  .kpi-label {
+    font-size: 0.85em;
+    margin-bottom: 10px;
+  }
+  
+  .kpi-value {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+  }
+  
+  .kpi-icon {
+    font-size: 1.8em;
+    margin-bottom: 12px;
+  }
+  
+  .kpi-trend {
+    font-size: 0.8em;
+    padding: 3px 6px;
+  }
+  
+  /* Customer insights on tablet/mobile */
+  .customer-insights-section .kpi-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .customer-avg-card {
+    max-width: 100%;
+  }
+}
+
+/* Customer insights cards need wider minimum to avoid cramped names */
+.customer-insights-section .kpi-cards:not(.customer-avg-container) {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+}
+
+@media (max-width: 960px) {
+  .customer-insights-section .kpi-cards:not(.customer-avg-container) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tablet portrait fix: prevent Customer Insights card overlap */
+@media (max-width: 1180px) and (orientation: portrait) {
+  .customer-insights-section .kpi-cards:not(.customer-avg-container) {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .customer-insights-section .kpi-card {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .customer-insights-section .customer-line {
+    align-items: flex-start;
+  }
+
+  .customer-insights-section .customer-line span:first-child {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word;
+  }
+}
+
+/* Top Revenue Drivers - MATCH OTHER CARDS EXACTLY */
+.kpi-card .kpi-value ol {
+  text-align: center;
+  margin: 0;
+  padding-left: 0;
+  line-height: 1.3;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  font-weight: inherit;
+}
+
+.kpi-card .kpi-value ol li {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: inherit;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--color-primary, #667eea) 6%, transparent);
+  border-radius: 8px;
+  border-left: 3px solid var(--color-primary, #667eea);
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-card .kpi-value ol li:hover {
+  background: color-mix(in srgb, var(--color-primary, #667eea) 10%, transparent);
+  transform: translateX(4px);
+}
+
+/* Arrow color classes - Enhanced */
+.arrow-positive {
+  color: var(--color-success, #007bff);
+  font-weight: 700;
+}
+
+.arrow-negative {
+  color: var(--color-error, #dc3545);
+  font-weight: 700;
+}
+
+.arrow-neutral {
+  color: var(--color-textMuted, #6b7280);
+  font-weight: 600;
+}
+
+.kpi-value > div {
+  margin-bottom: 8px;
+}
+
+/* Category Highlighting - Direct approach */
+.category-highlight {
+  font-size: 1.1em;
+  margin-bottom: 12px;
+  font-weight: 700;
+  color: var(--color-primary, #1e40af);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary, #3b82f6);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.8px;
+}
+
+/* Financial Performance Cards - Semantic styling */
+.financial-performance-section .kpi-card:nth-child(1)::before {
+  background: var(--color-success, #10b981);
+}
+
+.financial-performance-section .kpi-card:nth-child(2)::before {
+  background: var(--color-primary, #3b82f6);
+}
+
+.financial-performance-section .kpi-card:nth-child(3)::before {
+  background: var(--color-highlight, #8b5cf6);
+}
+
+.financial-performance-section .kpi-card:nth-child(4)::before {
+  background: var(--color-warning, #f59e0b);
+}
+
+/* Product Performance Cards */
+.product-performance-section .kpi-card::before {
+  background: var(--color-error, #ef4444);
+}
+
+.product-performance-section .kpi-card.large::before {
+  background: var(--color-error, #dc2626);
+}
+
+/* Geographic Distribution Cards */
+.geographic-distribution-section .kpi-card::before {
+  background: var(--color-accent, #06b6d4);
+}
+
+/* Geographic card text color variants - driven by percentage intensity */
+.geo-card--dark {
+  color: #ffffff;
+}
+.geo-card--dark .kpi-label,
+.geo-card--dark .kpi-value {
+  color: #ffffff;
+}
+.geo-card--dark .kpi-trend {
+  color: #e2e8f0;
+}
+
+.geo-card--light {
+  color: var(--color-text, #1a365d);
+}
+.geo-card--light .kpi-label {
+  color: var(--color-text, #2d3748);
+}
+.geo-card--light .kpi-value {
+  color: var(--color-text, #1a365d);
+}
+.geo-card--light .kpi-trend {
+  color: var(--color-textSecondary, #4a5568);
+}
+
+/* Customer Insights Cards */
+.customer-insights-section .kpi-card::before {
+  background: var(--color-success, #84cc16);
+}
+
+.customer-insights-section .kpi-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;  /* Stack items at top, not spread apart */
+  align-items: center;
+}
+
+/* Customer insights - tighter spacing */
+.customer-insights-section .kpi-card .kpi-value {
+  margin-bottom: 0;
+}
+
+.customer-insights-section .kpi-card .customer-subtitle {
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+/* MODERN CATEGORY CARDS - Process and Material Categories */
+/* Force process-row and material-row to display all cards in single rows */
+.product-performance-section .kpi-cards.category-cards.process-row,
+.product-performance-section .kpi-cards.category-cards.material-row {
+  display: flex !important;
+  flex-wrap: nowrap;
+  gap: 20px;
+  margin-top: 16px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.product-performance-section .kpi-cards.category-cards.process-row > .category-card-modern,
+.product-performance-section .kpi-cards.category-cards.material-row > .category-card-modern {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Override for modern cards within product performance section */
+.product-performance-section .category-card-modern {
+  min-height: 260px;
+}
+
+@media (max-width: 900px) {
+  .product-performance-section .kpi-cards.category-cards.process-row,
+  .product-performance-section .kpi-cards.category-cards.material-row {
+    flex-direction: column;
+  }
+  
+  .product-performance-section .kpi-cards.category-cards.process-row > .category-card-modern,
+  .product-performance-section .kpi-cards.category-cards.material-row > .category-card-modern {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .product-performance-section .kpi-cards.category-cards.process-row,
+  .product-performance-section .kpi-cards.category-cards.material-row {
+    flex-direction: column;
+  }
+  
+  .product-performance-section .kpi-cards.category-cards.process-row > .category-card-modern,
+  .product-performance-section .kpi-cards.category-cards.material-row > .category-card-modern {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+}
+
+/* Legacy category card styles (hidden but kept for reference) */
+.product-performance-section .kpi-cards.category-cards .kpi-card:not(.category-card-modern) {
+  display: none;
+}
+
+/* Top Revenue Drivers specific styling - Single Card with 3 Internal Rows */
+.revenue-drivers {
+  grid-column: 1 / -1; /* Force full width across all columns */
+  min-height: auto;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.revenue-drivers .kpi-label {
+  font-weight: 700;
+  font-size: 1.05em;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.revenue-drivers .kpi-value {
+  width: 100%;
+  text-align: left;
+  flex: 1;
+}
+
+/* On desktop/tablet, lay out the 3 revenue driver items horizontally */
+.revenue-drivers .kpi-value > div {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+.revenue-drivers .kpi-value > div > .revenue-driver-product-item {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin-bottom: 0;
+}
+
+.revenue-drivers > div {
+  padding-left: 0;
+  margin: 0;
+  width: 100%;
+}
+
+/* Target the product item rows inside the revenue drivers card */
+.revenue-driver-product-item {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.revenue-driver-product-item:hover {
+  background: rgba(102, 126, 234, 0.08);
+  transform: translateX(4px);
+}
+
+.revenue-driver-product-item:not(:last-child) {
+  margin-bottom: 16px;
+}
+
+/* Medal emojis styling in revenue drivers */
+.revenue-driver-product-item .revenue-driver-rank {
+  font-size: 2.2em;
+  margin-right: 16px;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Product details styling */
+.revenue-driver-product-item .revenue-driver-product-content {
+  flex: 1;
+}
+
+.revenue-driver-product-item .revenue-driver-product-name {
+  font-weight: 600;
+  font-size: 1.1em;
+  color: var(--color-text, #1f2937);
+  margin-bottom: 4px;
+}
+
+.revenue-driver-product-item .revenue-driver-product-metrics {
+  font-size: 0.9em;
+  color: var(--color-textSecondary, #6b7280);
+}
+
+/* Improve arrow styling in revenue drivers */
+.revenue-driver-product-item .arrow-positive,
+.revenue-driver-product-item .arrow-negative {
+  font-size: 0.85em;
+  padding: 3px 8px;
+  margin-left: 8px;
+}
+
+/* Geographic Distribution Cards */
+.export-regions {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 20px !important;
+  width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 10px; /* Space for scrollbar */
+}
+
+.export-regions .kpi-card {
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  scroll-snap-align: start;
+}
+
+.export-regions .kpi-card::before {
+  display: none;
+}
+
+.export-regions .kpi-card .region-globe-container {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 6px;
+}
+
+.export-regions .kpi-card .region-globe {
+  font-size: 24px;
+}
+
+.export-regions .kpi-card .kpi-trend {
+  font-size: 0.8em;
+  color: #64748b;
+}
+
+/* Visual connector under Export card */
+.export-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  height: 40px;
+  margin: 10px 0 15px 0;
+  padding-right: 25%;
+  position: relative;
+}
+
+.export-connector__arrow {
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 12px solid #6b7280;
+}
+
+.export-connector__bracket {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #6b7280;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), 0 0 16px rgba(59, 130, 246, 0.4);
+}
+
+.export-connector__bracket::before,
+.export-connector__bracket::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 15px;
+  background: #6b7280;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), 0 0 16px rgba(59, 130, 246, 0.4);
+}
+
+.export-connector__bracket::before {
+  left: 0;
+  top: 0;
+}
+
+.export-connector__bracket::after {
+  right: 0;
+  top: 0;
+}
+
+/* UAE Local Card */
+.uae-icon-container {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+}
+
+.uae-icon {
+  width: 50px;
+  height: 50px;
+}
+
+/* Globe Container */
+.rotating-emoji-container {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.rotating-emoji {
+  font-size: 40px;
+  animation: rotate-emoji 20s linear infinite;
+}
+
+@keyframes rotate-emoji {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Region Globe Container */
+.region-globe-container {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+.region-globe {
+  font-size: 32px;
+  animation: pulse-globe 3s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes pulse-globe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Responsive export regions with horizontal scroll */
+@media (max-width: 1200px) {
+  .export-regions {
+    gap: 15px !important;
+  }
+  
+  .export-regions .kpi-card {
+    min-width: 200px !important; /* Prevent excessive shrinking */
+    flex: 0 0 auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .export-regions {
+    gap: 12px !important;
+    padding-right: 16px; /* Extra padding for scroll */
+  }
+  
+  .export-regions .kpi-card {
+    min-width: 180px !important; /* Enable horizontal scroll */
+    flex: 0 0 auto !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-dashboard {
+    padding: 16px;
+  }
+  
+  .kpi-section {
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+  }
+  
+  .kpi-section-title {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+  }
+  
+  .kpi-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .kpi-card {
+    padding: 16px;
+    min-height: 140px;
+    border-radius: 8px;
+  }
+  
+  .kpi-label {
+    font-size: 0.8em;
+    margin-bottom: 8px;
+  }
+  
+  .kpi-value {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+  }
+  
+  .kpi-icon {
+    font-size: 1.6em;
+    margin-bottom: 10px;
+  }
+  
+  .kpi-trend {
+    font-size: 0.75em;
+    padding: 2px 5px;
+  }
+  
+  .kpi-period-header > span,
+  .kpi-period-vs {
+    font-size: 16px;
+  }
+  
+  /* Revenue drivers on mobile — stack vertically */
+  .revenue-drivers .kpi-value > div {
+    flex-direction: column;
+  }
+
+  /* Revenue drivers on mobile */
+  .revenue-driver-product-item {
+    padding: 6px 0;
+    margin-bottom: 10px;
+  }
+  
+  .revenue-driver-rank {
+    font-size: 1.5em;
+    min-width: 28px;
+  }
+  
+  .revenue-driver-product-name {
+    font-size: 0.95em;
+  }
+
+  .revenue-driver-product-metrics {
+    font-size: 0.8em;
+    gap: 4px;
+  }
+
+  .revenue-drivers > div > div {
+    padding: 8px 10px;
+  }
+
+  .revenue-drivers > div > div > span:first-child {
+    font-size: 1.6em;
+    margin-right: 10px;
+    min-width: 30px;
+  }
+  
+  /* Growth indicators on mobile */
+  .kpi-growth {
+    font-size: 12px;
+  }
+  
+  .kpi-growth-subtitle {
+    font-size: 9px;
+  }
+  
+  .kpi-growth-amount {
+    font-size: 11px;
+  }
+  
+  /* UAE icon and rotating emoji on mobile */
+  .uae-icon-container,
+  .rotating-emoji-container {
+    margin-bottom: 10px;
+  }
+  
+  .uae-icon {
+    width: 48px;
+    height: 32px;
+  }
+  
+  .rotating-emoji {
+    font-size: 2.5em;
+  }
+  
+  /* Region cards on mobile */
+  .region-globe-container {
+    margin-bottom: 8px;
+  }
+  
+  .region-globe {
+    font-size: 2em;
+  }
+  
+  /* Export regions horizontal scroll */
+  .export-regions {
+    gap: 10px !important;
+    padding-right: 16px;
+  }
+  
+  .export-regions .kpi-card {
+    min-width: 160px !important; /* Cards scroll horizontally on iPhone */
+    flex: 0 0 auto !important;
+  }
+  
+  /* Customer insights on mobile */
+  .customer-insights-section .kpi-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .customer-insights-section .kpi-card {
+    padding: 16px;
+    min-height: auto;
+  }
+  
+  .customer-names-small {
+    font-size: 0.85em;
+    line-height: 1.4;
+  }
+  
+  .customer-line {
+    margin-bottom: 4px;
+    font-size: 0.9em;
+  }
+  
+  .customer-line span:first-child {
+    margin-right: 6px;
+  }
+  
+  .customer-percentage {
+    font-size: 0.75em;
+  }
+  
+  .customer-subtitle {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  
+  .customer-avg-container {
+    margin-top: 16px;
+  }
+  
+  .customer-avg-card {
+    max-width: 100%;
+    margin: 0;
+  }
+}
+
+/* Error and loading states */
+.kpi-error-state {
+  padding: 32px;
+  text-align: center;
+  color: #888;
+}
+
+/* Customer insights styling */
+.customer-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  min-width: 0; /* Allow flex items to shrink */
+  padding: 2px 0;
+  text-align: left;
+}
+
+.customer-line span:first-child {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 12px;
+  font-size: 1em;
+  text-align: left;
+}
+
+.customer-percentage {
+  font-size: 0.95em;
+  color: #444;
+  font-weight: 700;
+}
+
+.customer-subtitle {
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  color: #555;
+}
+
+/* Revenue drivers styling */
+.revenue-driver-item {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.revenue-driver-medal {
+  font-size: 1.8em;
+  margin-right: 12px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.revenue-driver-content {
+  flex: 1;
+}
+
+.revenue-driver-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--color-text, #1f2937);
+}
+
+.revenue-driver-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Growth indicators */
+.growth-indicator {
+  margin-left: 8px;
+}
+
+/* Ensure trend text appears on new line */
+.kpi-trend {
+  display: block !important;
+  margin-top: 4px;
+  line-height: 1.2;
+}
+
+/* Geographic region styling */
+.region-card-gradient {
+  background: linear-gradient(135deg, var(--gradient-color), var(--gradient-color-cc));
+  border-left: 4px solid var(--gradient-color);
+  box-shadow: 0 4px 12px var(--gradient-color-44);
+}
+
+.region-label-light {
+  color: white;
+  font-weight: 700;
+}
+
+.region-label-dark {
+  color: #2d3748;
+  font-weight: 700;
+}
+
+.region-value-light {
+  color: white;
+  font-weight: 800;
+}
+
+.region-value-dark {
+  color: #1a365d;
+  font-weight: 800;
+}
+
+.region-trend-light {
+  color: #e2e8f0;
+}
+
+.region-trend-dark {
+  color: #4a5568;
+}
+
+/* Growth indicator styling - replaces inline styles */
+.kpi-growth {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.kpi-growth.positive {
+  color: #10b981;
+}
+
+.kpi-growth.negative {
+  color: #ef4444;
+}
+
+.kpi-growth-arrow {
+  font-weight: 900;
+}
+
+.kpi-growth-subtitle {
+  font-size: 10px;
+  font-weight: 400;
+  color: #666;
+  margin-top: 2px;
+  text-align: center;
+  width: 100%;
+}
+
+.kpi-growth-amount {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+  text-align: center;
+  width: 100%;
+}
+
+/* Revenue drivers product item - additional styling */
+.revenue-driver-product-item.with-border {
+  border-bottom: none;
+}
+
+.revenue-driver-product-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  flex-wrap: wrap;
+}
+
+/* Tooltip styling for regions */
+.kpi-tooltip {
+  font-size: 10px;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.kpi-tooltip.light {
+  color: #e2e8f0;
+}
+
+.kpi-tooltip.dark {
+  color: #666;
+}
+
+.region-growth {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.region-growth-positive {
+  color: #10b981;
+}
+
+.region-growth-negative {
+  color: #ef4444;
+}
+
+.region-growth-arrow {
+  font-weight: 900;
+}
+
+.region-growth-subtitle {
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.region-tooltip {
+  font-size: 10px;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.region-tooltip-light {
+  color: #e2e8f0;
+}
+
+.region-tooltip-dark {
+  color: #666;
+}
+
+/* Back button styling for export */
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.back-button:hover {
+  background: #5a6fcf;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.customer-names-small {
+  font-size: 1.05em;
+  color: var(--color-text, #333);
+  font-weight: 500;
+  margin-top: 12px;
+  line-height: 1.6;
+  width: 100%;
+}
+
+/* Customer AVG Sales container */
+.customer-avg-container {
+  margin-top: 20px;
+}
+
+/* Customer AVG Sales card */
+.customer-avg-card {
+  grid-column: 1 / -1;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Customer lines with dots styling */
+.customer-line-with-dots {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.customer-name {
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.customer-dots {
+  flex: 1;
+  border-bottom: 1px dotted #ccc;
+  margin: 0 8px;
+  height: 1px;
+  align-self: flex-end;
+  margin-bottom: 0.2em;
+}
+
+.customer-percentage {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.8em;
+}
+
+.kpi-section .kpi-cards .kpi-card {
+  min-height: 170px;
+}
+
+/* Process and Material Category Cards: 3 per row, centered */
+.kpi-section .kpi-cards.category-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+  width: 100%;
+  justify-items: stretch;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .kpi-section .kpi-cards.category-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* UAE Dirham Symbol Styling */
+.uae-dirham-symbol {
+  display: inline-block;
+  vertical-align: -0.1em; /* Negative value to lower the symbol */
+  width: 1em;
+  height: 1em;
+  margin-right: 0.2em;
+  fill: currentColor;
+}
+
+/* ========================================
+   KPI METRICS ROW — Always single row
+   (Total Sales Volume, Selling Price, MoRM)
+   ======================================== */
+
+.kpi-metrics-row {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 16px;
+  width: 100%;
+}
+
+.kpi-metrics-row > .kpi-card {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 150px;
+}
+
+@media (max-width: 768px) {
+  .kpi-metrics-row {
+    gap: 10px;
+  }
+
+  .kpi-metrics-row > .kpi-card {
+    padding: 12px 8px;
+    min-height: 120px;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-icon {
+    font-size: 1.4em;
+    margin-bottom: 6px;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-label {
+    font-size: 0.7em;
+    margin-bottom: 4px;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-value {
+    font-size: 0.95em;
+    margin-bottom: 6px;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-trend {
+    font-size: 0.65em;
+    padding: 2px 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-metrics-row {
+    gap: 6px;
+  }
+
+  .kpi-metrics-row > .kpi-card {
+    padding: 10px 6px;
+    min-height: 100px;
+    border-radius: 8px;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-icon {
+    font-size: 1.2em;
+    margin-bottom: 4px;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-label {
+    font-size: 0.6em;
+    margin-bottom: 3px;
+    letter-spacing: 0;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-value {
+    font-size: 0.8em;
+    margin-bottom: 4px;
+  }
+
+  .kpi-metrics-row > .kpi-card .kpi-trend {
+    font-size: 0.6em;
+    padding: 1px 3px;
+  }
+}
+
+/* ========================================
+   COLORFUL THEME SPECIFIC STYLES
+   ======================================== */
+
+.theme-colorful .kpi-dashboard {
+  background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 50%, #f5d0fe 100%);
+}
+
+.theme-colorful .kpi-section {
+  background: linear-gradient(145deg, #ffffff 0%, #fdf4ff 100%);
+  border: 1px solid #e9d5ff;
+  box-shadow: 0 8px 32px rgba(192, 38, 211, 0.12);
+}
+
+.theme-colorful .kpi-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fdf4ff 100%);
+  border: 1px solid #e9d5ff;
+}
+
+.theme-colorful .kpi-card:hover {
+  border-color: #c026d3;
+  box-shadow: 0 12px 40px rgba(192, 38, 211, 0.2);
+}
+
+.theme-colorful .kpi-card::before {
+  background: linear-gradient(to right, #c026d3, #8b5cf6, #06b6d4) !important;
+}
+
+.theme-colorful .kpi-label {
+  color: #7c3aed;
+}
+
+.theme-colorful .kpi-value {
+  background: linear-gradient(135deg, #c026d3 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.theme-colorful .arrow-positive {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
+}
+
+.theme-colorful .arrow-negative {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%) !important;
+} 

@@ -1,0 +1,141 @@
+[
+  {
+    "id": "V3-001",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 3,
+    "chapter": "Environment and Safety",
+    "topic": "VOC Emissions and Regulatory Framework for Flexographic Printing",
+    "subtopic": "Clean Air Act requirements — VOC definition — emission limits — NESHAP — LEL thresholds — solvent-based vs water-based regulatory implications",
+    "tags": ["VOC", "volatile organic compound", "Clean Air Act", "CAAA", "NESHAP", "EPA", "emission limit", "LEL", "solvent emission", "environmental compliance", "pollution control", "air quality", "ozone", "HAP", "hazardous air pollutant"],
+    "app_modules": ["estimation", "knowledge_chat"],
+    "trigger_actions": [
+      "estimation includes solvent-based ink system",
+      "user asks about environmental regulations for solvent inks",
+      "AI flags environmental cost items for solvent-based jobs",
+      "estimation for customer requiring environmental compliance documentation"
+    ],
+    "ai_use": "Retrieved when AI validates estimate completeness for solvent-based ink jobs. Environmental compliance costs (oxidizers, solvent recovery, monitoring) must be factored into operating costs. AI also uses this when customers ask about switching from solvent to water-based inks.",
+    "text": "Flexographic printing is a chemically intensive process generating pollutants that are subject to environmental regulation. The primary regulatory framework: VOLATILE ORGANIC COMPOUNDS (VOCs): VOCs are organic chemical compounds that evaporate at room temperature and participate in atmospheric photochemical reactions producing ground-level ozone (smog). In flexographic printing, VOCs come primarily from: solvent-based ink carriers (alcohols, esters, aromatic solvents); washup solvents; cleaning agents; coating materials. CLEAN AIR ACT (CAA) AND 1990 AMENDMENTS (CAAA): The CAAA required flexographic printing facilities to control VOC emissions. Requirements vary by facility size (major vs. area source) and geographic non-attainment status. Wide-web flexographic facilities are specifically regulated under NESHAP (National Emission Standards for Hazardous Air Pollutants) issued in 1996. KEY COMPLIANCE APPROACHES: (1) Pollution prevention (source reduction): Switch from solvent-based to water-based or UV-curable inks — eliminates most VOC emissions. Water-based inks release negligible VOCs (water and trace amines only). UV-curable inks release zero VOCs during printing (100% solids, no evaporation). (2) Add-on control equipment: Thermal oxidizers destroy VOC vapors at high temperature (1,350-1,800°F). Catalytic oxidizers operate at lower temperature. Carbon adsorption systems capture solvents for recovery or destruction. Recirculation dryer systems reduce total exhaust volume requiring treatment. NFPA DRYER SAFETY: Dryer exhaust must be maintained below 25% of LEL (Lower Explosive Limit) at all times — this is both a safety requirement (explosion prevention) and influences dryer airflow design. IMPLICATIONS FOR ESTIMATION: Facilities operating solvent-based ink systems must factor in: cost of control equipment amortization; energy cost of oxidizer operation; monitoring and reporting costs; potential permit fees. These operational costs are NOT present for water-based or UV ink systems — a key factor in ink system selection for new equipment or customer requirements.",
+    "cross_references": ["V3-002", "V5-002", "V5-003", "V6-004"]
+  },
+
+  {
+    "id": "V3-002",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 3,
+    "chapter": "Environment and Safety",
+    "topic": "Hazardous Waste Management — Spent Solvents, Waste Ink, and RCRA Compliance",
+    "subtopic": "Classification of waste inks and solvents — listed vs characteristic hazardous waste — cradle-to-grave tracking — storage and disposal requirements",
+    "tags": ["hazardous waste", "RCRA", "spent solvent", "waste ink", "F-listed waste", "U-listed waste", "hazardous waste classification", "waste disposal", "waste tracking", "solvent waste", "ink waste", "return ink management"],
+    "app_modules": ["knowledge_chat", "estimation"],
+    "trigger_actions": [
+      "user asks about disposal of waste ink",
+      "estimation includes solvent ink cleanup costs",
+      "AI advises on ink return and waste management",
+      "user asks about waste classification"
+    ],
+    "ai_use": "Retrieved when AI advises on waste ink and solvent disposal procedures. Waste inks and solvents from flexographic printing may be classified as hazardous waste requiring specific tracking, storage and disposal. AI flags this when a job uses hazardous solvent systems.",
+    "text": "Flexographic printing generates several waste streams that may be subject to hazardous waste regulations under the Resource Conservation and Recovery Act (RCRA). WASTE CLASSIFICATION: Wastes are hazardous if specifically listed (F, K, P, U codes) or if they exhibit characteristic properties (ignitability, corrosivity, reactivity, toxicity). SOLVENT WASTES (F-LISTED): F001-F005 codes designate spent solvent wastes. Solvents commonly used in flexographic printing that fall under F-listing include: methylene chloride; 1,1,1-trichloroethane; xylene; acetone; benzene; n-butyl alcohol. When these solvents are used for cleaning plates, anilox rolls, or press equipment and then discarded, the spent solvent is F-listed hazardous waste. WASTE INKS (U-LISTED): Waste inks containing certain chemical constituents carry U-codes. Acetone (U002) and benzene (U019) are examples. Waste inks that are discarded commercial chemical products containing listed ingredients are classified as U-listed hazardous waste. CHARACTERISTIC HAZARDOUS WASTES: Even if not specifically listed, a waste is hazardous if it is: Ignitable — flash point below 60°C (most solvent-based inks and solvents qualify); Corrosive — pH below 2 or above 12.5. INK CONSERVATION TO MINIMIZE WASTE: The most effective waste reduction strategy is ink conservation: maximize ink return before washup; use automated ink management systems; reformulate return inks into new batches before disposal becomes necessary. Return inks that can be reformulated are not waste — only truly unusable inks are waste. CRADLE-TO-GRAVE TRACKING: RCRA requires generators to track hazardous waste from generation through transportation, treatment, and disposal. This requires: waste manifests for transport; approved waste haulers; records kept for 3 years. PRACTICAL IMPLICATIONS FOR YOUR PLANT: Common solvent-based ink washup solvents (propyl alcohol, ethyl acetate) are ignitable and may be classified as hazardous waste when spent. Water-based ink washup waste (water with trace amines and pigments) is generally non-hazardous. Switching to water-based inks dramatically reduces hazardous waste generation and compliance burden.",
+    "cross_references": ["V3-001", "V3-003", "V5-002"]
+  },
+
+  {
+    "id": "V3-003",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 3,
+    "chapter": "Environment and Safety",
+    "topic": "Material Safety Data Sheets (MSDS) and Chemical Handling",
+    "subtopic": "Understanding MSDS content — health hazards — flammability ratings — exposure limits — PPE requirements — emergency response",
+    "tags": ["MSDS", "material safety data sheet", "SDS", "chemical hazard", "flammability", "health hazard", "exposure limit", "TLV", "PEL", "PPE", "first aid", "flash point", "HMIS", "OSHA", "chemical handling"],
+    "app_modules": ["knowledge_chat"],
+    "trigger_actions": [
+      "user asks about safety of a specific chemical",
+      "training content generation for operators",
+      "user asks about ink or solvent hazards",
+      "onboarding new pressroom staff"
+    ],
+    "ai_use": "Retrieved when AI explains chemical safety to operators or generates safety training content. Every ink, solvent, and cleaning agent used in the pressroom has an MSDS/SDS that must be understood by operators.",
+    "text": "Every chemical used in a flexographic printing facility — inks, solvents, cleaning agents, coatings — must have a Material Safety Data Sheet (MSDS, now called Safety Data Sheet/SDS under GHS) available to all workers who may be exposed. MSDS CONTENT SECTIONS: (1) Product identification and manufacturer contact; (2) Composition/ingredients — lists all chemicals above threshold concentrations; (3) Health hazard data — routes of exposure (inhalation, skin, eye, ingestion), acute and chronic effects, carcinogenicity; (4) Fire and explosion data — flash point, flammable limits (LEL/UEL), extinguishing agents, fire-fighting instructions; (5) Reactivity data — stability, incompatible materials, hazardous decomposition products; (6) Spill and disposal procedures; (7) Personal protective equipment (PPE) — specific gloves, eye protection, respiratory protection required; (8) Physical properties — color, odor, vapor pressure, density, boiling point; (9) First aid procedures. HMIS RATING SYSTEM: A quick reference rating system: Health 0-4 (0=minimal hazard, 4=severe); Flammability 0-4; Reactivity 0-4. Most solvent-based flexo inks have Health=1-2, Flammability=1-3. KEY PARAMETERS FOR PRESSROOM CHEMICALS: Flash Point — temperature at which a liquid gives off enough vapor to ignite. Solvent-based inks containing propyl alcohol (flash point 15°C/59°F) and ethyl acetate (flash point -4°C/25°F) are flammable liquids — require grounding, UL-approved containers, no open flames. TLV/TWA (Threshold Limit Value/Time Weighted Average) — maximum airborne concentration of a chemical considered safe for 8-hour daily exposure. Adequate ventilation must keep all solvents below TLV levels. FIRST AID: For skin contact with inks or solvents: flush thoroughly with water; remove contaminated clothing; seek medical attention if irritation develops. For eye contact: flush with plenty of water for 15 minutes; seek immediate medical attention. For inhalation of solvent vapors: move to fresh air; seek medical attention if breathing difficulties develop. PRACTICAL REQUIREMENT: MSDS files must be immediately accessible to all workers in the pressroom — not locked away. Workers must be trained to read and understand MSDS information for all chemicals they handle.",
+    "cross_references": ["V3-001", "V6-009"]
+  },
+
+  {
+    "id": "V3-004",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 3,
+    "chapter": "Environment and Safety",
+    "topic": "Pollution Prevention — Water-Based and UV Ink Conversion",
+    "subtopic": "Environmental and operational benefits of converting from solvent-based to water-based or UV inks — cost considerations — technical requirements",
+    "tags": ["pollution prevention", "ink conversion", "water-based ink", "UV ink", "solvent reduction", "VOC reduction", "environmental benefit", "source reduction", "ink system change", "regulatory compliance", "water-based conversion"],
+    "app_modules": ["estimation", "crm_quotation", "knowledge_chat"],
+    "trigger_actions": [
+      "customer asks about water-based or UV ink options",
+      "estimation compares solvent vs water-based cost",
+      "AI recommends ink system for a new job",
+      "user asks about environmental certification requirements"
+    ],
+    "ai_use": "Retrieved when AI helps with ink system selection or customer environmental compliance requirements. Water-based and UV inks are the pollution prevention solution — they eliminate the VOC and hazardous waste compliance burden of solvent-based systems.",
+    "text": "Pollution prevention through source reduction is the most effective and cost-efficient approach to environmental compliance for flexographic printers. Converting from solvent-based to water-based or UV-curable inks eliminates the primary source of VOC emissions. WATER-BASED INK CONVERSION BENEFITS: Virtually zero VOC emissions (water and trace amines only); no solvent recovery or oxidizer equipment required; reduced fire hazard (water is non-flammable); reduced health risk to operators from solvent vapor exposure; lower waste disposal costs (water-based washup waste is generally non-hazardous); potential elimination of air permits and associated compliance costs. WATER-BASED CONVERSION REQUIREMENTS: Press must have adequate drying capacity (water dries more slowly than solvents — additional dryer energy or reduced press speed); corona treatment equipment for polyolefin films is essential; anilox selection must be reviewed (finer anilox typically needed); pH monitoring equipment and training for all press operators; plate compatibility verification (most photopolymer plates are compatible with water-based inks); substrate surface energy must meet minimum dyne levels. UV-CURABLE INK CONVERSION BENEFITS: Zero VOC emissions; instantaneous curing (no drying time — very high press speeds possible); excellent chemical resistance of cured ink film; zero retained solvent; very compact press design possible without inter-station dryers. UV CONVERSION REQUIREMENTS: UV lamp units at each color station; UV-transparent substrates or top-coated films required; higher capital cost for UV cure units; some substrates incompatible with UV heat; UV inks typically higher material cost than water-based. COST-BENEFIT ANALYSIS FOR ESTIMATION: When estimating jobs on solvent-based vs. water-based systems, consider: Solvent system total cost = ink cost + solvent cost + control equipment cost + monitoring cost + waste disposal cost + permit cost. Water-based total cost = ink cost + higher energy for drying + corona treatment. The regulatory compliance savings often more than offset the operational differences. For UAE/Dubai operations: local environmental regulations (Ministry of Climate Change and Environment) require compliance with air quality standards — solvent emission controls are mandatory above threshold volumes.",
+    "cross_references": ["V3-001", "V3-002", "V5-002", "V5-003"]
+  },
+
+  {
+    "id": "V3-005",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 3,
+    "chapter": "Quality Control",
+    "topic": "Quality Control vs Quality Assurance in Flexographic Printing",
+    "subtopic": "Defining quality as meeting customer specifications — QC vs QA roles — quality responsibility — FIRST specifications",
+    "tags": ["quality control", "quality assurance", "QC", "QA", "FIRST", "specifications", "customer expectations", "flexographic quality", "process control", "quality system", "defect prevention"],
+    "app_modules": ["production_log", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user sets up QC parameters for a job",
+      "AI generates quality checklist",
+      "customer complaint about print quality",
+      "training content for operators"
+    ],
+    "ai_use": "Retrieved when AI helps define quality standards or generate QC procedures. Quality in flexo means consistently meeting agreed specifications — not subjective aesthetic judgement. FIRST specifications provide the industry-standard benchmarks.",
+    "text": "Quality in flexographic printing is defined as: consistently meeting whatever specifications have been agreed upon to achieve a satisfactory end result. It requires: (1) Understanding what the customer wants; (2) Knowledge of what you are capable of delivering; (3) A system to consistently meet those specifications. KEY DISTINCTION: Features vs Quality — features are characteristics describing a product (process color, varnish, high screen ruling). Quality is the continual meeting of specifications regardless of what those features are. A simple two-color job is not lower quality than a complex eight-color job if both consistently meet their respective specifications. QUALITY CONTROL (QC): Operational techniques and activities used to fulfill quality requirements. QC encompasses: preflight checking of incoming artwork; in-process measurement during press run; final inspection before shipment. The individual doing the work is ultimately responsible for its quality — the QC department acts as an extra set of eyes. QUALITY ASSURANCE (QA): The planned and systematic activities to provide confidence that the product will satisfy quality requirements. QA covers supplier qualification, process documentation, training, and corrective action systems. FIRST SPECIFICATIONS: Flexographic Image Reproduction Specifications and Tolerances — the industry standard specifications developed by FTA. FIRST defines: minimum/maximum dot requirements; solid ink density targets; dot gain (TVI) tolerances; registration tolerances; trap values; bar code specifications; color measurement targets (ΔE values). FIRST specifications are used as the baseline for QC in flexo printing. The QC checklist includes: color breaks correct; copy location and verbiage; bleed dimensions; small copy printability; process work vs. customer target; sign-off documentation. WHO IS RESPONSIBLE FOR QUALITY: Everyone — from the designer who creates files to the press operator running the job to the QC inspector releasing the product. Quality problems discovered late in the process are dramatically more expensive to fix than those caught early. The cost of a plate remake is far less than the cost of a customer return.",
+    "cross_references": ["V3-006", "V2-007", "V6-010"]
+  },
+
+  {
+    "id": "V3-006",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 3,
+    "chapter": "Quality Control",
+    "topic": "Statistical Process Control (SPC) Tools for Flexographic Quality",
+    "subtopic": "Pareto charts, control charts, histograms, scatter diagrams — using SPC to identify and control quality variation in flexo printing",
+    "tags": ["SPC", "statistical process control", "Pareto chart", "control chart", "histogram", "scatter diagram", "process capability", "sigma", "UCL", "LCL", "density control", "dot gain control", "quality improvement", "variation control"],
+    "app_modules": ["analytics_dashboard", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "analytics dashboard shows damage trends",
+      "AI analyzes damage pattern by machine",
+      "user asks how to identify root cause of recurring damage",
+      "reporting module generates monthly damage analysis"
+    ],
+    "ai_use": "CRITICAL for analytics module — retrieved when AI performs pattern analysis on damage logs. The Pareto principle (80/20 rule) and control chart concepts are the analytical framework for identifying the few root causes responsible for most plate damage. AI applies these concepts to damage data.",
+    "text": "Statistical Process Control (SPC) provides the tools to distinguish between normal process variation and special-cause problems that require corrective action. THE 80/20 (PARETO) PRINCIPLE: The bulk of printing problems (80%) are due to a small minority of causes (20%). Most customer complaints can be tied to a few systemic problems — late delivery or specific printing defects. Most printing defects are caused by a few items: a specific stock, press, or ingredient. Application to your damage log: rather than treating each damage entry individually, analyze: Which machine produces the most damage? Which damage category is most frequent? Which ink color is most often damaged? Which month/season shows highest damage? The Pareto chart plots these frequencies ranked from highest to lowest — address the top 2-3 causes and you eliminate 80% of damage. CONTROL CHARTS: A run chart of measured values (e.g. solid ink density over time) with Upper Control Limit (UCL) and Lower Control Limit (LCL) added. Control limits are set at ±3 sigma from the process average. Values within control limits = normal process variation. Values outside control limits = special cause requiring investigation. Using density control charts during press runs: measure solid ink density every 30 minutes; plot on control chart; if density drifts outside control limits, investigate ink viscosity, anilox condition, or plate condition before product becomes out-of-specification. HISTOGRAMS: Show the distribution of measured values compared to specification limits. Example: plotting plate area (cm²) used per job against the estimated area — if actual exceeds estimate consistently, the estimation model needs adjustment. SCATTER DIAGRAMS: Show correlation between two variables. Application: plot dot gain vs. anilox BCM — a positive correlation confirms that higher BCM anilox causes higher dot gain. This data justifies anilox selection changes. PROCESS CAPABILITY: The histogram reveals whether the natural variation in a process is smaller than the required tolerance. If 3-sigma variation is smaller than the tolerance range, the process is capable of reliably meeting specifications without defects. For plate damage rate: if the damage rate control chart shows the process is in control (no special causes) but the average rate is still too high — a process improvement (not just troubleshooting) is needed.",
+    "cross_references": ["V3-005", "V6-007", "V6-010"]
+  },
+
+  {
+    "id": "V3-007",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 3,
+    "chapter": "Quality Control",
+    "topic": "Process Improvement — Benchmarking and Supplier Partnership",
+    "subtopic": "Continuous improvement philosophy — benchmarking against best-in-class — customer-supplier partnership — quality cost analysis",
+    "tags": ["process improvement", "benchmarking", "continuous improvement", "supplier partnership", "customer partnership", "quality cost", "total cost", "reengineering", "TQM", "flexo improvement"],
+    "app_modules": ["analytics_dashboard", "crm_quotation", "knowledge_chat"],
+    "trigger_actions": [
+      "analytics dashboard shows KPI trends",
+      "user asks about reducing plate damage rate",
+      "AI generates improvement recommendations",
+      "customer requests quality improvement plan"
+    ],
+    "ai_use": "Retrieved when AI generates improvement recommendations from analytics data or assists with quality improvement planning. Provides the philosophical and practical framework for systematic quality improvement beyond troubleshooting individual incidents.",
+    "text": "Quality improvement in flexographic printing requires a systematic approach beyond reactive troubleshooting. BENCHMARKING: Comparing your processes, results, and costs against the best-in-class operations. Benchmarking identifies: the gap between current performance and what is achievable; which specific practices enable best-in-class performance; targeted improvement opportunities. Key flexo benchmarks to track and compare: plate damage rate (% of total plates damaged per month); makeready time (minutes per job); ink waste (% of ink purchased returned as waste); press efficiency (% of scheduled time actually printing); first-time-right rate (% of jobs approved on first proof). SUPPLIER PARTNERSHIP: Purchasing by price alone without consideration of long-term relationships is destructive to operational quality. Key supplier performance criteria beyond price: on-time delivery consistency; specification conformance rate; technical assistance and training support; quality consistency lot-to-lot. For plate suppliers (DYNAGRAPH, ANOOP, CRYSTAL): track incoming plate quality — caliper consistency, defect rate per delivery. Variations in plate caliper directly affect impression setting and dot gain. For ink suppliers: track color consistency, pH stability, lot-to-lot viscosity variation. CUSTOMER PARTNERSHIP: Understanding what the customer is doing with the printed product after delivery enables proactive quality management. If the customer is laminating the printed film — the printer must understand lamination bond strength requirements and formulate inks accordingly. If the customer's final package goes through retort — the printer must specify retort-resistant inks. QUALITY COST ANALYSIS: Quality costs include: Prevention costs (training, process improvement, equipment maintenance); Appraisal costs (QC inspection, testing equipment); Internal failure costs (waste, rework, plate damage, reruns); External failure costs (customer returns, credits, lost business). Tracking all four cost categories reveals that investment in prevention dramatically reduces total quality cost — the cost of preventing plate damage through proper storage and handling is far less than the cost of premature plate replacement.",
+    "cross_references": ["V3-005", "V3-006", "analytics_dashboard"]
+  }
+]

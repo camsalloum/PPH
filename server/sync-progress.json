@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "phase": "Sync complete!",
+  "year": 2026,
+  "startTime": "2026-03-04T07:03:04.126Z",
+  "completedAt": "2026-03-04T07:15:49.471Z",
+  "elapsedSeconds": 765,
+  "totalMinutes": 12.8,
+  "rows": 1092,
+  "oracleFetchTime": 687.3,
+  "pgCopyTime": 24.2,
+  "updatedAt": "2026-03-04T07:15:49.471Z"
+}

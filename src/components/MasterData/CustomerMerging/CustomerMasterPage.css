@@ -1,0 +1,88 @@
+/* Customer Master Page Styles */
+
+.customer-master-page {
+  padding: 0;
+}
+
+.customer-master-page .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.customer-master-page .ant-statistic-title {
+  font-size: 13px;
+  color: #666;
+}
+
+.customer-master-page .ant-statistic-content {
+  font-size: 24px;
+}
+
+.customer-master-page .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.customer-master-page .ant-table-row:hover {
+  cursor: pointer;
+}
+
+.customer-master-page .ant-tag {
+  border-radius: 4px;
+}
+
+.customer-master-page .ant-descriptions-item-label {
+  font-weight: 500;
+  background: #fafafa;
+}
+
+.customer-master-page .ant-list-item {
+  padding: 8px 16px;
+}
+
+.customer-master-page .ant-list-item:hover {
+  background: #f5f5f5;
+}
+
+.customer-master-page .ant-badge-count {
+  font-size: 11px;
+}
+
+/* Stats cards hover effect */
+.customer-master-page .ant-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Customer code tag styling */
+.customer-master-page .ant-tag[color="blue"] {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Modal improvements */
+.customer-master-page .ant-modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Search input */
+.customer-master-page .ant-input-search .ant-input {
+  border-radius: 6px 0 0 6px;
+}
+
+.customer-master-page .ant-input-search .ant-btn {
+  border-radius: 0 6px 6px 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .customer-master-page .ant-statistic-content {
+    font-size: 20px;
+  }
+  
+  .customer-master-page .ant-card-extra {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

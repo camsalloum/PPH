@@ -1,0 +1,855 @@
+/* ========================================
+   UNIFIED P&L TABLE STYLES - BASIC BLACK & WHITE
+   Single source of truth for all P&L table styling
+   Used by: Live view, HTML exports, PDF exports
+   ======================================== */
+
+:root {
+  /* Sticky header row height - DO NOT override in media queries */
+  --pl-hdr-h: 28px;
+
+  /* z-index layering for sticky elements - higher values to prevent overlaps */
+  /* ⚠️ SYNC: Must match MultiChartHTMLExport.js z-index values */
+  --z-corner: 20;    /* Ledger header - always on top */
+  --z-hdr4: 16;      /* First header row (Year) */
+  --z-hdr3: 15;      /* Second header row (Month) */
+  --z-hdr2: 14;      /* Third header row (Type) */
+  --z-hdr1: 13;      /* Fourth header row (Metrics) - with double-line */
+  --z-firstcol: 12;  /* Body first column */
+  --z-header: 10;    /* Generic header fallback */
+  --z-separator: 1;  /* Period separators */
+}
+
+/* ========================================
+   BASE CONTAINER & LAYOUT
+   ======================================== */
+
+.pl-table-view {
+  width: 100%;
+  padding: 20px;
+  margin-top: 20px;
+  max-width: 100%;
+  overflow: visible; /* FIXED: Let child container handle all scrolling */
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+.pl-table-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  position: relative !important;
+  overflow-x: auto !important;           /* Horizontal scroll - FORCED */
+  overflow-y: auto !important;          /* CRITICAL: Changed from visible to auto */
+  -webkit-overflow-scrolling: touch !important;
+  max-height: 85vh !important;           /* Increased for more table visibility */
+  min-height: 60vh !important;           /* Increased minimum height */
+  padding-bottom: 10px !important;
+  background-color: #fff !important;
+  will-change: scroll-position !important; /* FIXED: Optimize for scrolling */
+  contain: layout !important;            /* Isolate layout calculations */
+}
+
+/* STICKY DOUBLE-LINE - DIV OVERLAY */
+.pl-sticky-double-line {
+  position: sticky;
+  top: calc(var(--pl-hdr-h) * 4); /* 112px - sticks at this position when scrolling */
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 0;
+  border-bottom: 4px double #000;
+  z-index: 1000;
+  pointer-events: none;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow: visible;
+}
+
+.pl-table-container.tall-table {
+  overflow-y: auto !important;
+  max-height: 80vh !important;
+}
+
+/* ========================================
+   HEADER & TITLE STYLING
+   ======================================== */
+
+.pl-table-header {
+  text-align: center;
+  width: 100%;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.pl-header-center {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pl-table-title {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #000;
+  text-align: center;
+  font-weight: bold;
+}
+
+.pl-table-subtitle {
+  font-style: italic;
+  font-weight: bold;
+  text-align: center;
+  color: #000;
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+}
+
+/* ========================================
+   CORE TABLE STYLING
+   ======================================== */
+
+.pl-financial-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate; /* needed for sticky headers */
+  border-spacing: 0;         /* remove default cell gutters that look like borders */
+  
+  
+  font-size: clamp(9px, 1.8vw, 12px);
+  font-family: Arial, sans-serif;
+  table-layout: fixed;
+  max-width: 100%;
+  background: #fff;
+  background-color: #fff;
+}
+
+/* Keep headers at responsive 14px - STICKY for export */
+.pl-financial-table thead th {
+  font-size: clamp(11px, 2.1vw, 14px);
+  height: var(--pl-hdr-h) !important;
+  min-height: var(--pl-hdr-h) !important;
+  max-height: var(--pl-hdr-h) !important;
+  position: sticky !important;
+  top: 0;
+  z-index: var(--z-hdr4) !important;
+  font-weight: 700;
+  
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  padding: 4px 6px !important; /* Fixed consistent padding */
+  line-height: 1.2 !important;
+  vertical-align: middle !important;
+  /* IMPORTANT: let inline bg win */
+  background-color: transparent;
+  background-clip: padding-box !important;
+}
+
+/* underlay: blocks rows scrolling behind, but stays under inline color */
+/* White underlay ONLY when there is NO inline background on the cell */
+.pl-financial-table thead th:not([style*="background"]):not([style*="background-color"])::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;              /* keep it BEHIND the content and inline bg */
+  pointer-events: none;
+}
+
+/* If the header DOES have inline bg, don't put white on top of it */
+.pl-financial-table thead th[style*="background"],
+.pl-financial-table thead th[style*="background-color"] {
+  background-color: transparent;     /* let inline be visible */
+}
+
+/* Four sticky header tiers - stacked downwards */
+.pl-financial-table thead tr:nth-child(1) th {
+  top: 0 !important;
+  z-index: var(--z-hdr4) !important;
+}
+.pl-financial-table thead tr:nth-child(2) th {
+  top: calc(var(--pl-hdr-h) * 1) !important;
+  z-index: var(--z-hdr3) !important;
+}
+.pl-financial-table thead tr:nth-child(3) th {
+  top: calc(var(--pl-hdr-h) * 2) !important;
+  z-index: var(--z-hdr2) !important;
+}
+.pl-financial-table thead tr:nth-child(4) th {
+  top: calc(var(--pl-hdr-h) * 3) !important;
+  z-index: var(--z-hdr1) !important;
+}
+
+/* Last header band (metrics - 4th row) */
+.pl-financial-table thead tr:nth-child(4) th {
+  font-size: 12px !important;
+  font-family: Arial, sans-serif;
+}
+
+/* First data column (row labels) is left-aligned */
+.pl-financial-table tbody td:first-child { text-align: left; }
+
+/* Keep numbers tight in non-first columns */
+.pl-financial-table td:not(:first-child),
+.pl-financial-table thead th:not(:first-child) {
+  white-space: nowrap !important;
+}
+
+/* ========================================
+   TABLE CELL STYLING
+   ======================================== */
+
+.pl-financial-table th,
+.pl-financial-table td {
+  padding: clamp(2px, 0.5vw, 8px) clamp(3px, 0.7vw, 12px);
+  vertical-align: middle;
+  text-align: center;
+  line-height: 1.15;
+  white-space: normal;   /* allow wrapping by default */
+  word-break: normal;
+  overflow-wrap: anywhere;
+  background-clip: border-box;
+}
+
+/* FIRST COLUMN (ALL SCREENS) - Body cells - STICKY LEFT */
+/* Apply to body first column - EXCLUDE separator rows */
+/* ⚠️ SYNC: Must match MultiChartHTMLExport.js first column sticky rules */
+.pl-financial-table thead tr:first-child th:first-child,
+.pl-financial-table thead tr th.pl-ledger-header,
+.pl-financial-table tbody tr:not(.pl-separator-row) td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  background-color: transparent;   /* allow row-level / inline */
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 28ch;
+  min-width: 120px;
+  box-sizing: border-box;
+}
+
+/* Ledger header double-line is set at line 145-146 */
+
+/* Pseudo-element background for first column - WHITE to prevent bleeding while maintaining white appearance */
+/* Only apply to Ledger header and body cells, not first period columns in rows 2-4 */
+/* EXCLUDE separator rows */
+/* ⚠️ SYNC: Must match MultiChartHTMLExport.js pseudo-element rules */
+.pl-financial-table thead tr:first-child th:first-child::before,
+.pl-financial-table thead tr th.pl-ledger-header::before,
+.pl-financial-table tbody tr:not(.pl-separator-row) td:first-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;  /* Don't extend - let border show */
+  bottom: 0;
+  background-color: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Extend sticky underlay slightly to cover bleed from scrolling cells */
+.pl-financial-table tbody tr:not(.pl-separator-row) td:first-child::before {
+  right: -3px;
+}
+
+/* Special handling for first column header cells in sticky rows */
+/* Only target the Ledger header (has rowspan, so use class selector), not first period columns in rows 2-4 */
+/* Ledger header intersection (rowspan) gets highest z-index for corner effect */
+/* ⚠️ SYNC: Must match MultiChartHTMLExport.js ledger header corner sticky */
+.pl-financial-table thead tr:nth-child(1) th.pl-ledger-header {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: var(--z-corner) !important; /* Highest z-index for perfect corner intersection */
+}
+
+/* Note: Rows 2-4 don't have th:first-child because Ledger spans them, so we don't need to target them */
+
+/* Note: Pseudo-element for ledger header is handled by the general rule above */
+
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+
+/* Desktop - Default (1200px+) */
+@media (min-width: 1200px) {
+  .pl-financial-table {
+    font-size: 12px;
+    min-width: 100%;
+  }
+  
+  /* Keep headers at 14px */
+  .pl-financial-table thead th {
+    font-size: 14px;
+    padding: 4px 6px !important; /* Fixed padding for header height consistency */
+  }
+
+  /* Override font size for metric headers (Amount, % of Sales, per Kg) to be smaller */
+  .pl-financial-table thead tr:nth-child(4) th {
+    font-size: 10px !important;
+  }
+
+  .pl-financial-table td {
+    padding: 8px 12px;
+  }
+}
+
+/* Tablet - Medium screens (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .pl-financial-table {
+    font-size: 10px;
+    min-width: 100%;
+  }
+  
+  /* Keep headers at 12px for tablet */
+  .pl-financial-table thead th {
+    font-size: 12px;
+  }
+  
+  /* Override font size for metric headers (Amount, % of Sales, per Kg) to be smaller */
+  .pl-financial-table thead tr:last-child th {
+    font-size: 9px !important;
+  }
+  
+  .pl-financial-table th,
+  .pl-financial-table td {
+    padding: 6px 8px;
+  }
+  
+  /* Adjust column widths for tablet */
+  .pl-financial-table colgroup:first-child col {
+    width: 23% !important; /* Ledger column - increased by 10% from period columns */
+  }
+  
+  .pl-financial-table colgroup.period-column-group col:nth-child(1) {
+    width: 12.6% !important; /* Amount column - reduced by 10% */
+  }
+  
+  .pl-financial-table colgroup.period-column-group col:nth-child(2) {
+    width: 9% !important; /* % of Sales column - reduced by 10% */
+  }
+  
+  .pl-financial-table colgroup.period-column-group col:nth-child(3) {
+    width: 8.1% !important; /* AED per Kg column - reduced by 10% */
+  }
+}
+
+/* Mobile - Small screens (< 768px) */
+@media (max-width: 767px) {
+  .pl-financial-table {
+    font-size: 9px; /* Slightly smaller for more content */
+    min-width: 100%; /* Remove fixed min-width, let content determine size */
+    width: 100%;
+    table-layout: auto; /* Allow flexible column sizing */
+  }
+  
+  /* Keep headers readable on mobile */
+  .pl-financial-table thead th {
+    font-size: 10px; /* Reduced to fit better */
+    padding: 4px 2px; /* Tighter padding to save space */
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  
+  /* Override font size for metric headers (Amount, % of Sales, per Kg) */
+  .pl-financial-table thead tr:last-child th {
+    font-size: 8px !important; /* Smaller for metric headers */
+  }
+  
+  .pl-financial-table th,
+  .pl-financial-table td {
+    padding: 3px 2px; /* Tighter padding for more space */
+    white-space: nowrap;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: none; /* Remove max-width constraints */
+  }
+  
+  /* Mobile column optimization - use flexible widths */
+  .pl-financial-table colgroup:first-child col {
+    width: auto !important; /* Let Ledger column size naturally */
+    min-width: 80px; /* Minimum readable width */
+  }
+  
+  .pl-financial-table colgroup.period-column-group col:nth-child(1) {
+    width: auto !important; /* Amount column - flexible */
+    min-width: 60px;
+  }
+  
+  .pl-financial-table colgroup.period-column-group col:nth-child(2) {
+    width: auto !important; /* % of Sales column - flexible */
+    min-width: 45px;
+  }
+  
+  .pl-financial-table colgroup.period-column-group col:nth-child(3) {
+    width: auto !important; /* AED per Kg column - flexible */
+    min-width: 45px;
+  }
+  
+  /* Improve Ledger header readability on mobile */
+  .pl-ledger-header {
+    font-size: 14px !important; /* Smaller but still prominent */
+    line-height: 1.0 !important;
+    padding: 4px 2px !important;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  
+  /* Reduce header font size on mobile */
+  .pl-table-title {
+    font-size: 1.2rem;
+  }
+  
+  .pl-table-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  /* Improve row highlighting on mobile - REMOVED: Colors now come from period selection only */
+  /* .pl-financial-table tbody tr:hover { background-color: rgba(0, 123, 255, 0.1); } */
+  
+  /* Ensure table container allows horizontal scrolling only when needed */
+  .pl-table-view {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Responsive column widths for optimal layout */
+.pl-financial-table colgroup:first-child col {
+  width: 25% !important; /* Ledger column - increased by 10% from period columns */
+}
+
+/* Amount columns - reduced by 10% */
+.pl-financial-table colgroup.period-column-group col:nth-child(1) {
+  width: 11.7% !important; /* Amount column - reduced by 10% */
+}
+
+/* Percentage columns - reduced by 10% */
+.pl-financial-table colgroup.period-column-group col:nth-child(2) {
+  width: 8.1% !important; /* % of Sales column - reduced by 10% */
+}
+
+/* Per Kg columns - reduced by 10% */
+.pl-financial-table colgroup.period-column-group col:nth-child(3) {
+  width: 7.2% !important; /* AED per Kg column - reduced by 10% */
+}
+
+/* ========================================
+   SPECIAL ROWS / LABELS
+   ======================================== */
+
+.pl-table-main-label { font-size: 28px !important; }
+.pl-financial-table th.pl-empty-header { font-size: 28px !important; }
+
+.pl-financial-table .pl-important-row { font-weight: bold; }
+
+/* Row styling */
+.pl-product-header-row td:first-child {
+  /* background-color: #1565c0; */ /* REMOVED: Colors now come from period selection only */
+  color: white;
+  font-weight: bold;
+}
+
+.pl-category-header-row td:first-child {
+  /* background-color: #37474f; */ /* REMOVED: Colors now come from period selection only */
+  color: white;
+  font-weight: bold;
+}
+
+.pl-total-header-row td:first-child {
+  /* background-color: #e65100; */ /* REMOVED: Colors now come from period selection only */
+  color: white;
+  font-weight: bold;
+}
+
+/* ========================================
+   HTML EXPORT SPECIFIC STYLES
+   ======================================== */
+
+/* Ledger header specific styling - prevent vertical wrapping beyond 4 rows */
+.pl-ledger-header {
+  font-family: Arial, sans-serif !important;
+  font-size: 20px !important; /* Keep original font size as requested */
+  font-weight: bold !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+  line-height: 1.1 !important;
+  height: calc(var(--pl-hdr-h) * 4) !important; /* Strict 4-row height constraint */
+  max-height: calc(var(--pl-hdr-h) * 4) !important; /* Prevent expansion beyond 4 rows */
+  overflow: hidden !important; /* Hide any content that exceeds the height */
+  box-sizing: border-box !important; /* Include padding/border in height calculation */
+}
+
+/* Consistent header row heights - using CSS variable for consistency */
+.pl-financial-table thead tr th {
+  height: var(--pl-hdr-h);
+  line-height: 1.1;
+  vertical-align: middle;
+  font-weight: bold;
+  position: sticky;
+  /* z-index set per row via nth-child rules, not generic override */
+  white-space: nowrap !important;
+  padding: 3px 6px;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+/* Override nowrap for the ledger header to allow word breaking */
+.pl-financial-table thead tr th.pl-ledger-header {
+  white-space: normal !important;
+}
+
+/* Freeze ALL 4 header rows - using CSS variable for consistent positioning */
+.pl-financial-table thead tr:nth-child(1) th {
+  top: calc(var(--pl-hdr-h) * 0); /* First row at top */
+  z-index: var(--z-hdr4);
+}
+
+.pl-financial-table thead tr:nth-child(2) th {
+  top: calc(var(--pl-hdr-h) * 1); /* Second row */
+  z-index: var(--z-hdr3);
+}
+
+.pl-financial-table thead tr:nth-child(3) th {
+  top: calc(var(--pl-hdr-h) * 2); /* Third row */
+  z-index: var(--z-hdr2);
+}
+
+.pl-financial-table thead tr:nth-child(4) th {
+  top: calc(var(--pl-hdr-h) * 3); /* Fourth row */
+  z-index: var(--z-hdr1);
+}
+
+/* Overlay handles double-line */
+.pl-financial-table thead tr:nth-child(4) th {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.pl-financial-table thead tr:first-child th.pl-ledger-header {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+/* Ensure sticky headers retain their borders when scrolled */
+/* Note: Thick borders on period separators and edges take precedence with !important */
+/* 4th row bottom border is removed to allow double-line box-shadow to show */
+
+/* Headers are center aligned */
+.pl-financial-table th {
+  text-align: center;
+}
+
+/* First column data cells left alignment */
+.pl-financial-table td:first-child {
+  text-align: left;
+  padding-left: 12px;
+}
+
+/* Preserve inline colors when present (e.g., header bands from period selection) */
+/* .pl-financial-table th[style*="background-color"], .pl-financial-table td[style*="background-color"] {} */
+
+/* Remove top borders from colored header cells to create merged appearance (first 3 tiers) */
+.pl-financial-table thead tr:nth-child(1) th,
+.pl-financial-table thead tr:nth-child(2) th,
+.pl-financial-table thead tr:nth-child(3) th {
+  border-top: none !important;
+  border-left: 1px solid #e0e0e0 !important;
+  border-right: 1px solid #e0e0e0 !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  margin: 0;
+  padding: 8px 12px;
+  line-height: 1;
+}
+
+/* Fourth header row keeps top border and gets double-line at bottom */
+.pl-financial-table thead tr:nth-child(4) th {
+  border-top: 1px solid #e0e0e0 !important;
+  border-left: 1px solid #e0e0e0 !important;
+  border-right: 1px solid #e0e0e0 !important;
+  /* border-bottom handled by sticky positioning rule - 4px double black */
+}
+
+/* Ensure no spacing between header rows */
+.pl-financial-table thead tr:nth-child(1),
+.pl-financial-table thead tr:nth-child(2),
+.pl-financial-table thead tr:nth-child(3) {
+  margin: 0;
+  padding: 0;
+  border-spacing: 0;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .pl-table-view {
+    padding: 8px; /* Reduced padding for more space */
+    overflow-x: auto; /* Enable horizontal scrolling */
+  }
+  
+  .pl-table-title {
+    font-size: 1.4rem; /* Consistent with updated mobile styles */
+  }
+  
+  .pl-table-subtitle {
+    font-size: 1rem; /* Consistent with updated mobile styles */
+  }
+  
+  /* Improve table container for mobile */
+  .pl-financial-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+}
+
+/* Sticky header behavior for mobile */
+/* ONLY target Ledger header (using class) and body first column - NOT period headers */
+/* ⚠️ SYNC: Must match MultiChartHTMLExport.js mobile sticky behavior */
+@media (max-width: 768px) {
+  /* Mobile sticky positioning for Ledger header */
+  .pl-financial-table thead tr th.pl-ledger-header,
+  .pl-financial-table thead tr:first-child th:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-corner) !important;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+  }
+
+  .pl-financial-table tbody tr:not(.pl-separator-row) td:first-child,
+  .pl-financial-table tbody tr:not(.pl-separator-row) td.row-label {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+  }
+}
+
+/* Scroll behavior for large tables */
+@media (min-width: 769px) {
+  /* This media query is now handled by the comprehensive responsive breakpoints above */
+}
+
+/* P&L SPECIFIC ROW STYLING - BOLD ROWS */
+/* ======================================== */
+
+/* Make entire rows bold for important P&L ledgers */
+.pl-financial-table .pl-important-row {
+  font-weight: bold;
+}
+
+/* Ensure black border on all table edges - Standardized to 2px */
+/* Top edge - first header row */
+.pl-financial-table thead tr:first-child th {
+  border-top: 2px solid #000 !important;
+}
+/* Bottom edge - last body row */
+.pl-financial-table tbody tr:last-child td {
+  border-bottom: 2px solid #000 !important;
+}
+/* Left edge - first column already handled in sticky column section */
+/* Right edge - last column in ALL header rows and body rows */
+.pl-financial-table thead tr th:last-child,
+.pl-financial-table tbody tr td:last-child {
+  border-right: 2px solid #000 !important;
+}
+/* Double-line removed - will be implemented properly later */
+
+/* Remove top border from first tbody row to avoid overlap */
+/* EXCEPT for separator row which needs its explicit black border */
+.pl-financial-table tbody tr:first-child:not(.pl-separator-row) td {
+  border-top: none !important;
+}
+
+/* ========================================
+   SEPARATOR ROW between headers and body - STICKY
+   ⚠️ SYNC: Must match MultiChartHTMLExport.js separator row rules
+   ======================================== */
+.pl-financial-table .pl-separator-row {
+  height: 8px !important;
+  line-height: 8px !important;
+  padding: 0 !important;
+}
+
+.pl-financial-table .pl-separator-row td {
+  position: sticky !important;
+  top: calc(var(--pl-hdr-h) * 4) !important; /* Position below 4 header rows */
+  z-index: var(--z-hdr1) !important;
+  height: 8px !important;
+  padding: 0 !important;
+  background-color: white !important;
+  border-top: 1px solid black !important;
+  border-bottom: 1px solid black !important;
+  border-left: none !important; /* Remove all internal left borders */
+  border-right: none !important; /* Remove all internal right borders */
+  background-clip: padding-box !important;
+}
+
+.pl-financial-table .pl-separator-row td::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* First cell of separator row - STICKY TOP + LEFT (corner) */
+/* IMPORTANT: Explicitly include top, bottom, and left borders so they stick with the cell */
+/* Left border is the outer edge of the rectangle */
+.pl-financial-table .pl-separator-row td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  top: calc(var(--pl-hdr-h) * 4) !important;
+  z-index: var(--z-corner) !important;
+  background-color: white !important;
+  border-top: 1px solid black !important; /* Explicit top border for sticky */
+  border-bottom: 1px solid black !important; /* Explicit bottom border for sticky */
+  border-left: 1px solid black !important; /* Outer edge of rectangle */
+  border-right: none !important; /* No internal border */
+  height: 8px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  vertical-align: top !important;
+}
+
+.pl-financial-table .pl-separator-row td:first-child::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  right: -3px; /* Extend slightly to cover bleed from scrolling cells */
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* SEPARATOR ROW: Remove all internal vertical borders - separator row should be one continuous rectangle */
+/* Only first cell has left border (outer edge), last cell has right border (outer edge) */
+/* Override any period border rules that might apply to separator rows - ensure no internal borders */
+.pl-financial-table .pl-separator-row td:nth-child(n+2):not(:last-child) {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Last cell of separator row - right border only (outer edge) */
+.pl-financial-table .pl-separator-row td:last-child {
+  border-right: 1px solid black !important;
+  border-left: none !important;
+}
+
+/* ========================================
+   BODY LEDGER COLUMN BORDERS
+   ⚠️ SYNC: Must match MultiChartHTMLExport.js ledger column borders
+   ======================================== */
+/* BODY LEDGER COLUMN (column 1) - Explicit black borders */
+.pl-financial-table tbody tr td:nth-child(1) {
+  border-left: 1px solid black !important;
+  border-right: 1px solid black !important;
+}
+
+/* LEDGER COLUMN HEADER BORDERS (column 1, only in row 1 because of rowspan) */
+.pl-financial-table thead tr:first-child th.pl-ledger-header {
+  border-left: 1px solid black !important;
+  border-right: 1px solid black !important;
+}
+
+
+/* ========================================
+   MOBILE ADJUSTMENTS & THEME COLORS
+   ======================================== */
+
+/* Mobile adjustments */
+@media (max-width: 767px) {
+  /* Optimize column widths for mobile - allow natural content width */
+  .pl-financial-table colgroup col {
+    width: auto !important; /* Let content determine width */
+  }
+  
+  /* Ensure table has proper responsive behavior */
+  .pl-financial-table {
+    min-width: 100%; /* Consistent with main mobile rule - no forced width */
+    width: 100%;
+    table-layout: auto; /* Allow flexible column sizing */
+  }
+  
+  /* Mobile sticky specifics */
+  :root { --pl-hdr-h: 24px; }
+
+  .pl-financial-table thead tr:first-child th.pl-ledger-header {
+    position: sticky !important;
+    min-width: 80px;
+    left: 0 !important;
+    z-index: var(--z-corner) !important;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+  }
+
+  .pl-financial-table tbody tr:not(.pl-separator-row) td:first-child {
+    position: sticky !important;
+    min-width: 80px;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+  }
+
+  .pl-financial-table thead tr:first-child th.pl-ledger-header::before,
+  .pl-financial-table tbody tr:not(.pl-separator-row) td:first-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #fff !important;
+    z-index: -1;
+    pointer-events: none;
+  }
+  
+  .pl-financial-table tbody tr:not(.pl-separator-row) td:first-child::before {
+    right: -3px;
+  }
+  
+  /* Ensure proper text handling in cells */
+  .pl-financial-table td {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+}
+
+/* Optional themes for period header bands - REMOVED: Colors now come from period selection only */
+
+/* ========================================
+   OVERLAY-SPECIFIC STYLES
+   Reduce padding when table is inside divisional dashboard overlay
+   ======================================== */
+.divisional-dashboard__overlay .pl-table-view {
+  padding: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* ========================================
+   PRINT
+   ======================================== */
+@media print {
+  .pl-financial-table { font-size: 10px; background:#fff; }
+  .pl-financial-table th, .pl-financial-table td { padding: 4px 6px; }
+}

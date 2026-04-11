@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexLayer Pro — Packaging Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        .title { font-family: 'Space Grotesk', sans-serif; }
+        
+        .layer-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .layer-card:hover {
+            transform: translateX(4px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        
+        .canvas-container {
+            background: radial-gradient(circle at center, #1e2937 0%, #0f172a 100%);
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.6);
+        }
+        
+        .silk-layer {
+            filter: drop-shadow(12px 18px 25px rgba(0,0,0,0.45));
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-96 bg-slate-900 border-r border-slate-700 flex flex-col">
+            <div class="p-6 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h1 class="title text-3xl font-semibold tracking-tight">FlexLayer</h1>
+                    <div id="structure" class="px-4 py-1 bg-amber-400 text-slate-900 font-mono font-bold text-sm rounded-3xl">ABCBA</div>
+                </div>
+                <p class="text-slate-400 text-sm mt-1">Multi-layer film designer</p>
+            </div>
+
+            <div class="p-6 flex-1 overflow-auto">
+                <div class="flex gap-3 mb-6">
+                    <button onclick="addLayer()" 
+                            class="flex-1 bg-white text-slate-900 hover:bg-amber-300 font-semibold py-3 rounded-3xl flex items-center justify-center gap-2 transition-all active:scale-95">
+                        <span class="text-xl">+</span> ADD LAYER
+                    </button>
+                    <select id="quick-material" class="bg-slate-800 border border-slate-700 text-sm rounded-3xl px-5 focus:outline-none">
+                        <option value="">Quick material...</option>
+                        <option value="skin">Skin (PP)</option>
+                        <option value="core">Core (PP)</option>
+                        <option value="seal">Seal (PE)</option>
+                        <option value="tie">Tie Layer</option>
+                        <option value="evoh">EVOH Barrier</option>
+                    </select>
+                </div>
+
+                <div id="layers-list" class="space-y-3"></div>
+            </div>
+
+            <div class="p-6 border-t border-slate-700 text-xs text-slate-400 flex justify-between items-center">
+                <div>Total thickness: <span id="total-thick" class="font-mono text-emerald-400">100μm</span></div>
+                <button onclick="resetDemo()" class="underline hover:text-white">Reset</button>
+            </div>
+        </div>
+
+        <!-- Main Visualizer -->
+        <div class="flex-1 flex flex-col">
+            <div class="h-14 border-b border-slate-700 flex items-center px-8 justify-between bg-slate-900">
+                <div>
+                    <span id="film-title" class="title text-2xl font-semibold">5-Layer Custom Film</span>
+                    <span class="text-xs ml-4 text-emerald-400 font-mono">ABCBA • Premium high-control</span>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" id="labels" checked onchange="draw()" class="accent-amber-400">
+                        <span>Layer labels</span>
+                    </label>
+                    <button onclick="toggleView()" id="view-btn"
+                            class="px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-3xl text-sm font-medium flex items-center gap-2 transition-colors">
+                        <span id="view-text">SHOW ROLL VIEW</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 canvas-container flex items-center justify-center p-12 relative" id="canvas-wrapper">
+                <canvas id="canvas" width="820" height="580" class="silk-layer"></canvas>
+                
+                <div onclick="toggleView()" 
+                     class="absolute top-8 right-8 bg-slate-800/80 backdrop-blur-xl px-5 h-9 rounded-3xl flex items-center text-xs font-medium cursor-pointer hover:bg-slate-700 transition-colors">
+                    <span id="toggle-label">SWITCH TO ROLL VIEW</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let layers = [
+            {id:1, name:"Skin Layer", color:"#f59e0b", thickness:15},
+            {id:2, name:"Intermediate Layer", color:"#10b981", thickness:20},
+            {id:3, name:"Core Layer", color:"#64748b", thickness:40},
+            {id:4, name:"Intermediate Layer", color:"#3b82f6", thickness:20},
+            {id:5, name:"Seal Layer", color:"#10b981", thickness:15}
+        ];
+        
+        let isRollView = false;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function renderLayers() {
+            const container = document.getElementById('layers-list');
+            container.innerHTML = '';
+            
+            layers.forEach((layer, i) => {
+                const div = document.createElement('div');
+                div.className = `layer-card flex items-center gap-4 bg-slate-800 border border-slate-700 rounded-3xl p-4 cursor-grab active:cursor-grabbing`;
+                div.draggable = true;
+                div.dataset.index = i;
+                
+                div.innerHTML = `
+                    <div class="text-slate-400 text-xl">⋮⋮</div>
+                    <div class="w-6 h-6 rounded-2xl shadow-inner flex-shrink-0" style="background: ${layer.color}"></div>
+                    <input value="${layer.name}" class="flex-1 bg-transparent focus:outline-none font-medium text-sm" 
+                           onchange="updateName(${i}, this.value)">
+                    <input type="color" value="${layer.color}" class="w-8 h-8 rounded-xl overflow-hidden cursor-pointer" 
+                           onchange="updateColor(${i}, this.value)">
+                    <div class="flex items-center gap-2 w-28">
+                        <input type="range" min="5" max="60" value="${layer.thickness}" class="accent-amber-400 flex-1" 
+                               onchange="updateThickness(${i}, this.value)">
+                        <span class="font-mono text-xs w-8 text-right">${layer.thickness}</span>
+                    </div>
+                    <button onclick="deleteLayer(${i});event.stopImmediatePropagation()" class="text-slate-400 hover:text-red-400 text-2xl leading-none px-2">×</button>
+                `;
+                
+                // Drag & drop
+                div.addEventListener('dragstart', e => { div.classList.add('opacity-50'); window.dragged = i; });
+                div.addEventListener('dragover', e => e.preventDefault());
+                div.addEventListener('drop', e => {
+                    e.preventDefault();
+                    if (window.dragged !== null) reorder(window.dragged, i);
+                    window.dragged = null;
+                });
+                div.addEventListener('dragend', () => div.classList.remove('opacity-50'));
+                
+                container.appendChild(div);
+            });
+            
+            updateStats();
+        }
+
+        function updateName(i, val) { layers[i].name = val; draw(); }
+        function updateColor(i, val) { layers[i].color = val; renderLayers(); draw(); }
+        function updateThickness(i, val) { layers[i].thickness = +val; renderLayers(); draw(); }
+        
+        function deleteLayer(i) {
+            if (layers.length <= 2) return;
+            layers.splice(i, 1);
+            renderLayers();
+            draw();
+        }
+        
+        function reorder(from, to) {
+            const [moved] = layers.splice(from, 1);
+            layers.splice(to, 0, moved);
+            renderLayers();
+            draw();
+        }
+        
+        function addLayer() {
+            const sel = document.getElementById('quick-material').value;
+            let newL = {id: Date.now(), name: "New Layer", color: "#6b7280", thickness: 20};
+            
+            if (sel === "skin") { newL.name = "Skin Layer"; newL.color = "#f59e0b"; newL.thickness = 15; }
+            if (sel === "core") { newL.name = "Core Layer"; newL.color = "#64748b"; newL.thickness = 40; }
+            if (sel === "seal") { newL.name = "Seal Layer"; newL.color = "#10b981"; newL.thickness = 15; }
+            if (sel === "tie") { newL.name = "Tie Layer"; newL.color = "#22c55e"; newL.thickness = 8; }
+            if (sel === "evoh") { newL.name = "EVOH Barrier"; newL.color = "#ef4444"; newL.thickness = 12; }
+            
+            layers.unshift(newL);
+            renderLayers();
+            draw();
+        }
+        
+        function updateStats() {
+            const total = layers.reduce((s, l) => s + l.thickness, 0);
+            document.getElementById('total-thick').textContent = total + 'μm';
+            document.getElementById('structure').textContent = layers.length === 5 ? 'ABCBA' : layers.length + ' LAYERS';
+            document.getElementById('film-title').textContent = `${layers.length}-Layer Custom Film`;
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (isRollView) {
+                drawRoll();
+                return;
+            }
+            
+            const totalThick = layers.reduce((a,b)=>a+b.thickness,0) || 100;
+            const maxH = 320;
+            const scale = maxH / totalThick;
+            
+            let y = 420;
+            const baseX = 220;
+            const width = 380;
+            const isoX = 85;
+            const isoY = -48;
+            
+            // Draw layers from bottom to top
+            for (let i = layers.length-1; i >= 0; i--) {
+                const l = layers[i];
+                const h = Math.max(18, l.thickness * scale);
+                
+                // Front face
+                const grad = ctx.createLinearGradient(baseX, y-h, baseX+width, y);
+                grad.addColorStop(0, lighten(l.color, 50));
+                grad.addColorStop(1, l.color);
+                
+                ctx.fillStyle = grad;
+                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur = 25;
+                ctx.shadowOffsetY = 15;
+                ctx.fillRect(baseX, y-h, width, h);
+                ctx.shadowBlur = 0;
+                
+                // Highlight edge
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(baseX+6, y-h+6, width-12, h-12);
+                
+                // Side face (isometric)
+                ctx.beginPath();
+                ctx.moveTo(baseX + width, y - h);
+                ctx.lineTo(baseX + width + isoX, y - h + isoY);
+                ctx.lineTo(baseX + width + isoX, y + isoY);
+                ctx.lineTo(baseX + width, y);
+                ctx.closePath();
+                
+                ctx.fillStyle = darken(l.color, 35);
+                ctx.fill();
+                
+                // Label
+                if (document.getElementById('labels').checked) {
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.font = '500 13px Inter';
+                    ctx.fillText(l.name, baseX + width + 110, y - h/2 + isoY/2 + 5);
+                    ctx.font = '400 10px monospace';
+                    ctx.fillText(l.thickness + 'μm', baseX + width + 110, y - h/2 + isoY/2 + 22);
+                }
+                
+                y -= h;
+            }
+            
+            // Top glossy surface
+            ctx.shadowBlur = 30;
+            ctx.shadowOffsetY = -12;
+            ctx.fillStyle = lighten(layers[0].color, 70);
+            ctx.beginPath();
+            ctx.moveTo(baseX, y);
+            ctx.lineTo(baseX + isoX, y + isoY);
+            ctx.lineTo(baseX + width + isoX, y + isoY);
+            ctx.lineTo(baseX + width, y);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+        
+        function drawRoll() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            let x = 180;
+            const baseY = 260;
+            
+            layers.forEach((l, i) => {
+                ctx.save();
+                ctx.translate(x, baseY + i*12);
+                ctx.rotate((i * 7 - 15) * Math.PI / 180);
+                
+                const w = 320;
+                const h = 28;
+                
+                const g = ctx.createLinearGradient(0,0,w,h);
+                g.addColorStop(0, l.color);
+                g.addColorStop(1, darken(l.color,40));
+                ctx.fillStyle = g;
+                ctx.fillRect(0,0,w,h);
+                
+                // Silk gloss
+                ctx.fillStyle = 'rgba(255,255,255,0.45)';
+                ctx.fillRect(12, 5, w-60, 8);
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(8,6,w-20,h-12);
+                
+                ctx.fillStyle = '#0f172a';
+                ctx.font = '600 12px Inter';
+                ctx.fillText(l.name, 22, h/2 + 4);
+                
+                ctx.restore();
+                x += 32;
+            });
+        }
+        
+        function lighten(hex, percent) {
+            let r = parseInt(hex.slice(1,3),16),
+                g = parseInt(hex.slice(3,5),16),
+                b = parseInt(hex.slice(5,7),16);
+            r = Math.min(255, Math.floor(r + (255-r)*percent/100));
+            g = Math.min(255, Math.floor(g + (255-g)*percent/100));
+            b = Math.min(255, Math.floor(b + (255-b)*percent/100));
+            return '#' + ((1<<24) + (r<<16) + (g<<8) + b).toString(16).slice(1);
+        }
+        
+        function darken(hex, percent) {
+            let r = parseInt(hex.slice(1,3),16),
+                g = parseInt(hex.slice(3,5),16),
+                b = parseInt(hex.slice(5,7),16);
+            r = Math.max(0, Math.floor(r * (100 - percent)/100));
+            g = Math.max(0, Math.floor(g * (100 - percent)/100));
+            b = Math.max(0, Math.floor(b * (100 - percent)/100));
+            return '#' + ((1<<24) + (r<<16) + (g<<8) + b).toString(16).slice(1);
+        }
+        
+        function toggleView() {
+            isRollView = !isRollView;
+            document.getElementById('toggle-label').textContent = isRollView ? "BACK TO STACK VIEW" : "SWITCH TO ROLL VIEW";
+            draw();
+        }
+        
+        function resetDemo() {
+            layers = [
+                {id:1, name:"Skin Layer", color:"#f59e0b", thickness:15},
+                {id:2, name:"Intermediate Layer", color:"#10b981", thickness:20},
+                {id:3, name:"Core Layer", color:"#64748b", thickness:40},
+                {id:4, name:"Intermediate Layer", color:"#3b82f6", thickness:20},
+                {id:5, name:"Seal Layer", color:"#10b981", thickness:15}
+            ];
+            renderLayers();
+            draw();
+        }
+        
+        // Init
+        renderLayers();
+        draw();
+        
+        console.log('%cFlexLayer Pro loaded — much cleaner & more premium', 'color:#fbbf24; font-weight:600');
+    </script>
+</body>
+</html>

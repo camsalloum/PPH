@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FieldVisit Trip Planner — Bug Audit</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0b0d11;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: #2a2f3e;
+    --accent: #e8664d;
+    --accent2: #f5a623;
+    --accent3: #4d9de8;
+    --accent4: #52c97a;
+    --text: #e2e6f0;
+    --muted: #6b7591;
+    --critical: #ff4d6d;
+    --important: #f5a623;
+    --medium: #4d9de8;
+    --minor: #52c97a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 64px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 600px 300px at 80% -20%, rgba(232,102,77,.12) 0%, transparent 70%),
+                radial-gradient(ellipse 400px 200px at 20% 120%, rgba(77,157,232,.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .header h1 {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800;
+    letter-spacing: -.03em;
+    line-height: 1.15;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .header-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+  .header-meta span { display: flex; align-items: center; gap: 6px; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-cell {
+    padding: 20px 32px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-num {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -.04em;
+    line-height: 1;
+  }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 48px 40px 80px; }
+
+  /* ── SECTION HEADER ── */
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 40px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── BUG CARD ── */
+  .bug {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .bug:hover { border-color: #3d4357; }
+
+  .bug-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 22px 14px;
+    cursor: pointer;
+  }
+
+  .bug-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .bug-title-wrap { flex: 1 }
+
+  .bug-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+    letter-spacing: -.01em;
+  }
+
+  .bug-file {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .sev-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .sev-critical  { background: rgba(255,77,109,.15); color: var(--critical); border: 1px solid rgba(255,77,109,.3); }
+  .sev-important { background: rgba(245,166,35,.12); color: var(--accent2); border: 1px solid rgba(245,166,35,.3); }
+  .sev-medium    { background: rgba(77,157,232,.12); color: var(--accent3); border: 1px solid rgba(77,157,232,.3); }
+  .sev-minor     { background: rgba(82,201,122,.1);  color: var(--minor);   border: 1px solid rgba(82,201,122,.3); }
+
+  .bug-body {
+    padding: 0 22px 18px;
+    border-top: 1px solid var(--border);
+  }
+
+  .bug-desc {
+    margin-top: 14px;
+    color: #b8bdcc;
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  .bug-impact {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(255,77,109,.05);
+    border-left: 3px solid rgba(255,77,109,.4);
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    color: #d4a0a8;
+  }
+  .bug-impact.info { background: rgba(77,157,232,.05); border-left-color: rgba(77,157,232,.4); color: #9bbcd4; }
+  .bug-impact.warn { background: rgba(245,166,35,.05); border-left-color: rgba(245,166,35,.4); color: #c9ab74; }
+  .bug-impact.ok   { background: rgba(82,201,122,.05); border-left-color: rgba(82,201,122,.4); color: #8ec9a4; }
+
+  pre {
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #c9d1e8;
+    margin-top: 12px;
+  }
+  .del { color: #ff6b85; background: rgba(255,77,109,.1); display: block; }
+  .ins { color: #6bcf7f; background: rgba(82,201,122,.08); display: block; }
+  .neu { color: #6b7591; }
+
+  .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+  }
+
+  strong { color: #fff; font-weight: 700; }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #c9d1e8;
+  }
+
+  .summary-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+  }
+  .summary-box h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #fff;
+    letter-spacing: -.02em;
+  }
+  .summary-box ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 32px;
+  }
+  .summary-box li {
+    font-size: 13px;
+    color: #9ca3bc;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .summary-box li strong { color: #dde1f0; font-weight: 600; font-size: 13px; }
+
+  @media (max-width: 700px) {
+    .header { padding: 32px 24px 28px; }
+    .main { padding: 32px 20px 60px; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .summary-box ul { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-eyebrow">Code Audit Report</div>
+  <h1>FieldVisit Trip Planner<br/>Bug & Quality Audit</h1>
+  <p style="color:#9ca3bc;font-size:14px;max-width:600px;">Deep review of <code style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:2px 7px;border-radius:3px;font-size:13px;">FieldVisitPlanner.jsx</code> and all related trip planner modules. 14 bugs found across 6 files.</p>
+  <div class="header-meta">
+    <span>📁 81 files audited</span>
+    <span>📌 6 trip planner files (deep)</span>
+    <span>🐛 14 bugs identified</span>
+    <span>📄 ~7,800 LOC</span>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-cell"><div class="stat-num" style="color:var(--critical)">1</div><div class="stat-label">Critical</div></div>
+  <div class="stat-cell"><div class="stat-num" style="color:var(--accent2)">5</div><div class="stat-label">Important</div></div>
+  <div class="stat-cell"><div class="stat-num" style="color:var(--accent3)">5</div><div class="stat-label">Medium</div></div>
+  <div class="stat-cell"><div class="stat-num" style="color:var(--minor)">3</div><div class="stat-label">Minor</div></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <div class="summary-box" style="margin-top:0">
+    <h2>Files Covered</h2>
+    <ul>
+      <li><strong>FieldVisitPlanner.jsx</strong> <span>3,586 lines — primary</span></li>
+      <li><strong>FieldVisitInTrip.jsx</strong> <span>841 lines</span></li>
+      <li><strong>FieldVisitList.jsx</strong> <span>443 lines</span></li>
+      <li><strong>FieldVisitReviewStep.jsx</strong> <span>236 lines</span></li>
+      <li><strong>FieldVisitLegForm.jsx</strong> <span>253 lines</span></li>
+      <li><strong>fieldVisitUtils.js</strong> <span>137 lines</span></li>
+    </ul>
+  </div>
+
+  <!-- ═══ CRITICAL ═══ -->
+  <div class="section-title">Critical Bugs</div>
+
+  <!-- BUG 1 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#01</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>hasValidCoordinates(stop)</code> called with wrong argument type — coordinates display always broken</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · Stop card render · ~line 2730</div>
+      </div>
+      <span class="sev-badge sev-critical">Critical</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        <strong>The function <code>hasValidCoordinates(lat, lng)</code> expects two numeric arguments</strong>, but the stop card renders pass the entire <code>stop</code> object as the first argument (<code>hasValidCoordinates(stop)</code>) in three places: the Tooltip title, the cursor style, and the text color. <code>Number(stop)</code> evaluates to <code>NaN</code>, so <code>Number.isFinite(NaN)</code> returns <code>false</code> and the function always returns <code>false</code> for all three calls.
+      </div>
+      <div class="bug-impact">
+        <strong>Impact:</strong> Even when a stop has perfectly valid saved coordinates, the entity name text is never clickable/blue, the tooltip always shows "No coordinates yet" instead of "Click to focus on map", and the cursor never changes to pointer. Visually breaks the coordinate-focus interaction for every stop that has an entity name.
+      </div>
+      <pre><span class="del">// ❌ Wrong — stop object passed instead of lat/lng</span>
+<span class="del">title={hasValidCoordinates(stop) ? 'Click to focus on map' : 'No coordinates yet'}</span>
+<span class="del">cursor: hasValidCoordinates(stop) ? 'pointer' : 'default'</span>
+<span class="del">color: hasValidCoordinates(stop) ? '#1677ff' : undefined</span>
+
+<span class="ins">// ✅ Fix — pass the actual coordinates</span>
+<span class="ins">title={hasValidCoordinates(stop.latitude, stop.longitude) ? 'Click to focus on map' : 'No coordinates yet'}</span>
+<span class="ins">cursor: hasValidCoordinates(stop.latitude, stop.longitude) ? 'pointer' : 'default'</span>
+<span class="ins">color: hasValidCoordinates(stop.latitude, stop.longitude) ? '#1677ff' : undefined</span></pre>
+      <div class="tag-row">
+        <span class="tag">visual bug</span>
+        <span class="tag">wrong arg type</span>
+        <span class="tag">always fails</span>
+        <span class="tag">stop card</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ IMPORTANT ═══ -->
+  <div class="section-title">Important Bugs</div>
+
+  <!-- BUG 2 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#02</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title">Side effect (<code>setTimeout</code>) called inside a <code>setStops</code> state updater — React anti-pattern</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · <code>addDraftStops()</code> · ~line 1770</div>
+      </div>
+      <span class="sev-badge sev-important">Important</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        Inside the <code>addDraftStops</code> function, <code>setTimeout(() => geocodeQueue.forEach(q =&gt; autoGeocodeStop(...)), 0)</code> is called from within the functional updater passed to <code>setStops(prev =&gt; { ... })</code>. React may call state updater functions more than once (in StrictMode, twice), and updater functions are supposed to be pure. A side-effect inside an updater can lead to <strong>double-geocoding requests</strong> in development (Strict Mode double-invoke) and unpredictable behavior in production.
+      </div>
+      <div class="bug-impact warn">
+        <strong>Impact:</strong> In React 18 Strict Mode, the updater runs twice, potentially firing two geocoding requests per stop. Even outside Strict Mode, having a side effect inside a state updater is a React rule violation that can cause subtle races if React batches or defers the update.
+      </div>
+      <pre><span class="del">// ❌ Side effect inside state updater</span>
+setStops(prev => {
+  ...
+  if (geocodeQueue.length > 0) {
+<span class="del">    setTimeout(() => geocodeQueue.forEach(q => autoGeocodeStop(q.idx, q.hints, q.countryCode)), 0);</span>
+  }
+  return newStops;
+});
+
+<span class="ins">// ✅ Fix — hoist the setTimeout outside the setStops call</span>
+setStops(prev => {
+  ...
+  return newStops;
+});
+<span class="ins">if (geocodeQueue.length > 0) {</span>
+<span class="ins">  setTimeout(() => geocodeQueue.forEach(q => autoGeocodeStop(q.idx, q.hints, q.countryCode)), 0);</span>
+<span class="ins">}</span></pre>
+      <div class="tag-row">
+        <span class="tag">react anti-pattern</span>
+        <span class="tag">strict mode</span>
+        <span class="tag">side effect</span>
+        <span class="tag">addDraftStops</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 3 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#03</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>resumeTrip</code> never updates <code>formSnapshotRef</code> — loaded trip data lost after unmounting Step 0 form</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · <code>resumeTrip()</code> · ~line 1110</div>
+      </div>
+      <span class="sev-badge sev-important">Important</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        <code>resumeTrip</code> populates the Ant Design form via <code>form.setFieldsValue()</code> and updates individual saved* state variables. However, it <strong>never writes to <code>formSnapshotRef.current</code></strong>. The snapshot ref is the sole source of form values on Steps 1 and 2, when the <code>&lt;Form&gt;</code> component is unmounted. <code>buildTripPayload()</code> merges <code>formSnapshotRef.current</code> with live form values — but after unmount, <code>form.getFieldsValue(true)</code> returns an empty or stale object, so the payload falls back entirely to the snapshot, which is still empty/stale from before the resume.
+      </div>
+      <div class="bug-impact">
+        <strong>Impact:</strong> When a user resumes a draft trip and navigates to Step 1 or 2, then saves, the payload can have a blank/stale title, wrong dates, or missing destination countries — overwriting the DB record with partial data.
+      </div>
+      <pre><span class="del">// ❌ resumeTrip sets form values but forgets the snapshot</span>
+form.setFieldsValue({ title: trip.title, ... });
+setSavedTripType(trip.trip_type || 'local');
+// formSnapshotRef.current is never updated here
+
+<span class="ins">// ✅ Fix — also sync the snapshot immediately after setFieldsValue</span>
+const loadedVals = {
+  title: trip.title, trip_type: trip.trip_type, country_code: trip.country_code,
+  destination_countries: destCountries, transport_mode: parseTransportMode(trip.transport_mode),
+  budget_estimate: trip.budget_estimate, visa_required: trip.visa_required,
+  visa_type: visaDetails.visa_type, accommodation: trip.accommodation,
+  objectives: trip.objectives, travel_notes: trip.travel_notes,
+  departure_date: trip.departure_date ? dayjs(trip.departure_date) : undefined,
+  return_date: trip.return_date ? dayjs(trip.return_date) : undefined,
+};
+form.setFieldsValue(loadedVals);
+<span class="ins">formSnapshotRef.current = { ...formSnapshotRef.current, ...loadedVals };</span></pre>
+      <div class="tag-row">
+        <span class="tag">data integrity</span>
+        <span class="tag">resume trip</span>
+        <span class="tag">form snapshot</span>
+        <span class="tag">payload bug</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 4 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#04</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>findTransitLeg</code> fallback silently matches the wrong leg</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · <code>findTransitLeg()</code> · ~line 1615</div>
+      </div>
+      <span class="sev-badge sev-important">Important</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        When the primary match (by country names in <code>from_label</code>/<code>to_label</code>) fails, the fallback returns <em>the first leg that has any dep_datetime and arr_datetime</em> — regardless of origin or destination. For a trip with multiple legs (e.g. DXB→RUH and RUH→CAI), the fallback will always return Leg 1 for every cross-country pair that doesn't match by country name.
+      </div>
+      <div class="bug-impact warn">
+        <strong>Impact:</strong> Transit duration between two countries is computed from the wrong flight leg, producing incorrect ETA calculations, wrong route strip durations in the UI, and incorrect <code>est_drive_sec</code> values saved to the DB for stops.
+      </div>
+      <pre><span class="del">// ❌ Fallback finds any leg with times — ignores country context</span>
+return legs.find(l => {
+  if (l.dep_datetime && l.arr_datetime) return true; // matches any leg!
+  return false;
+}) || null;
+
+<span class="ins">// ✅ Fix — remove the blind fallback; return null if no country match</span>
+<span class="ins">// The caller already handles a null transitLeg gracefully</span>
+return legs.find(l => {
+  const from = [l.from_label, l.dep_airport].join(' ').toLowerCase();
+  const to   = [l.to_label, l.arr_airport].join(' ').toLowerCase();
+  return (from.includes(fromCountry) || fromCountry.includes(from.split(' ')[0])) &&
+         (to.includes(toCountry) || toCountry.includes(to.split(' ')[0]));
+}) || null;</pre>
+      <div class="tag-row">
+        <span class="tag">wrong data</span>
+        <span class="tag">multi-leg trips</span>
+        <span class="tag">eta chain</span>
+        <span class="tag">transit</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 5 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#05</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>markArrived</code> blocks check-in for overdue stops (past scheduled date)</div>
+        <div class="bug-file">FieldVisitInTrip.jsx · <code>markArrived()</code> · ~line 175</div>
+      </div>
+      <span class="sev-badge sev-important">Important</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        The check-in guard compares the stop's <code>visit_date</code> against today's date and returns early if they don't match — including past dates. A sales rep who postponed a stop yesterday due to poor signal or a schedule delay <strong>can never GPS-check-in to that stop</strong>, even though the trip is still active and the stop still needs to be marked.
+      </div>
+      <div class="bug-impact">
+        <strong>Impact:</strong> Legitimate late check-ins (travel delays, rescheduled meetings) are permanently blocked by a hard date equality check. The rep is forced to use manual outcome logging with no GPS record, losing location audit data.
+      </div>
+      <pre><span class="del">// ❌ Hard equality: only allows check-in on exact scheduled day</span>
+if (stop.visit_date) {
+  const today = dayjs().startOf('day').format('YYYY-MM-DD');
+  const stopDate = dayjs(stop.visit_date).format('YYYY-MM-DD');
+  if (stopDate !== today) {
+    message.warning(`This stop is scheduled for ${stopDate}...`);
+    return;
+  }
+}
+
+<span class="ins">// ✅ Fix — allow check-in if stop is overdue (past) or today</span>
+<span class="ins">if (stop.visit_date) {</span>
+<span class="ins">  const stopDate = dayjs(stop.visit_date).startOf('day');</span>
+<span class="ins">  const today = dayjs().startOf('day');</span>
+<span class="ins">  if (stopDate.isAfter(today)) {</span>
+<span class="ins">    message.warning(`This stop is scheduled for a future date (${stopDate.format('DD MMM')}). Check-in is only allowed on or after the visit date.`);</span>
+<span class="ins">    return;</span>
+<span class="ins">  }</span>
+<span class="ins">}</span></pre>
+      <div class="tag-row">
+        <span class="tag">UX bug</span>
+        <span class="tag">check-in</span>
+        <span class="tag">in-trip mode</span>
+        <span class="tag">gps</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 6 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#06</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title">Steps navigation allows jumping to Step 2 without ever adding stops</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · <code>&lt;Steps onChange&gt;</code> · ~line 2470</div>
+      </div>
+      <span class="sev-badge sev-important">Important</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        The <code>Steps</code> component's <code>onChange</code> calls <code>canAdvance()</code> to gate forward navigation. But <code>canAdvance()</code> only checks Step 0 conditions when <code>step === 0</code>. If the form title/dates are filled and the user clicks the "Review & Save" step header directly from Step 0, <code>canAdvance()</code> returns <code>true</code> and they jump to Step 2 with zero stops. The "Save Trip" button is disabled by the GPS-unresolved count, but the user sees no message explaining why — they just see a disabled button.
+      </div>
+      <div class="bug-impact warn">
+        <strong>Impact:</strong> Confusing UX: user can reach the Review page with an empty stop list, no clear explanation, and a disabled Save button. The "Next" button inline validates stops correctly, but the Steps header bypasses it.
+      </div>
+      <pre><span class="del">// ❌ canAdvance() only checks current step — jumping 0→2 checks step 0 only</span>
+onChange={(s) => { if (s < step || canAdvance()) setStep(s); }}
+
+<span class="ins">// ✅ Fix — validate all intermediate steps when jumping forward</span>
+<span class="ins">onChange={(s) => {</span>
+<span class="ins">  if (s <= step) { setStep(s); return; }  // always allow going back</span>
+<span class="ins">  // Validate every step between current and target</span>
+<span class="ins">  const savedStep = step;</span>
+<span class="ins">  for (let check = savedStep; check < s; check++) {</span>
+<span class="ins">    const tmpStep = step; // canAdvance reads `step` state</span>
+<span class="ins">    if (check === 0 && !canAdvance()) return;  // form validation</span>
+<span class="ins">    if (check === 1 && stops.length === 0) { message.warning('Add at least one stop.'); return; }</span>
+<span class="ins">  }</span>
+<span class="ins">  setStep(s);</span>
+<span class="ins">}}</span></pre>
+      <div class="tag-row">
+        <span class="tag">UX bug</span>
+        <span class="tag">navigation</span>
+        <span class="tag">validation bypass</span>
+        <span class="tag">steps</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MEDIUM ═══ -->
+  <div class="section-title">Medium Bugs</div>
+
+  <!-- BUG 7 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#07</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>validateStops</code> emits duplicate error messages for prospect stops missing both entity and coordinates</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · <code>validateStops()</code> · ~line 1910</div>
+      </div>
+      <span class="sev-badge sev-medium">Medium</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        For a prospect stop with no <code>prospect_id</code> and no coordinates, two separate <code>issues.push</code> calls fire: one for "select a prospect or pin a location" and another for "location required". Since the function shows only the first issue, the second is suppressed — but the logic is still wrong in principle and can produce misleading messages if the order changes.
+      </div>
+      <pre><span class="del">// ❌ Two issues for the same root cause</span>
+if (s.stop_type === 'prospect' && !hasProspect && !hasCoords) {
+  issues.push(`Stop ${idx + 1}: select a prospect or pin/search a location`);
+}
+if (!hasCoords) {  // ← also fires for the same stop
+  issues.push(`Stop ${idx + 1}: location required...`);
+}
+
+<span class="ins">// ✅ Fix — guard the generic coords check</span>
+if (s.stop_type === 'prospect' && !hasProspect && !hasCoords) {
+  issues.push(`Stop ${idx + 1}: select a prospect or pin/search a location`);
+} else if (!hasCoords) {  // only run if the prospect check didn't already fire
+  issues.push(`Stop ${idx + 1}: location required. Use Pin On Map or Google URL.`);
+}</pre>
+      <div class="tag-row">
+        <span class="tag">validation logic</span>
+        <span class="tag">duplicate error</span>
+        <span class="tag">prospect</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 8 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#08</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title">Drive-time summary bar label says "drive" but includes flight transit durations</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · <code>tripSummary</code> useMemo · ~line 2050 &amp; route intelligence bar ~line 2570</div>
+      </div>
+      <span class="sev-badge sev-medium">Medium</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        <code>totalDriveSec</code> is the sum of all <code>routeLegs[i].durationSec</code>. Transit legs (flights, trains) also store a computed <code>durationSec</code> (from dep_datetime → arr_datetime difference). The UI renders this as <strong>"X drive"</strong>, but for international trips this figure mixes road driving time with hours of flight time — e.g. showing "11h 20min drive" when 8h of that is a flight.
+      </div>
+      <div class="bug-impact warn">
+        <strong>Impact:</strong> Misleading summary for international trips. A trip with a 3h drive and an 8h flight shows "11h 20min drive" — suggesting an absurd day plan.
+      </div>
+      <pre><span class="del">// ❌ All leg durations summed and labelled "drive"</span>
+const totalDriveSec = routeLegs.reduce((acc, l) => acc + (l?.durationSec || 0), 0);
+// UI: {tripSummary.totalDriveTxt} drive
+
+<span class="ins">// ✅ Fix — separate drive vs transit durations</span>
+<span class="ins">const totalDriveSec   = routeLegs.filter(l => !l?.transit).reduce((acc, l) => acc + (l?.durationSec || 0), 0);</span>
+<span class="ins">const totalTransitSec = routeLegs.filter(l =>  l?.transit).reduce((acc, l) => acc + (l?.durationSec || 0), 0);</span>
+// UI: show "Xh drive" and "Xh transit" separately when both are non-zero</pre>
+      <div class="tag-row">
+        <span class="tag">misleading label</span>
+        <span class="tag">international trips</span>
+        <span class="tag">summary bar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 9 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#09</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>FieldVisitLegForm</code>: arrival-before-departure is shown as error but doesn't prevent saving</div>
+        <div class="bug-file">FieldVisitLegForm.jsx · Arrival <code>Form.Item</code> · ~line 130</div>
+      </div>
+      <span class="sev-badge sev-medium">Medium</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        The Arrival <code>DatePicker</code> uses <code>validateStatus</code> to show a red error border when arrival is before departure. But there is <strong>no <code>rules</code> prop</strong> on this Form.Item, so <code>form.validateFields()</code> will never reject the leg. A negative transit duration will be computed and stored to the DB, corrupting ETA chains.
+      </div>
+      <pre><span class="del">// ❌ validateStatus shows UI error but doesn't block form submission</span>
+&lt;Form.Item label="Arrival"
+  validateStatus={leg.arr_datetime && leg.dep_datetime &&
+    dayjs(leg.arr_datetime).isBefore(dayjs(leg.dep_datetime)) ? 'error' : ''}&gt;
+
+<span class="ins">// ✅ Fix — also prevent saving via a custom validator</span>
+<span class="ins">// Since FieldVisitLegForm is uncontrolled, gate the parent's "Next" button:</span>
+<span class="ins">// In addLeg/updateLeg, expose a hasErrors() helper that the parent can call.</span>
+<span class="ins">// Or use a hidden Form.Item with a rule:</span>
+&lt;Form.Item
+  validateStatus={...}
+  help={...}
+<span class="ins">  rules={[{ validator: () => (arr &lt; dep) ? Promise.reject('Arrival must be after departure') : Promise.resolve() }]}&gt;</span></pre>
+      <div class="tag-row">
+        <span class="tag">validation gap</span>
+        <span class="tag">leg form</span>
+        <span class="tag">negative duration</span>
+        <span class="tag">data corruption</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 10 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#10</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>loadPreVisitBrief</code> fetches the entire prospects list just to look up one prospect by ID</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · <code>loadPreVisitBrief()</code> · ~line 1670</div>
+      </div>
+      <span class="sev-badge sev-medium">Medium</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        For customer stops, the brief calls dedicated <code>/api/crm/customers/:id</code>, <code>/api/crm/customers/:id/sales-history</code>, and <code>/api/crm/deals</code> endpoints — all efficient. For prospect stops, it fetches the <em>entire</em> <code>/api/crm/my-prospects</code> list and then uses <code>.find()</code> to locate one record by ID. With hundreds of prospects, this is wasteful and slow.
+      </div>
+      <pre><span class="del">// ❌ Fetches all prospects to find one</span>
+const prospRes = await axios.get(`${API_BASE}/api/crm/my-prospects`, { headers: getAuthHeaders() });
+const p = (prospRes.data?.data?.prospects || []).find(p => Number(p.id) === Number(stop.prospect_id));
+
+<span class="ins">// ✅ Fix — use a specific endpoint, or look up from existing state</span>
+<span class="ins">// Option A: look up from already-loaded prospects state (free, already in memory)</span>
+<span class="ins">const p = prospects.find(p => Number(p.id) === Number(stop.prospect_id));</span>
+<span class="ins">// Option B: if more detail needed, call a /api/crm/prospects/:id endpoint</span></pre>
+      <div class="tag-row">
+        <span class="tag">performance</span>
+        <span class="tag">unnecessary fetch</span>
+        <span class="tag">pre-visit brief</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 11 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#11</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title">Review step stop list uses <code>stops.indexOf(s)</code> — fragile reference equality</div>
+        <div class="bug-file">FieldVisitReviewStep.jsx · filtered stops <code>.map()</code> · ~line 130</div>
+      </div>
+      <span class="sev-badge sev-medium">Medium</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        When <code>reviewShowUnsavedOnly</code> is on, the component filters <code>stops</code> and then calls <code>stops.indexOf(s)</code> to get the original index. This relies on <strong>object reference identity</strong>. Any state update that recreates stop objects (a shallow spread like <code>{ ...stop, someField }</code>) would cause <code>indexOf</code> to return <code>-1</code>, displaying <code>actualIndex + 1 = 0</code> for all filtered stops (showing "Stop 0") and making the ETA chain look up <code>etaChain[-1]</code> (undefined).
+      </div>
+      <pre><span class="del">// ❌ Reference equality is fragile after any state update that recreates objects</span>
+const actualIndex = stops.indexOf(s);
+
+<span class="ins">// ✅ Fix — match by a stable identity field</span>
+<span class="ins">const actualIndex = stops.findIndex(orig =></span>
+<span class="ins">  orig.local_id ? orig.local_id === s.local_id : orig.id === s.id</span>
+<span class="ins">);</span></pre>
+      <div class="tag-row">
+        <span class="tag">fragile logic</span>
+        <span class="tag">reference equality</span>
+        <span class="tag">review step</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MINOR ═══ -->
+  <div class="section-title">Minor Issues</div>
+
+  <!-- BUG 12 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#12</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title">Map markers accumulate <code>InfoWindow</code> objects that are never disposed</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · map markers <code>useEffect</code> · ~line 1000</div>
+      </div>
+      <span class="sev-badge sev-minor">Minor</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        Each time <code>stops</code> changes, the markers effect creates a new <code>google.maps.InfoWindow</code> per stop. Old markers are removed via <code>setMap(null)</code>, which disposes the marker, but the associated <code>InfoWindow</code> instance is never closed or dereferenced. On long planning sessions with many stop edits, this can accumulate dozens of dangling InfoWindow objects in memory.
+      </div>
+      <pre><span class="ins">// ✅ Fix — track and close InfoWindows in the cleanup step</span>
+const infoWindows = []; // collect refs alongside mapMarkersRef
+
+// at cleanup:
+mapMarkersRef.current.forEach(m => m.setMap(null));
+<span class="ins">infoWindowsRef.current.forEach(iw => iw.close());</span>
+<span class="ins">infoWindowsRef.current = [];</span>
+mapMarkersRef.current = [];</pre>
+      <div class="tag-row">
+        <span class="tag">memory leak</span>
+        <span class="tag">google maps</span>
+        <span class="tag">infowindow</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 13 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#13</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title"><code>FieldVisitList</code> uses the static <code>message</code> API from Ant Design (inconsistent with rest of codebase)</div>
+        <div class="bug-file">FieldVisitList.jsx · direct <code>message</code> import · line 2</div>
+      </div>
+      <span class="sev-badge sev-minor">Minor</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        <code>FieldVisitList</code> imports and uses Ant Design's static <code>message</code> API directly (<code>import { ..., message, ... } from 'antd'</code>). Every other component in the trip planner suite uses <code>const { message } = App.useApp()</code>. The static API can cause positioning issues and is deprecated for use inside React contexts in Ant Design v5.
+      </div>
+      <pre><span class="del">// ❌ Static import — message.success/error called directly</span>
+import { ..., message, ... } from 'antd';
+
+<span class="ins">// ✅ Fix — use App.useApp() like all other trip planner components</span>
+<span class="ins">import { ..., App, ... } from 'antd';</span>
+<span class="ins">const { message } = App.useApp();</span></pre>
+      <div class="tag-row">
+        <span class="tag">inconsistency</span>
+        <span class="tag">deprecated api</span>
+        <span class="tag">ant design v5</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUG 14 -->
+  <div class="bug">
+    <div class="bug-header">
+      <span class="bug-number">#14</span>
+      <div class="bug-title-wrap">
+        <div class="bug-title">Dead variable <code>GMAP_LIBS_FVP</code> defined but never used</div>
+        <div class="bug-file">FieldVisitPlanner.jsx · module level · line 32</div>
+      </div>
+      <span class="sev-badge sev-minor">Minor</span>
+    </div>
+    <div class="bug-body">
+      <div class="bug-desc">
+        <code>const GMAP_LIBS_FVP = ['marker']</code> is defined at module level but never referenced. The actual Google Maps API loader uses <code>GMAP_LIBRARIES</code> imported from <code>fieldVisitUtils.js</code> (which includes both <code>'marker'</code> and <code>'places'</code>). The local constant is stale dead code — and dangerously so, because it omits <code>'places'</code>, so if it were accidentally used in the <code>useJsApiLoader</code>, Place Search would silently break.
+      </div>
+      <pre><span class="del">// ❌ Dead constant — never used, and missing 'places'</span>
+<span class="del">const GMAP_LIBS_FVP = ['marker'];</span>
+
+<span class="neu">// The loader correctly uses the shared constant from utils:</span>
+const { isLoaded: mapsLoaded } = useJsApiLoader({
+  googleMapsApiKey: GMAP_API_KEY_FVP,
+  libraries: GMAP_LIBRARIES,  // ✅ ['marker', 'places'] from fieldVisitUtils
+});</pre>
+      <div class="tag-row">
+        <span class="tag">dead code</span>
+        <span class="tag">cleanup</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="section-title">Fix Priority Summary</div>
+  <div class="summary-box">
+    <h2>Recommended Fix Order</h2>
+    <ul>
+      <li><span>#01 — <code>hasValidCoordinates(stop)</code> wrong args</span><span class="sev-badge sev-critical" style="font-size:9px;padding:2px 7px">Fix Now</span></li>
+      <li><span>#03 — <code>resumeTrip</code> missing snapshot update</span><span class="sev-badge sev-critical" style="font-size:9px;padding:2px 7px">Fix Now</span></li>
+      <li><span>#04 — <code>findTransitLeg</code> wrong fallback</span><span class="sev-badge sev-important" style="font-size:9px;padding:2px 7px">Soon</span></li>
+      <li><span>#05 — <code>markArrived</code> blocks overdue check-in</span><span class="sev-badge sev-important" style="font-size:9px;padding:2px 7px">Soon</span></li>
+      <li><span>#02 — <code>setTimeout</code> in state updater</span><span class="sev-badge sev-important" style="font-size:9px;padding:2px 7px">Soon</span></li>
+      <li><span>#06 — Steps skip-to-review bypass</span><span class="sev-badge sev-important" style="font-size:9px;padding:2px 7px">Soon</span></li>
+      <li><span>#09 — Leg form arrival date not validated</span><span class="sev-badge sev-medium" style="font-size:9px;padding:2px 7px">Next Sprint</span></li>
+      <li><span>#08 — Drive vs transit time label confusion</span><span class="sev-badge sev-medium" style="font-size:9px;padding:2px 7px">Next Sprint</span></li>
+      <li><span>#07 — Duplicate validateStops errors</span><span class="sev-badge sev-medium" style="font-size:9px;padding:2px 7px">Next Sprint</span></li>
+      <li><span>#10 — loadPreVisitBrief full list fetch</span><span class="sev-badge sev-medium" style="font-size:9px;padding:2px 7px">Next Sprint</span></li>
+      <li><span>#11 — Review step indexOf fragility</span><span class="sev-badge sev-medium" style="font-size:9px;padding:2px 7px">Next Sprint</span></li>
+      <li><span>#12 — InfoWindow memory leak</span><span class="sev-badge sev-minor" style="font-size:9px;padding:2px 7px">Backlog</span></li>
+      <li><span>#13 — Static message API (FieldVisitList)</span><span class="sev-badge sev-minor" style="font-size:9px;padding:2px 7px">Backlog</span></li>
+      <li><span>#14 — Dead variable GMAP_LIBS_FVP</span><span class="sev-badge sev-minor" style="font-size:9px;padding:2px 7px">Backlog</span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

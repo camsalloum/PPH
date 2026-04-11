@@ -1,0 +1,55 @@
+/**
+ * AEBF Health Check Route
+ * GET /api/aebf/health
+ */
+
+const express = require('express');
+const router = express.Router();
+const logger = require('../../utils/logger');
+const { getPoolForDivision, getTableNames } = require('./shared');
+const { asyncHandler, ErrorCreators, successResponse } = require('../../middleware/aebfErrorHandler');
+const validationRules = require('../../middleware/aebfValidation');
+
+/**
+ * GET /health
+ * Health check endpoint to verify AEBF API is running and database connectivity
+ * 
+ * @route GET /api/aebf/health
+ * @query {string} division - Division to check (FP or HC)
+ * @returns {object} 200 - Health status with database info
+ * @returns {object} 500 - Database connection error
+ */
+router.get('/health', validationRules.health, asyncHandler(async (req, res) => {
+  const division = req.query.division || 'FP';
+  const divisionPool = getPoolForDivision(division);
+  const tables = getTableNames(division);
+  
+  // Test database connection
+  const result = await divisionPool.query('SELECT NOW() as current_time, version() as pg_version');
+  
+  // Check if data_excel table exists and get row count
+  const tableCheck = await divisionPool.query(`
+    SELECT 
+      COUNT(*) as total_records,
+      COUNT(DISTINCT division) as divisions,
+      MIN(year) as min_year,
+      MAX(year) as max_year
+    FROM public.${tables.dataExcel}
+  `);
+  
+  successResponse(res, {
+    status: 'healthy',
+    timestamp: result.rows[0].current_time,
+    database: {
+      connected: true,
+      version: result.rows[0].pg_version,
+      division: division,
+      table: tables.dataExcel,
+      totalRecords: parseInt(tableCheck.rows[0].total_records),
+      divisions: parseInt(tableCheck.rows[0].divisions),
+      yearRange: `${tableCheck.rows[0].min_year}-${tableCheck.rows[0].max_year}`
+    }
+  }, 'System healthy');
+}));
+
+module.exports = router;

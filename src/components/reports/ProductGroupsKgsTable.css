@@ -1,0 +1,383 @@
+/* TARGETED WHITE BACKGROUND FIX FOR PRODUCT GROUPS KGS TABLE ONLY */
+.product-groups-kgs-table {
+  margin: 15px 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-groups-kgs-table h3 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  padding: 15px;
+  background: white;
+}
+
+.kgs-comparison-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px !important;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+/* TARGETED OVERRIDE: Only override .product-header within this specific component */
+.product-groups-kgs-table .product-header {
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  text-align: center;
+  vertical-align: middle;
+  width: 10%;
+  min-width: 80px;
+  font-size: 14px !important;
+  padding: 5px 6px !important;
+}
+
+/* TARGETED OVERRIDE: Override row-label gray background for Product Groups column */
+.product-groups-kgs-table .row-label {
+  background: white !important;
+  background-color: white !important;
+}
+
+/* TARGETED OVERRIDE: Only override .total-row within this specific component */
+.product-groups-kgs-table .kgs-comparison-table .total-row {
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+}
+
+.product-groups-kgs-table .kgs-comparison-table .total-row td {
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+  color: white !important;
+  font-weight: bold !important;
+  font-size: 14px !important;
+  padding: 4px 6px !important;
+  border: 1px solid #1e40af !important;
+  text-align: center;
+}
+
+.product-groups-kgs-table .kgs-comparison-table .total-row .total-label {
+  text-align: left !important;
+  padding-left: 8px;
+}
+
+/* Additional override for any total-related classes */
+.product-groups-kgs-table .total-label,
+.product-groups-kgs-table .total-value,
+.product-groups-kgs-table tr.total-row,
+.product-groups-kgs-table .kgs-comparison-table tr.total-row td {
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+  color: white !important;
+  font-weight: bold !important;
+  border: 1px solid #1e40af !important;
+}
+
+/* Ensure delta cells in total row match the styling */
+.product-groups-kgs-table .kgs-comparison-table .total-row .delta-cell {
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+  color: white !important;
+  border: 1px solid #1e40af !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+}
+
+/* Ensure total-value cells in total row have correct font size */
+.product-groups-kgs-table .kgs-comparison-table .total-row .total-value {
+  font-size: 15px !important;
+  font-weight: bold !important;
+}
+
+/* Row hover effects */
+.kgs-comparison-table tbody tr:hover {
+  background-color: #f5f5f5 !important;
+  cursor: pointer;
+}
+
+.kgs-comparison-table tbody tr:hover td {
+  background-color: #f5f5f5 !important;
+}
+
+/* Exclude total row from hover effects */
+.product-groups-kgs-table .kgs-comparison-table .total-row:hover,
+.product-groups-kgs-table .kgs-comparison-table .total-row:hover td {
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+  color: white !important;
+}
+.kgs-comparison-table thead th {
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  text-align: center;
+  padding: 5px 4px !important;
+  border: 1px solid #1e40af;
+  font-size: 14px !important;
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+}
+
+/* Override for year headers to match second table */
+.kgs-comparison-table thead th:not(.product-header):not(.delta-header):not(.period-header) {
+  font-size: 14px !important;
+}
+
+.kgs-comparison-table .star-cell {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: center;
+  vertical-align: middle;
+  color: #333;
+  font-weight: 500;
+}
+
+.kgs-comparison-table .period-header {
+  background: white;
+  font-size: 14px !important;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+  width: 6%;
+  min-width: 50px;
+  padding: 4px 3px !important;
+  line-height: 1.1;
+  color: #1f2937;
+}
+
+/* Year headers (first row) should be 14px to match second table */
+.kgs-comparison-table thead tr:first-child .period-header {
+  font-size: 14px !important;
+  font-weight: bold !important;
+  padding: 5px 4px !important;
+  background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+  color: white !important;
+}
+
+/* Month and Type headers (second and third rows) should be 14px */
+.kgs-comparison-table thead tr:nth-child(2) .period-header,
+.kgs-comparison-table thead tr:nth-child(3) .period-header {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 4px 3px !important;
+}
+
+.kgs-comparison-table .delta-header {
+  background: linear-gradient(135deg, #1e40af, #1e3a8a) !important;
+  color: #fbbf24 !important;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  width: 4%;
+  min-width: 40px;
+  font-size: 14px !important;
+}
+
+/* Body Styles - COMPACT ROWS */
+.product-groups-kgs-table .kgs-comparison-table tbody tr {
+  height: auto !important;
+  line-height: 1.1 !important;
+}
+
+.product-groups-kgs-table .kgs-comparison-table tbody td,
+.product-groups-kgs-table .kgs-comparison-table tbody tr td,
+.kgs-comparison-table tbody td {
+  border: 1px solid #e5e7eb !important;
+  padding: 3px 5px !important;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px !important;
+  background: white;
+  color: #1f2937;
+  line-height: 1.1 !important;
+  height: auto !important;
+}
+
+.product-groups-kgs-table .kgs-comparison-table tbody tr.product-row td {
+  padding: 3px 5px !important;
+  line-height: 1.1 !important;
+}
+
+.kgs-comparison-table .product-row:nth-child(even) {
+  background-color: white;
+}
+
+.kgs-comparison-table .product-row:hover {
+  background-color: white;
+}
+
+.kgs-comparison-table .product-row:hover td {
+  background-color: white;
+}
+
+.product-groups-kgs-table .kgs-comparison-table .product-name,
+.kgs-comparison-table .product-name {
+  text-align: left;
+  font-weight: 600;
+  color: #1f2937;
+  background: white;
+  width: 18%;
+  min-width: 150px;
+  max-width: 250px;
+  padding: 3px 5px 3px 8px !important;
+  font-size: 14px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.1 !important;
+}
+
+.product-groups-kgs-table .kgs-comparison-table .metric-cell,
+.kgs-comparison-table .metric-cell {
+  text-align: center;
+  font-weight: 500;
+  color: #374151;
+  background: white;
+  width: auto;
+  min-width: 65px;
+  padding: 3px 5px !important;
+  font-size: 14px !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1 !important;
+}
+
+.product-groups-kgs-table .kgs-comparison-table .delta-cell,
+.kgs-comparison-table .delta-cell {
+  background: white;
+  font-weight: 600;
+  text-align: center;
+  width: auto;
+  min-width: 55px;
+  padding: 3px 4px !important;
+  font-size: 14px !important;
+  line-height: 1.1 !important;
+}
+
+.kgs-comparison-table .delta-arrow {
+  margin-right: 3px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.kgs-comparison-table .delta-value {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.kgs-comparison-table .delta-up {
+  color: #059669;
+}
+
+.kgs-comparison-table .delta-down {
+  color: #dc2626;
+}
+
+.kgs-comparison-table .total-label {
+  text-align: left;
+  padding-left: 8px;
+  font-weight: 700;
+  color: #333;
+  width: 10%;
+  background: white;
+}
+
+.kgs-comparison-table .total-value {
+  font-weight: 700;
+  color: #333;
+  font-size: 14px;
+  background: white;
+}
+
+/* No Data Styles */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+  font-style: italic;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin: 16px;
+  font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .kgs-comparison-table {
+    font-size: 12px;
+  }
+  
+  .kgs-comparison-table .period-header {
+    font-size: 11px;
+    padding: 10px 6px;
+  }
+  
+  .kgs-comparison-table .delta-header {
+    font-size: 11px;
+  }
+  
+  .kgs-comparison-table tbody td {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+  
+  .kgs-comparison-table .metric-cell {
+    font-size: 12px;
+  }
+  
+  .kgs-comparison-table .delta-arrow,
+  .kgs-comparison-table .delta-value {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-groups-kgs-table {
+    margin: 10px 0;
+  }
+  
+  .kgs-comparison-table {
+    font-size: 11px;
+  }
+  
+  .kgs-comparison-table thead th,
+  .kgs-comparison-table tbody td {
+    padding: 8px 4px;
+  }
+  
+  .kgs-comparison-table .period-header {
+    font-size: 10px;
+    padding: 8px 4px;
+  }
+  
+  .kgs-comparison-table .delta-header {
+    font-size: 10px;
+  }
+  
+  .kgs-comparison-table .product-name {
+    font-size: 11px;
+    padding-left: 8px;
+  }
+  
+  .kgs-comparison-table .metric-cell {
+    font-size: 11px;
+  }
+  
+  .kgs-comparison-table .delta-arrow,
+  .kgs-comparison-table .delta-value {
+    font-size: 10px;
+  }
+  
+  .product-groups-kgs-table h3 {
+    font-size: 18px;
+    padding: 15px;
+  }
+}

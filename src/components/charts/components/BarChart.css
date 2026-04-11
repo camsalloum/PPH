@@ -1,0 +1,49 @@
+.bar-chart-container {
+  width: 100%;
+  height: 500px;
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Ensure consistent rendering of chart area */
+.chart-area {
+  width: 100%;
+  height: 100%;
+}
+
+/* Tooltip styling */
+.echarts-tooltip {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #ccc !important;
+  padding: 8px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1) !important;
+  max-width: 300px !important;
+  font-size: 14px !important;
+  z-index: 9999 !important;
+  pointer-events: none !important;
+}
+
+/* Ensure tooltip container doesn't cause layout issues */
+.echarts-tooltip-content {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+}
+
+/* Override some ECharts defaults - but NOT tooltips */
+.echarts-for-react > div:first-child {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Fix tooltip sizing - prevent inheriting 100% width/height */
+div[style*="position: absolute"][style*="z-index"] {
+  width: auto !important;
+  height: auto !important;
+  max-width: 250px !important;
+} 

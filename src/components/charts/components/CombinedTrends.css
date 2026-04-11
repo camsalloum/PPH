@@ -1,0 +1,248 @@
+/* Combined Trends (Expenses Trend + Profitability Trend) - SINGLE SOURCE OF TRUTH */
+/* Used by: ExpencesChart.js, Profitchart.js, MultiChartHTMLExport.js */
+/* EXTRACTED FROM LIVE INLINE STYLES - DO NOT MODIFY WITHOUT UPDATING ALL THREE FILES */
+
+/* Main container for Expenses Trend */
+.expenses-trend-container {
+    margin-top: 60px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    width: 95%;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+/* Main container for Profit Trend */
+.profit-trend-container {
+    margin-top: 30px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    width: 95%;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+/* Section Heading - EXACT from live */
+.trend-heading {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: 600;
+}
+
+/* KPI Row Title (e.g., Total Expenses, Net Profit, EBIT, EBITDA) */
+.trend-kpi-title {
+    text-align: left;
+    font-size: 14px;
+    margin-bottom: 10px;
+    margin-top: 15px;
+    margin-left: 24px;
+    color: #555;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.trend-kpi-title:first-of-type {
+    margin-top: 0;
+}
+
+/* KPI Section wrapper */
+.trend-kpi-section {
+    margin-bottom: 30px;
+}
+
+.trend-kpi-section:last-child {
+    margin-bottom: 0;
+}
+
+/* Cards Row Container - EXACT from live */
+.trend-cards-row {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    margin-top: 20px;
+    margin-bottom: 0;
+    width: 100%;
+    padding: 0 24px;
+    box-sizing: border-box;
+}
+
+/* Profit section uses margin-top: 10px */
+.trend-cards-row.profit-row {
+    margin-top: 10px;
+}
+
+/* Individual Trend Card - EXACT from live */
+.trend-card {
+    padding: 12px 15px;
+    border-radius: 6px;
+    border: 1px solid;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    min-width: 150px;
+    max-width: 180px;
+    flex: 1;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.trend-card:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Card title - period name - EXACT from live */
+.trend-card-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+/* Card main value - EXACT from live */
+.trend-card-value {
+    font-weight: bold;
+    font-size: 22px;
+    margin-top: 8px;
+}
+
+/* Card metrics row - EXACT from live */
+.trend-card-metrics {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 8px;
+    width: 100%;
+}
+
+/* Variance Connector - EXACT from live */
+.trend-connector {
+    align-self: center;
+    margin: 0 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 40px;
+    width: 40px;
+    height: 60px;
+    justify-content: center;
+}
+
+/* Variance arrow - EXACT from live */
+.trend-variance-arrow {
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* Variance value - EXACT from live */
+.trend-variance-value {
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1.1;
+}
+
+/* Variance percent - EXACT from live */
+.trend-variance-percent {
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1.1;
+}
+
+/* N/A text for null variance */
+.trend-variance-na {
+    color: #888;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Variance colors */
+.trend-variance-positive {
+    color: #2E865F;
+}
+
+.trend-variance-negative {
+    color: #cf1322;
+}
+
+.trend-variance-neutral {
+    color: #888;
+}
+
+/* Invisible spacer after last card - EXACT from live */
+.trend-spacer {
+    flex: 0 0 40px;
+}
+
+/* No data message */
+.trend-no-data {
+    margin-top: 60px;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Mobile Portrait - Horizontal Scroll */
+@media (max-width: 768px) and (orientation: portrait) {
+    .trend-cards-row {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 16px 16px 16px;
+        gap: 12px;
+    }
+
+    .trend-card {
+        flex: 0 0 220px;
+        min-width: 220px;
+        max-width: 220px;
+    }
+
+    .trend-connector {
+        flex: 0 0 56px;
+        min-width: 56px;
+        max-width: 56px;
+    }
+}
+
+/* Mobile/Tablet Landscape - keep cards inside container */
+@media (max-width: 992px) and (orientation: landscape) {
+    .trend-cards-row {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 16px 12px 16px;
+        gap: 12px;
+    }
+
+    .trend-card {
+        flex: 0 0 200px;
+        min-width: 200px;
+        max-width: 200px;
+    }
+
+    .trend-connector {
+        flex: 0 0 56px;
+        min-width: 56px;
+        max-width: 56px;
+    }
+}

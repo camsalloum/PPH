@@ -1,0 +1,266 @@
+[
+  {
+    "id": "V4-001",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Plate Classes — Overview of Rubber vs Photopolymer",
+    "subtopic": "Two broad plate classes: rubber (hand-engraved, molded) and photopolymer (sheet, liquid, direct-imaged)",
+    "tags": ["plate class", "rubber plate", "photopolymer plate", "molded rubber", "hand engraved", "sheet photopolymer", "liquid photopolymer", "direct imaged", "CTP", "laser engraved", "plate technology"],
+    "app_modules": ["plate_inventory", "job_entry", "estimation", "knowledge_chat"],
+    "trigger_actions": [
+      "user selects plate type in job entry",
+      "user adds new plate type to inventory",
+      "AI explains difference between plate types",
+      "user asks which plate type to use for a job"
+    ],
+    "ai_use": "Foundation knowledge — retrieved when AI needs to explain plate type selection or validate that the correct plate class is being used for a job. Photopolymer is the standard for your plant; rubber plates are obsolete for your applications.",
+    "text": "Flexographic printing plates are divided into two broad classes: rubber and photopolymer. Rubber plates (hand-engraved and molded) were the original technology and are still used in some corrugated and display applications, but their stronghold on the industry has been relinquished to photopolymer. Photopolymer plates — in sheet and liquid forms — represent a major step forward and are the dominant technology today. Key advantages of photopolymer over rubber: (1) Dimensionally stable polyester backing eliminates the unpredictable stretching of rubber; (2) Images are of predictable, consistent size; (3) Plates last longer and can be registered accurately; (4) Plate mounting now takes minutes, not hours; (5) Large-format plates (up to 52\" × 110\") are possible with multiple stepped images on one plate; (6) Process-color halftone plates are made from electronically imaged negatives or CTP, computer-compensated for dot gain based on press characterization data; (7) More environmentally safe to manufacture. The four sub-classes of photopolymer plates in current use: (a) Sheet photopolymer — preformed solid sheets of defined thickness; the standard for your ACE, ESX, ESE, FTV, FTF plate types; (b) Liquid photopolymer — cast to custom thickness; used for ASAHI AWP washable plates; (c) Direct-imaged / CTP plates — imaged directly from digital data by laser (Esko CDI LAMS process); (d) Laser-engraved rubber — for design rolls and seamless printing (giftwrap, continuous patterns). For your plant: DuPont Cyrel (ACE/ESX/ESE) are sheet photopolymers from DYNAGRAPH/ANOOP PLASTIC. ASAHI AWP plates from CRYSTAL are liquid photopolymer water-washable plates.",
+    "cross_references": ["V4-002", "V4-003", "V4-004", "V4-005"]
+  },
+
+  {
+    "id": "V4-002",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Photopolymer Plate Characteristics — Durometer, Construction Types",
+    "subtopic": "Plate hardness (durometer), capped vs uncapped, compressible, strippable, aqueous processing, special constructions",
+    "tags": ["photopolymer", "durometer", "Shore A", "Shore D", "hardness", "capped plate", "dual durometer", "compressible plate", "strippable", "aqueous processing", "plate construction", "polyester backing"],
+    "app_modules": ["plate_inventory", "job_entry", "estimation", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user selects plate type in job entry",
+      "AI recommends plate type for substrate",
+      "user asks about plate hardness",
+      "damage log includes impression-related damage",
+      "estimation needs plate specification for process work"
+    ],
+    "ai_use": "Retrieved when AI validates plate selection for a job type. Durometer affects dot gain and impression behaviour — harder plates give sharper dots, softer plates give better ink coverage on uneven surfaces. AI uses this to flag mismatches between plate type and job requirements.",
+    "text": "Photopolymer plate characteristics that determine their suitability for different applications: DUROMETER (HARDNESS): Measured with a Shore gauge — reported as Shore A or Shore D. Higher number = harder plate. Photopolymer plate materials are available in cured-plate durometer readings from 25 to 70 Shore A. Most materials for general film and paper converting have a cured plate durometer of 45-60 Shore A. Rough and uneven substrates (corrugated board) require lower-durometer materials of 25-40 Shore A. Effect on print quality: Harder plates (higher Shore A) — sharper dots, better hold on fine detail and small type, less dot gain; better for process color work, halftones, barcodes. Softer plates (lower Shore A) — more flexible conforming to substrate irregularities; better solid ink coverage on uneven surfaces; higher dot gain risk. PLATE CONSTRUCTION TYPES: (1) Standard uncapped — uniform durometer throughout; most common for general flexo work; (2) Capped (dual durometer) — a thin (0.004\"-0.010\") harder image surface lies atop a lower-durometer polymer base. The harder cap produces a steeper character shoulder, sharper dots, and reduced dot gain. Used for high-quality process work. (3) Compressible — contains a compressible foam layer between the photopolymer image layer and the dimensionally stable polyester backing. Controls image gain with printing impression — the foam absorbs impression variation. Reduces dot gain and fill-in in solids. (4) Strippable — allows removal of the polyester base after plate production. Used when the plate is laminated to sheet steel for magnetic cylinder mounting. (5) Aqueous processing — uses water and detergent for plate washout instead of organic solvent. ASAHI AWP is an aqueous-processing plate. More environmentally friendly, shorter drying time. PLATE BACKING: All photopolymer plates are supported by a transparent, dimensionally stable polyester backing sheet 0.004\"-0.010\" thick. This backing is critical — it provides dimensional stability, prevents plate stretching during processing and mounting, and contributes to the distortion correction factor calculation (the neutral plane is displaced to just above the polyester carrier).",
+    "cross_references": ["V4-001", "V4-003", "V1-015"]
+  },
+
+  {
+    "id": "V4-003",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Photopolymer Plate Processing — Six Steps from Raw Plate to Press-Ready",
+    "subtopic": "Back exposure, face exposure, washout, drying, post-exposure, light finishing — the full platemaking sequence",
+    "tags": ["platemaking", "plate processing", "back exposure", "face exposure", "washout", "drying", "post exposure", "light finishing", "UV exposure", "relief depth", "floor thickness", "plate development"],
+    "app_modules": ["job_entry", "prepress_checklist", "esko_export", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "job status advances to PLATES_READY",
+      "user asks about platemaking steps",
+      "prepress checklist includes plate inspection step",
+      "AI validates plate quality before mounting",
+      "damage reason includes plate processing defect"
+    ],
+    "ai_use": "Retrieved when AI validates that plates are properly processed before mounting, or when diagnosing plate defects. Incorrect back exposure causes wrong relief depth (plates too flat = fill-in; too deep = fragile highlights). Incorrect face exposure causes fill-in in reverses or loss of highlight dots.",
+    "text": "The basic photopolymer platemaking process is similar for sheet and liquid materials. Both types go through the following sequence: STEP 1 — BACK EXPOSURE (UV): The plate is exposed from the back (polyester side) without a negative. This establishes the floor thickness and determines the relief depth. The longer the back exposure, the thicker the floor and the shallower the relief. Exact back exposure time is determined by a back-exposure step test. This step also increases adhesion of the photopolymer to the polyester backing sheet. STEP 2 — FACE EXPOSURE (UV through film negative or CTP mask): UV light passes through clear image areas of the negative (or ablated mask in CTP), polymerizing (hardening) the photopolymer in those areas. Unexposed areas (under opaque film/mask) remain liquid or soft. The face exposure time is determined by the type of copy: fine lines and screens require more exposure than solids and fine reverses. STEP 3 — WASHOUT: The plate is processed in appropriate solvent (organic solvent for most sheet plates) or water and detergent (for aqueous-wash plates like ASAHI AWP). This removes the unexposed polymer from between the image elements, leaving the hardened, raised printing image. Solvent-wash plates require adequate drying time to remove absorbed solvents. Water-wash plates dry in 5-10 minutes. STEP 4 — DRYING: Removes residual washout solution from the plate, restoring plate gauge thickness. Inadequate drying leaves solvent in the plate, which swells the material and gives incorrect caliper readings. Complete drying is essential before mounting. STEP 5 — POST-EXPOSURE (UV): A final UV exposure fully polymerizes the floor and character shoulders of the relief image. This completes the curing process, increases plate hardness and improves abrasion resistance. STEP 6 — LIGHT FINISHING (UV-C germicidal lamp): A short-wavelength UV-C exposure de-tacks the plate surface, eliminating surface tackiness that would cause substrate sticking and ink pickup problems. The plate is now press-ready. CRITICAL NOTE for CTP plates (Esko CDI): The mask is ablated by laser directly on the plate surface. No film negative is used. During face exposure, no vacuum is applied (mask is in intimate contact with polymer surface). Exposure takes place in the presence of oxygen, which slightly inhibits polymerization at the surface — resulting in smaller image dots than the digital mask. This provides the steeper shoulder profile characteristic of digital plates, with better highlight reproduction than conventional film-made plates.",
+    "cross_references": ["V4-001", "V4-002", "V4-004", "V2-012"]
+  },
+
+  {
+    "id": "V4-004",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Direct-to-Plate (CTP) Imaging — Esko CDI and LAMS Technology",
+    "subtopic": "How computer-to-plate (CTP) works vs conventional film — LAMS mask ablation, steeper shoulders, digital workflow implications",
+    "tags": ["CTP", "computer to plate", "direct to plate", "Esko CDI", "LAMS", "laser ablation", "mask", "digital plate", "digital workflow", "filmless", "RIP", "shoulder", "conventional vs digital plate", "flat top dot"],
+    "app_modules": ["job_entry", "esko_export", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "user exports job parameters to Esko",
+      "AI generates Esko CDI parameters",
+      "user asks about digital vs conventional plates",
+      "plate type is CTP or digital",
+      "AI explains flat-top dot advantages"
+    ],
+    "ai_use": "CRITICAL — retrieved every time job parameters are sent to Esko CDI. AI must confirm: correct plate type and thickness entered, distortion compensation applied, screen ruling and dot shape specified, RIP parameters correct. Also retrieved when explaining digital plate advantages over film-based.",
+    "text": "Direct-to-plate (DTP) or computer-to-plate (CTP) imaging bypasses film negatives entirely. The Esko CDI (Crystal Digital Imager) is the industry standard CTP device for photopolymer flexo plates. Technology: LAMS (Laser Ablatable Mask System). The photopolymer plate comes pre-coated with a black masking layer on the printing surface. A focused laser beam (driven by the RIPped digital data) ablates (vaporizes) the mask in the image areas, creating a negative image in the mask. Non-image areas retain the opaque mask. The plate is then processed identically to a conventionally imaged plate (back exposure, face exposure without film — through the remaining mask, washout, drying, post-exposure, light finishing). Critical differences from conventional film-based plates: (1) NO FILM NEGATIVE: The entire workflow is digital from computer file to plate. No film is generated. A digital proof (not a film-based laminate proof) must be used for color approval. (2) STEEPER SHOULDERS AND SMALLER DOTS: Because face exposure occurs in the presence of oxygen (no vacuum frame), polymerization is slightly inhibited at the plate surface. The image dots that form are actually slightly smaller than the digital mask image. This produces steeper, sharper character shoulders — less of the typical halo/shoulder gain that limits conventional plate quality. (3) FLAT-TOP DOT PROFILE: CTP plates (ESX, ESE plate types) produce flat-top printing dots rather than the round-top dots of conventional plates. Flat-top dots have a larger printable area at a given percentage and maintain size better under impression. This means lower dot gain in print, more stable tone reproduction, and tighter color control. ESX and ESE plates from DuPont Cyrel are specifically formulated for CTP/digital imaging and deliver flat-top dot profiles. (4) WORKFLOW IMPLICATIONS: Since no film exists, the prepress house cannot pull a film-based proof. Color management and digital proofing become the only verification tools. All files must be fully RIPped and checked before plate exposure — errors cannot be corrected by film retouching. (5) ESKO CDI INPUTS REQUIRED: Machine/press identification; plate type and thickness (e.g. DuPont Cyrel ESX 1.14mm); cylinder repeat (circumference in mm); screen ruling (lpi) and dot shape; distortion compensation factor (calculated from plate thickness and repeat); number of colors/separations; file format (1-bit TIFF per color separation).",
+    "cross_references": ["V4-003", "V4-002", "V2-012", "V1-006"]
+  },
+
+  {
+    "id": "V4-005",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Plate Distortion Correction — Mathematical Formula and K-Factor",
+    "subtopic": "Distortion correction factor (DCF) formula, K-factor by plate thickness, % reduction calculation for CTP/film",
+    "tags": ["distortion", "elongation", "distortion correction factor", "DCF", "K factor", "plate thickness", "repeat length", "compensation", "photopolymer distortion", "polyester backing", "neutral plane", "% reduction"],
+    "app_modules": ["estimation", "esko_export", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "estimation calculates imposition and repeat",
+      "Esko export generates distortion compensation value",
+      "user enters plate thickness and repeat for a job",
+      "AI validates distortion factor in job parameters"
+    ],
+    "ai_use": "CRITICAL — the exact mathematical formula for plate distortion calculation. Retrieved by the estimation engine to compute the distortion compensation factor for every job before generating Esko parameters. Different plate thicknesses give different K-factors.",
+    "text": "Elastomeric printing plates made flat and then wrapped around a printing cylinder experience elongation (distortion) in print length. The amount of distortion depends on plate dimensions and cylinder size, as well as plate construction. Photopolymer plates tend to have greater but more constant distortion factors than rubber plates — because of the dimensionally stable polyester backing, the neutral plane is displaced to just above the polyester carrier rather than through the center of plate thickness. Two factors determine image elongation: (1) The thickness of the elastomeric layer above the neutral plane; (2) The diameter of the printing cylinder (repeat length). DISTORTION CORRECTION FACTOR (DCF) FORMULA: DCF = 1 - [2(Tp - Tb) / R]. Where: DCF = distortion correction factor (dimensionless, always less than 1.0); R = printing circumference or repeat length of cylinder (inches); Tp = total plate thickness (inches); Tb = thickness of polyester backing sheet (inches, typically 0.004\" or 0.007\"). PERCENTAGE REDUCTION FORMULA (what to apply to artwork): % reduction = K / R × 100. Where: K = 2(Tp - Tb) — a constant supplied by the plate material manufacturer based on plate thickness and backing; R = cylinder circumference (repeat length) in inches. Example K-factors for common DuPont plate thicknesses with 0.007\" backing: 0.045\" plate → K = 0.076; 0.067\" plate → K = 0.120; 0.100\" plate → K = 0.186; 0.125\" plate → K = 0.236; 0.187\" plate → K = 0.360; 0.250\" plate → K = 0.486. METRIC FORMULA (for mm): DCF = 1 - [2π × plate_thickness_mm / cylinder_circumference_mm]. The distortion correction is applied ONLY in the repeat direction (around the cylinder) — the cross-web direction is not affected. The image file must be compressed (pre-shrunk) in the repeat direction by the DCF before CTP exposure or film output. For a 1.14mm plate (0.045\" ≈ 1.14mm) on a 450mm repeat: DCF ≈ 1 - (2π × 1.14 / 450) ≈ 1 - 0.01592 ≈ 0.984. The artwork is pre-shrunk to 98.4% of its true length in the repeat direction. The Esko CDI applies this automatically when plate thickness and repeat are correctly entered.",
+    "cross_references": ["V1-006", "V4-003", "V4-004", "V2-012"]
+  },
+
+  {
+    "id": "V4-006",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Film Negative Requirements for Photopolymer Platemaking",
+    "subtopic": "Film quality specifications — density, dot quality, orientation, emulsion side, handling rules",
+    "tags": ["film negative", "plate film", "negative density", "emulsion", "matte film", "optical density", "pinholes", "film orientation", "emulsion side", "film handling", "platemaking film", "right reading", "wrong reading"],
+    "app_modules": ["prepress_checklist", "esko_export", "knowledge_chat"],
+    "trigger_actions": [
+      "prepress checklist includes film quality verification",
+      "AI validates film specification before plate exposure",
+      "user asks about film requirements for plates"
+    ],
+    "ai_use": "Retrieved for conventional film-based plate validation. For CTP (Esko CDI) jobs, film is not used — but this chunk is useful when diagnosing plate defects caused by film quality issues.",
+    "text": "The film negative is the single most important element in photopolymer plate preparation for conventional (non-CTP) platemaking. Film requirements for flexo platemaking: (1) FILM TYPE: High-contrast film, free of dirt, kinks, nicks and pinholes. Matte-surface films are mandatory for sheet photopolymers — the matte surface ensures good vacuum contact between film and plate during exposure, preventing light scatter and fringing. Non-matte films should be used for liquid photopolymer platemaking. (2) OPTICAL DENSITY: In non-image (opaque/black) areas: density must be 4.0 or greater — insufficient density allows UV light to bleed through, causing partial polymerization in non-printing areas. In image (clear) areas: density must be 0.05 or less — residual density blocks UV, giving under-exposure and weak image areas. (3) IMAGE ORIENTATION: For surface (face) printing: film must be Right-Reading, Emulsion Side Down (RRED) — emulsion in contact with plate surface; For reverse (back) printing: film must be Right-Reading, Emulsion Side Up (RREU) — base side contacts plate surface. CRITICAL: Using wrong orientation inverts the image or produces a mirror image on the plate. (4) DOT QUALITY: For process/halftone plates, film must be imaged with hard, fringe-free, round dots. Poorly imaged or veiled dots require higher-than-normal face exposure times, which causes reverses to fill in and shadows to lose detail. (5) FILM HANDLING: Prevent kinks in image areas — film thickness of 0.007\" is preferred (easier to handle without kinking). Prevent scratches in image areas. Colloidal black opaques are recommended for retouching; avoid red opaques (they flake and can contaminate plates). Opaque on emulsion side only for liquid polymer; on base side only for sheet polymer. (6) FILM THICKNESS: 4-mil (0.004\") for smaller imagesetters; 7-mil (0.007\") is dominant for large-format work and photopolymer platemakers — easier to handle and store without kinking.",
+    "cross_references": ["V4-003", "V4-004", "V2-012"]
+  },
+
+  {
+    "id": "V4-007",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Plate and Solvent Compatibility — Ink and Washout Solvent Interaction",
+    "subtopic": "How solvents and inks affect photopolymer plate swell — compatibility testing, maximum percentages",
+    "tags": ["plate compatibility", "solvent compatibility", "plate swell", "ink compatibility", "swelling", "photopolymer swell", "alcohol", "ester", "aromatic", "water based compatibility", "plate damage", "ink solvent"],
+    "app_modules": ["job_entry", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "damage reason includes sticky surface or plate swell",
+      "user asks about ink compatibility with plate type",
+      "job uses solvent inks and plate is ASAHI or ESX",
+      "AI diagnoses plate swelling damage"
+    ],
+    "ai_use": "Retrieved when AI diagnoses plate damage related to chemical incompatibility — specifically 'very sticky surface' and 'patches showing' damage entries which can be caused by ink/solvent swelling the plate. Also used to validate ink-plate compatibility in job setup.",
+    "text": "Photopolymer plates must be chemically compatible with the inks and solvents used in the printing process. Incompatibility causes plate swelling — the plate absorbs solvent and expands, causing dimensional distortion, increased dot gain, and eventual plate degradation. Compatibility test: Take a small section of fully cured plate material, measure its thickness, and immerse for 24 hours in the solution to be tested. Remove and blot dry, then remeasure thickness. If the material has gained more than 5% in gauge, the two materials are incompatible. For thin plates (0.045\"-0.067\"): acceptable gain is 2-3 mils. For thick plates (0.250\"): acceptable gain is 10-12 mils. DuPont Cyrel plate compatibility guidelines (key solvents): Compatible (Y) with: Ethyl alcohol (up to 100%); Isopropyl alcohol (up to 100%); Normal propyl alcohol (up to 100%); Normal butyl alcohol (up to 100%); Water (100%); Ethylene glycol; Propylene glycol. Not compatible (N) or limited compatibility: Aromatics (toluene, xylene, benzene) — maximum 1% in alcohol co-solvent; Ethyl acetate, isopropyl acetate, propyl acetate — maximum 20%; Methyl alcohol — maximum 50% in co-solvent. Solvent-based inks for flexible packaging typically use n-propyl alcohol with ethyl acetate co-solvent. The aromatic content must be strictly controlled — even low aromatic levels above the maximum percentage cause progressive plate swelling. Water-based ink systems are generally fully compatible with most photopolymer plate materials. UV-curable inks contain reactive monomers — verify compatibility with plate manufacturer before use. ASAHI AWP (water-washable) plates have different compatibility characteristics from solvent-wash plates — always verify with ASAHI specifications for specific ink systems.",
+    "cross_references": ["V4-002", "V1-007", "V4-008"]
+  },
+
+  {
+    "id": "V4-008",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Plate Storage, Care, and Maintenance — After-Press Procedures",
+    "subtopic": "Proper plate cleaning, storage conditions, ozone and UV damage, storage registry, reuse criteria",
+    "tags": ["plate storage", "plate care", "plate cleaning", "plate maintenance", "ozone damage", "UV damage", "plate aging", "storage conditions", "plate reuse", "plate lifecycle", "after press", "plate cleaning procedure"],
+    "app_modules": ["plate_warehouse", "damage_log", "production_log", "knowledge_chat"],
+    "trigger_actions": [
+      "job completed — plates ready for warehouse",
+      "user stores plates to warehouse",
+      "plate warehouse 6-month review triggered",
+      "damage reason includes old plate deterioration",
+      "user asks how to store plates correctly"
+    ],
+    "ai_use": "CRITICAL for warehouse module — retrieved when AI validates plate storage procedures or diagnoses damage caused by improper storage. Old plates with sticky surfaces, cracking, or less covering are often the result of ozone exposure, UV light, or temperature damage during storage.",
+    "text": "Proper plate storage and care after press determines how long plates remain usable for reprints and directly affects the 'old plate' damage category that is the most common damage reason in your plant. CLEANING AFTER PRESS: Plates should be cleaned immediately after each press run using cleaning agents designed for the specific plate type, together with a soft-bristle brush. Use lint-free cloths or discarded nylon stockings for washing plates (regular rags leave lint on printing surface). STORAGE CONDITIONS — CRITICAL: (1) Temperature: Store in a cool area, below room temperature (below 55°F/13°C if possible). For rubber compounds, shelf life of plate material is effectively doubled for every 15°F reduction in storage temperature. (2) Ozone: All polymers and rubber compounds suffer changes in physical properties when exposed to ozone. Electric motors, especially those in electric motors near the storage area, produce ozone that attacks rubber compounds and photopolymers. Plates must NOT be stored near electrical equipment or electric motors. (3) UV/Fluorescent light: Photopolymers are UV-sensitive. Plates must be protected from direct fluorescent light and sunlight — both contain UV energy that continues to cure the plate, increasing brittleness and decreasing flexibility over time. (4) Position: Store plates suspended (not laid flat under weight) to prevent distortion and compression marks. (5) Wrapping: Loosely wrap to allow cleaning solvents to evaporate while protecting from light. SIGNS OF STORAGE DAMAGE: Plate becomes brittle and cracks (excessive UV or ozone exposure) → damage category: 'CRACKED'. Plate surface becomes tacky and sticky ('STICKY SURFACE' damage) → caused by ink additive residue, inadequate cleaning, or chemical reaction from incompatible ink. Plate loses ink-transfer ability ('LESS COVERING', 'OLD PLATE LESS COVERING') → caused by surface wear, dot erosion from long press runs, or swelling/shrinkage from solvent exposure. 6-MONTH REVIEW RULE: Plates not used for 6 months should be reviewed for condition before being put back on press. Plates showing any of the above deterioration signs should be dispositioned as damaged rather than returned to active stock.",
+    "cross_references": ["V4-007", "V1-015", "plate_warehouse"]
+  },
+
+  {
+    "id": "V4-009",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Mounting and Proofing",
+    "topic": "Purpose and Documentation of Plate Mounting",
+    "subtopic": "Why off-press mounting is critical — documentation checklist per cylinder, proofing objectives",
+    "tags": ["mounting", "plate mounting", "off-press mounting", "documentation", "job ticket", "mounting checklist", "proofing", "register check", "mounting purpose", "press-ready"],
+    "app_modules": ["job_entry", "prepress_checklist", "production_log", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "job status advances to MOUNTED",
+      "prepress checklist mounting step",
+      "damage log — folded plate during mounting",
+      "AI validates mounting documentation",
+      "user asks what to document when mounting"
+    ],
+    "ai_use": "Retrieved when AI validates mounting stage completion and prompts for documentation. Poor mounting documentation is a root cause of repeated problems — the same mounting error occurs again on the next reprint if not documented and learned from.",
+    "text": "The purpose of mounting and proofing is to prove that the job is press-ready: correctly laid out and positioned to conform to end-use specifications; correct copy mounted on an approved color cylinder in appropriate register; plates, cylinders, gears and bearings sufficiently mechanically accurate to perform within acceptable standards. Two requirements must be met: the mounting procedure must be performed correctly according to clearly defined practices, and the equipment used must be manufactured and maintained within stringent mechanical tolerances. TO BE A SUCCESSFUL PRINTER demands a good mounting department, good mounting knowledge and techniques, and good documentation procedures. Without documentation, the same errors recur on every reprint. MINIMUM DOCUMENTATION PER JOB TICKET (must be completed for every mounted job): (1) Plate type, caliper and plate condition for each color; (2) Cylinder ID and TIR (total indicated runout) of each cylinder; (3) Mounting tape (stickyback) used for each color — type (solid vinyl or cushion foam) and thickness; (4) Any makeready done for each color (low-spot buildups, high-spot reduction); (5) Problems encountered and solutions applied. This one-page sheet should be completed by each department involved (prepress, mounting, press) and placed in a job ticket. On the next press run, the mounting technician reviews the previous conditions and solutions. Mounting corrections that worked previously can be applied immediately; new problems can be approached with knowledge of what was already tried. Mounting equipment must be precisely calibrated: The impression cylinder must be level (checked with machinists' level); Total indicated runout of impression cylinder must not exceed 0.0005\"; Plate cylinder TIR must not exceed 0.001\" for line work and 0.0005\" for process work; Gears must be clean, undamaged, and fitting snugly with no more than 0.002\" total tolerance.",
+    "cross_references": ["V4-010", "V4-011", "V1-017"]
+  },
+
+  {
+    "id": "V4-010",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Mounting and Proofing",
+    "topic": "Stickyback Application and Impression Setting",
+    "subtopic": "How to apply stickyback to cylinders, impression setting rules, makeready for low and high spots",
+    "tags": ["stickyback", "mounting tape", "impression setting", "makeready", "low spot", "high spot", "plate pressure", "plate distortion", "impression control", "zero impression", "fill in", "solid printing"],
+    "app_modules": ["job_entry", "prepress_checklist", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "mounting step — stickyback selection",
+      "damage log includes impression-related damage",
+      "AI diagnoses fill-in or dot gain damage",
+      "user asks about impression pressure setting"
+    ],
+    "ai_use": "Retrieved when AI diagnoses impression-related damage such as fill-in, halo, or excessive dot gain. Also retrieved when mounting checklist prompts stickyback type selection. Incorrect impression or wrong stickyback causes many of the 'dot gain more' damage entries in the production log.",
+    "text": "Stickyback application and impression setting are the most critical variables in plate mounting for print quality control. IMPRESSION CONCEPT: Impression is the amount of squeeze or contact pressure between the plate surface and the substrate at the nip. Zero impression means the plate just barely contacts the substrate with no compression. Adding impression compresses the plate into the substrate. Too little impression = poor ink transfer, missing print areas. Too much impression = dot gain, halos, fill-in in reverses and screens, shortened plate life. IMPRESSION GUIDELINES: As a rough guide, compression of the plate material and mounting foam equal to 2% of their total combined thickness should be sufficient to proof print images. For a typical press undercut, 0.002\" additional impression from zero may be the difference between good sharp printing and a completely unsatisfactory job — but this same 0.002\" additional impression can produce halos and fill-in. Large solids and large type permit more impression before distorting than small type, mechanical screens or halftone process work. The maximum tolerable impression is the amount just before any copy becomes distorted or enlarged. MAKEREADY — LOWERING HIGH AREAS: When some plates print well but others are too high: Remove all ink. With 0.010\"-0.012\" additional impression from zero, rotate the plate cylinder against the impression cylinder — this 'sets' the high plates into the stickyback and levels them. Clean, re-ink, find new zero contact (it will be farther in because high areas have been lowered) and reproof. Can be repeated with 0.0015\" more impression if needed. MAKEREADY — BUILDING UP LOW AREAS: Lift the plate from stickyback in the low area, apply a thin coat of liquid adhesive (rubber cement diluted with recommended solvent) to the back of the plate in the low areas, and reset on stickyback. Apply in several thin layers, allowing each to dry. Alternative: double-sided adhesive tape in thickness from 0.0009\" to 0.005\" applied to back of plate or directly to bare cylinder. CRITICAL RULE: Never use makeready for process work — plate cylinders, bearings, stickyback and plate-thickness variables for process color work must be measured, hand-picked and controlled so the entire plate area will print without visible image growth or distortion.",
+    "cross_references": ["V1-015", "V4-009", "V4-011"]
+  },
+
+  {
+    "id": "V4-011",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Mounting and Proofing",
+    "topic": "Pin Register Mounting System — Procedure and Advantages",
+    "subtopic": "Pin register plate punching, planning grid, pivoting pin-bar mounter, accuracy and speed advantages",
+    "tags": ["pin register", "pin mounting", "plate punching", "register system", "mounting accuracy", "pivoting pin bar", "planning grid", "microvideo registration", "punch position", "job specification sheet"],
+    "app_modules": ["job_entry", "prepress_checklist", "esko_export", "knowledge_chat"],
+    "trigger_actions": [
+      "Esko export includes pin register flag",
+      "prepress checklist — pin register confirmed",
+      "user asks about mounting registration method",
+      "AI validates that pin register is specified for process work"
+    ],
+    "ai_use": "Retrieved when AI validates registration method specification for a job. Process color work and high-quality packaging require pin register mounting — not optical mounting alone. AI flags when pin register is not specified for process color jobs.",
+    "text": "The pin register mounting system provides the highest accuracy and speed of plate registration and mounting in flexographic printing. It moves the responsibility for registration to the planning stage when plates are prepared — rather than to the mounting operator's skill on the mounter-proofer. THE PLANNING STAGE: (1) Place a transparent, prepunched acetate carrier sheet over the planning grid sheet. (2) Place the first composite negative on top of the grid. (3) Select the best position for plates on the cylinder by moving the negative on the grid. Tape the negative to the acetate carrier in that position. (4) Select two target-punch positions outside the image areas, along grid lines, and record these positions on the job specification sheet. (5) Establish the plate-punch positions and record on the job sheet. THE PUNCHING STAGE (using microvideo punch): (1) Move the two cameras and plate-punch heads to the recorded grid-reference target points. (2) The cameras project electronic crosshairs on a split-screen monitor at 20× magnification. (3) Place the processed printing plate on the vacuum table and align with plate-target register marks using the microvideo monitor. (4) When camera crosshairs and plate target marks are precisely aligned, activate the punching button. (5) This entire procedure takes less than one minute per plate. THE MOUNTING STAGE: (1) Apply stickyback to the plate cylinder. (2) Find the pivoting pin-bar mounter below the plate cylinder. Locate the pins at numbered positions from the job sheet. (3) Load the plate onto the retractable spring-loaded pins. (4) Pivot the pin bar until the leading edge of the plate contacts the stickyback. Push the bar until pins retract and the plate sticks to the cylinder across the entire leading edge. (5) Lower the pin bar and rotate the plate cylinder slowly as the remainder of the plate is smoothed down. (6) Each plate takes less than one minute to mount. A six-color job takes less than one hour total. ADVANTAGES: Accuracy and repeatability of registration across all colors; eliminates operator skill dependency; multiple plates can be accurately mounted around and across the cylinder; makes it possible to nest images precisely; eliminates need for step-and-repeating negatives or large, unmanageable single plates.",
+    "cross_references": ["V4-009", "V4-010", "V1-017"]
+  },
+
+  {
+    "id": "V4-012",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Photopolymer Plate Benefits Summary — Cost Savings and Quality Factors",
+    "subtopic": "Comprehensive advantages of photopolymer plates over rubber — quality, registration, time, cost",
+    "tags": ["photopolymer advantages", "plate quality", "plate registration", "plate life", "process printing", "time savings", "cost savings", "plate mounting time", "quality control", "consistent plate"],
+    "app_modules": ["estimation", "crm_quotation", "knowledge_chat"],
+    "trigger_actions": [
+      "customer asks about photopolymer plate quality",
+      "sales team preparing plate cost justification",
+      "AI explains plate cost vs print quality tradeoffs",
+      "user asks why photopolymer vs rubber"
+    ],
+    "ai_use": "Retrieved when AI assists sales or estimation with plate quality justification. Useful when explaining to customers why plate costs are a worthwhile investment relative to print quality and reprint frequency.",
+    "text": "Photopolymer printing plates offer the following quality, time, and cost advantages over rubber plates for flexible packaging: QUALITY FACTORS: Better print quality — produces sharp line images, excellent ink transfer, and predictable halftone results; Dimensional stability — 90% coverage plate registers with 10% coverage plate because of stable polyester backing (not possible with rubber); Accurate prepress proofing — off-press proofs are accurate reproductions from the film used for plates; Better registration — plates can be registered accurately with pin systems, taking minutes not hours; Larger plate sizes — up to 52\" × 110\" for large format work; Process color capability — halftone dots are consistent and can be compensated for dot gain. TIME SAVINGS: A 6-color, 4-up job can be mounted with pin-registered photopolymer plates in about 30 minutes versus 8 hours or more for rubber; Eliminates the need for the mounter-proofer operation; Downtime is minimized to re-register plates; Process work can be done in half the time compared to making copper engravings, molds and rubber plates; Images can be stepped and repeated in multiple images on one plate, reducing total plate count. COST SAVINGS: Longer plate life — photopolymer lasts about twice as long as rubber plates; Eliminates the need for engraving or mold; Reduces make-ready time and waste at press start-up. PRINT QUALITY IMPLICATIONS FOR MES: When jobs are damaged (DAMAGE remark in production log), the cost of replacement photopolymer plates is the primary cost impact. ESX/ESE flat-top CTP plates typically show lower damage rates for dot gain reasons compared to conventional round-top plates — because flat-top dots are more stable under impression. Tracking damage by plate type in the damage log provides data to optimize plate type selection per machine/substrate combination.",
+    "cross_references": ["V4-001", "V4-002", "V4-003"]
+  },
+
+  {
+    "id": "V4-013",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 4,
+    "chapter": "Flexographic Printing Plates",
+    "topic": "Plate Types Used in Your Plant — ACE, ESX, ESE, FTV, FTF, ASAHI",
+    "subtopic": "Classification and application guide for each plate material used at your facility",
+    "tags": ["ACE plate", "ESX plate", "ESE plate", "FTV plate", "FTF plate", "ASAHI plate", "ASAHI AWP", "DuPont Cyrel", "plate selection", "plate thickness", "1.14mm", "2.84mm", "1.70mm", "plate type guide"],
+    "app_modules": ["plate_inventory", "job_entry", "estimation", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user selects plate type in job entry",
+      "estimation selects plate type for cost calculation",
+      "user asks which plate type to use for a machine",
+      "AI suggests plate type based on machine and job type",
+      "user asks about difference between ACE and ESX"
+    ],
+    "ai_use": "CRITICAL — retrieved every time a plate type is selected in the system. AI uses this to validate plate-machine-substrate compatibility and suggest the optimal plate type for a job. This is specific to your plant's actual inventory.",
+    "text": "Your plant uses the following photopolymer plate types, sourced from three suppliers. Here is the application guide for each: ACE 1.14mm (DuPont Cyrel): Standard flexo photopolymer sheet plate. Round-top dot conventional imaging (film-based). Good for line work, solids, text. Suitable for all CI presses (BOBST, UTECO, CARINT, M6, KYMC). Available in widths 76cm, 92cm (from ANOOP PLASTIC) and 106.7cm (from ANOOP PLASTIC). Used for: general flexible packaging, surface and reverse print, shrink sleeves, stand-up pouches. ESX 1.14mm (DuPont Cyrel): Digital CTP photopolymer sheet plate. Flat-top dot profile (LAMS digital imaging, Esko CDI). Superior to ACE for process color, halftone work, dot gain control. Recommended for process color printing on BOBST and UTECO. Available in 106.7cm × 152.4cm sheets (from DYNAGRAPH/CRYSTAL). Use for: process CMYK print, vignettes, fine halftone screening, jobs requiring tight color control. ESE 1.14mm (DuPont Cyrel): Digital CTP photopolymer sheet plate. Similar to ESX but with different formulation for specific applications. Available in 90cm and 106.7cm widths (from DYNAGRAPH). Use for: similar applications to ESX. FTV 1.14mm (DuPont Cyrel): Fine-line photopolymer plate for demanding process work. Available in 106.7cm width. Use for: high-resolution process color, fine screen work. FTF 1.14mm (DuPont Cyrel): Similar to FTV. Use for: fine-line text, barcodes, high-resolution requirements. ASAHI AWP 2.84mm (Asahi DSF, from CRYSTAL): Thick liquid photopolymer water-washable plate. Thicker relief depth suitable for flexible packaging when deeper relief is needed. Available in 90cm × 120cm and 106.68cm × 152.4cm. Primarily used for CARINT (flexible packaging), UTECO and some wide web applications. The 2.84mm thickness means higher distortion compensation required vs 1.14mm plates. ASAHI ESX 1.14mm (from CRYSTAL): Thin Asahi plate. Similar thickness to DuPont Cyrel. Available in 90cm × 120cm format. Machine allocation by plate type: BOBST → ESX/ESE/ACE 1.14mm; M6 → ACE/ESX 1.14mm; FT → ACE/FTV 1.14mm; CARINT → ASAHI 2.84mm or ACE 1.14mm; UTECO → ASAHI 2.84mm or ESX 1.14mm; KYMC → ACE/ESX 1.14mm; HONG YANG → ASAHI 1.70mm.",
+    "cross_references": ["V4-001", "V4-002", "V4-004", "V4-005"]
+  }
+]

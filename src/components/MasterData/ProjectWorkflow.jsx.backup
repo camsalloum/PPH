@@ -1,0 +1,1838 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, Tabs, Typography, Tag, Collapse, Badge, Tooltip, Progress, Divider, Alert } from 'antd';
+import {
+  DatabaseOutlined,
+  UserOutlined,
+  FileExcelOutlined,
+  CloudUploadOutlined,
+  CalculatorOutlined,
+  TableOutlined,
+  CheckCircleOutlined,
+  ArrowRightOutlined,
+  ArrowDownOutlined,
+  SyncOutlined,
+  LineChartOutlined,
+  BarChartOutlined,
+  FundOutlined,
+  AimOutlined,
+  TeamOutlined,
+  GlobalOutlined,
+  ShoppingCartOutlined,
+  DollarOutlined,
+  SettingOutlined,
+  SafetyCertificateOutlined,
+  PieChartOutlined,
+  DashboardOutlined,
+  NodeIndexOutlined,
+  ApiOutlined,
+  ClusterOutlined,
+  FileSearchOutlined,
+  EditOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  MergeCellsOutlined,
+  FilterOutlined,
+  BookOutlined,
+  PartitionOutlined,
+} from '@ant-design/icons';
+
+const { Title, Text, Paragraph } = Typography;
+const { Panel } = Collapse;
+
+/**
+ * ProjectWorkflow - Complete FlexPack ERP System Workflow Visualization
+ * 
+ * This component provides a comprehensive view of the entire project's data flow,
+ * architecture, and relationships between all modules.
+ * 
+ * Based on the FlexPack ERP 32-module architecture
+ */
+
+// =============================================================================
+// STYLES
+// =============================================================================
+const styles = {
+  container: {
+    padding: '20px',
+    backgroundColor: '#f5f7fa',
+    minHeight: '100vh',
+    maxWidth: '1600px',
+    margin: '0 auto',
+  },
+  card: {
+    marginBottom: '20px',
+    borderRadius: '16px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+    border: '1px solid #e8ecf1',
+    overflow: 'hidden',
+  },
+  moduleCard: {
+    padding: '16px',
+    borderRadius: '12px',
+    border: '1px solid',
+    marginBottom: '12px',
+    transition: 'all 0.2s ease',
+    cursor: 'pointer',
+    backgroundColor: '#fff',
+    minWidth: 0,
+    wordBreak: 'break-word',
+  },
+  flowBox: {
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    minWidth: 0,
+    padding: '14px 18px',
+    backgroundColor: '#fff',
+    borderRadius: '10px',
+    border: '1.5px solid',
+    marginBottom: '10px',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+  },
+  arrow: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '10px 0',
+    fontSize: '20px',
+    color: '#8c8c8c',
+  },
+  phaseHeader: {
+    padding: '16px 24px',
+    borderRadius: '12px',
+    marginBottom: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    flexWrap: 'wrap',
+    minWidth: 0,
+  },
+  statusBadge: {
+    padding: '6px 14px',
+    borderRadius: '16px',
+    fontSize: '12px',
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+  },
+  connectionLine: {
+    height: '48px',
+    width: '3px',
+    margin: '0 auto',
+    background: 'linear-gradient(180deg, #1890ff 0%, #52c41a 100%)',
+    borderRadius: '2px',
+  },
+  legendItem: {
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    minWidth: 0,
+    gap: '10px',
+    padding: '10px 16px',
+    borderRadius: '10px',
+    backgroundColor: '#fafafa',
+    border: '1px solid #e8ecf1',
+    transition: 'all 0.2s ease',
+  },
+};
+
+// =============================================================================
+// SINGLE SOURCE OF TRUTH: ERP MODULES (All 32 modules from flex_pack_erp_guide)
+// Status: 'done' = Completed, 'partial' = In Progress, 'planned' = Not Started
+// =============================================================================
+const ERP_MODULES = [
+  // Phase 1: Foundation (Weeks 1-4)
+  { id: 1, phase: 1, name: 'Authentication & User Management', status: 'partial', icon: '🔐', 
+    tables: ['users', 'user_sessions', 'permissions', 'user_permissions', 'permission_audit_log'],
+    features: ['JWT Auth', 'Role-based Access', 'Fine-grained Permissions', 'Audit Logging'],
+    apiBase: '/api/auth', notes: 'Basic auth done, permissions system in progress' },
+  { id: 2, phase: 1, name: 'Dashboard & Navigation', status: 'done', icon: '📊',
+    tables: ['user_preferences'], features: ['Role-based KPIs', 'Real-time Alerts', 'Theme Customization'],
+    apiBase: '/api/dashboard' },
+  { id: 3, phase: 1, name: 'Master Data Management', status: 'done', icon: '⚙️',
+    tables: ['divisions', 'product_groups', 'materials', 'currencies'],
+    features: ['Division Management', 'Product Pricing', 'Material Percentages'],
+    apiBase: '/api/master-data' },
+  
+  // Phase 2: CRM & Sales (Weeks 5-10)
+  { id: 4, phase: 2, name: 'Lead Management', status: 'planned', icon: '🎯',
+    tables: ['leads', 'lead_interactions'], features: ['Lead Capture', 'Qualification', 'Conversion Tracking'] },
+  { id: 5, phase: 2, name: 'Customer Management (CRM)', status: 'done', icon: '👥',
+    tables: ['fp_data_excel (customers)', 'customer_merge_rules'],
+    features: ['Customer Analytics', 'Customer Merging', 'Key Facts'], apiBase: '/api/customers' },
+  { id: 6, phase: 2, name: 'Product Catalog & Specs', status: 'done', icon: '📦',
+    tables: ['fp_product_group_pricing_rounding', 'fp_material_percentages'],
+    features: ['Product Performance', 'Pricing Analysis', 'Material Breakdown'], apiBase: '/api/product-groups' },
+  { id: 7, phase: 2, name: 'Inquiry Management', status: 'planned', icon: '❓',
+    tables: ['inquiries', 'inquiry_attachments'], features: ['Inquiry Tracking', 'Feasibility Assessment'] },
+  { id: 8, phase: 2, name: 'Sample Request & Management', status: 'planned', icon: '🧪',
+    tables: ['sample_requests', 'sample_approvals'], features: ['Multi-stage Approvals', 'Cost Tracking'] },
+  { id: 9, phase: 2, name: 'Quotation & Pricing', status: 'done', icon: '💰',
+    tables: ['quotations', 'quotation_items'], features: ['Multi-item Quotes', 'Cost Breakdown'] },
+  
+  // Phase 3: Order Management (Weeks 11-13)
+  { id: 10, phase: 3, name: 'Sales Order Management', status: 'partial', icon: '🛒',
+    tables: ['sales_orders', 'order_items'], features: ['Order Tracking', 'Approval Workflow'] },
+  { id: 11, phase: 3, name: 'Design & Artwork Management', status: 'planned', icon: '🎨',
+    tables: ['artworks', 'artwork_approvals'], features: ['Version Control', 'Customer Approval'] },
+  
+  // Phase 4: Business Units - Internal Suppliers (Weeks 14-21)
+  { id: 12, phase: 4, name: 'Plate Production', status: 'planned', icon: '🖨️',
+    tables: ['plates', 'plate_jobs'], features: ['Job Tracking', 'QC Checklist'] },
+  { id: 13, phase: 4, name: 'Cylinder Engineering', status: 'planned', icon: '⚙️',
+    tables: ['cylinders', 'cylinder_jobs'], features: ['Engraving Management', 'Maintenance Tracking'] },
+  { id: 14, phase: 4, name: 'Ink Production & Formulation', status: 'planned', icon: '🎨',
+    tables: ['ink_formulations', 'ink_batches'], features: ['Recipe Management', 'Color Matching'] },
+  { id: 15, phase: 4, name: 'Film Extrusion Management', status: 'planned', icon: '🎞️',
+    tables: ['extrusion_lines', 'extrusion_jobs'], features: ['Multi-layer Film', 'Quality Testing'] },
+  
+  // Phase 5: Production Planning (Weeks 22-26)
+  { id: 16, phase: 5, name: 'MRP (Material Requirements)', status: 'planned', icon: '📋',
+    tables: ['bom_headers', 'bom_items', 'material_requirements'], features: ['BOM Explosion', 'Auto PR Generation'] },
+  { id: 17, phase: 5, name: 'Production Scheduling Engine', status: 'planned', icon: '📆', critical: true,
+    tables: ['production_lines', 'production_schedule'], features: ['AI Scheduling', 'Gantt View'] },
+  { id: 18, phase: 5, name: 'Purchasing & Procurement', status: 'planned', icon: '🛍️',
+    tables: ['suppliers', 'purchase_orders'], features: ['PO Generation', 'Three-way Matching'] },
+  { id: 19, phase: 5, name: 'Inventory Management', status: 'planned', icon: '📦',
+    tables: ['warehouses', 'stock_levels', 'lot_tracking'], features: ['Multi-location', 'FIFO/FEFO'] },
+  
+  // Phase 6: Production Execution (Weeks 27-32)
+  { id: 20, phase: 6, name: 'Job Order Management', status: 'planned', icon: '📄',
+    tables: ['job_orders', 'job_routing'], features: ['Job Creation', 'Material Allocation'] },
+  { id: 21, phase: 6, name: 'TDS Generator', status: 'planned', icon: '📑',
+    tables: ['tds_templates', 'tds_documents'], features: ['Auto-generate from Specs'] },
+  { id: 22, phase: 6, name: 'MES (Manufacturing Execution)', status: 'planned', icon: '🖥️', critical: true,
+    tables: ['machine_status', 'production_logs'], features: ['Real-time Tracking', 'OEE Calculation'] },
+  { id: 23, phase: 6, name: 'Quality Control & Inspection', status: 'planned', icon: '✅',
+    tables: ['inspections', 'inspection_results'], features: ['Inspection Checklists', 'COA Generation'] },
+  { id: 24, phase: 6, name: 'Customer Complaints & CAPA', status: 'planned', icon: '📢',
+    tables: ['complaints', 'corrective_actions'], features: ['Investigation Workflow', 'CAPA Tracking'] },
+  
+  // Phase 7: Dispatch & Delivery (Weeks 33-35)
+  { id: 25, phase: 7, name: 'Finished Goods Warehouse', status: 'planned', icon: '📦',
+    tables: ['fg_inventory', 'packing_list'], features: ['FG Receipt', 'Pick List Generation'] },
+  { id: 26, phase: 7, name: 'Dispatch & Logistics', status: 'planned', icon: '🚛',
+    tables: ['delivery_schedules', 'delivery_notes'], features: ['Route Planning', 'POD Capture'] },
+  { id: 27, phase: 7, name: 'Invoicing & AR', status: 'planned', icon: '💵',
+    tables: ['invoices', 'payments'], features: ['Auto-invoice', 'Payment Tracking'] },
+  
+  // Phase 8: Support Modules (Weeks 36-40)
+  { id: 28, phase: 8, name: 'Maintenance Management', status: 'planned', icon: '🔧',
+    tables: ['equipment_master', 'maintenance_work_orders'], features: ['Preventive Maintenance', 'Spare Parts'] },
+  { id: 29, phase: 8, name: 'Document Management', status: 'planned', icon: '📁',
+    tables: ['documents', 'document_versions'], features: ['Version Control', 'Approval Workflow'] },
+  { id: 30, phase: 8, name: 'Reports & Analytics', status: 'done', icon: '📈',
+    tables: ['report_definitions', 'dashboards'],
+    features: ['Sales Rep Reports', 'Customer Reports', 'Country Reports'], apiBase: '/api/reports' },
+  { id: 31, phase: 8, name: 'Cost Accounting & Analysis', status: 'partial', icon: '💹',
+    tables: ['job_costing', 'variance_analysis'], features: ['Job Costing', 'Profitability Reports'] },
+  { id: 32, phase: 8, name: 'System Configuration & Admin', status: 'done', icon: '⚙️',
+    tables: ['system_settings', 'number_series'], features: ['Settings', 'Workflows', 'Email Templates'],
+    apiBase: '/api/settings' },
+];
+
+// Phase definitions (shared by all views)
+const PHASES = [
+  { id: 1, name: 'Foundation', color: '#1890ff', bgColor: '#e6f7ff', weeks: '1-4', icon: <SettingOutlined /> },
+  { id: 2, name: 'CRM & Sales', color: '#52c41a', bgColor: '#f6ffed', weeks: '5-10', icon: <ShoppingCartOutlined /> },
+  { id: 3, name: 'Order Management', color: '#faad14', bgColor: '#fff7e6', weeks: '11-13', icon: <ShoppingCartOutlined /> },
+  { id: 4, name: 'Business Units', color: '#722ed1', bgColor: '#f9f0ff', weeks: '14-21', icon: <ClusterOutlined /> },
+  { id: 5, name: 'Production Planning', color: '#eb2f96', bgColor: '#fff0f6', weeks: '22-26', icon: <CalculatorOutlined /> },
+  { id: 6, name: 'Production Execution', color: '#13c2c2', bgColor: '#e6fffb', weeks: '27-32', icon: <SyncOutlined /> },
+  { id: 7, name: 'Dispatch & Delivery', color: '#f5222d', bgColor: '#fff1f0', weeks: '33-35', icon: <GlobalOutlined /> },
+  { id: 8, name: 'Support Modules', color: '#8c8c8c', bgColor: '#f5f5f5', weeks: '36-40', icon: <SettingOutlined /> },
+];
+
+// Status configurations
+const STATUS_CONFIG = {
+  done: { label: 'Completed', color: '#52c41a', icon: '✓', bgColor: '#f6ffed' },
+  partial: { label: 'In Progress', color: '#1890ff', icon: '◐', bgColor: '#e6f7ff' },
+  planned: { label: 'Planned', color: '#d9d9d9', icon: '○', bgColor: '#fafafa' },
+};
+
+// =============================================================================
+// MODULE STATUS DEFINITIONS (for JSX icon-based views)
+// =============================================================================
+const MODULE_STATUS = {
+  IMPLEMENTED: { color: '#52c41a', label: 'Implemented', icon: <CheckCircleOutlined /> },
+  IN_PROGRESS: { color: '#1890ff', label: 'In Progress', icon: <SyncOutlined spin /> },
+  PLANNED: { color: '#faad14', label: 'Planned', icon: <ClusterOutlined /> },
+  FUTURE: { color: '#d9d9d9', label: 'Future', icon: <NodeIndexOutlined /> },
+};
+
+// Map ERP_MODULES status to MODULE_STATUS key
+const statusToModuleStatus = (status) => {
+  switch(status) {
+    case 'done': return 'IMPLEMENTED';
+    case 'partial': return 'IN_PROGRESS';
+    case 'planned': return 'PLANNED';
+    default: return 'FUTURE';
+  }
+};
+
+// Icon mapping for JSX views
+const moduleIcons = {
+  1: <SafetyCertificateOutlined />, 2: <DashboardOutlined />, 3: <DatabaseOutlined />,
+  4: <AimOutlined />, 5: <TeamOutlined />, 6: <PieChartOutlined />,
+  7: <FileSearchOutlined />, 8: <FileSearchOutlined />, 9: <DollarOutlined />,
+  10: <ShoppingCartOutlined />, 11: <EditOutlined />, 12: <SettingOutlined />,
+  13: <SettingOutlined />, 14: <SettingOutlined />, 15: <SettingOutlined />,
+  16: <CalculatorOutlined />, 17: <TableOutlined />, 18: <ShoppingCartOutlined />,
+  19: <DatabaseOutlined />, 20: <FileExcelOutlined />, 21: <FileSearchOutlined />,
+  22: <SyncOutlined />, 23: <CheckCircleOutlined />, 24: <TeamOutlined />,
+  25: <DatabaseOutlined />, 26: <GlobalOutlined />, 27: <DollarOutlined />,
+  28: <SettingOutlined />, 29: <FileSearchOutlined />, 30: <BarChartOutlined />,
+  31: <LineChartOutlined />, 32: <SettingOutlined />,
+};
+
+// =============================================================================
+// DERIVED: PROJECT_PHASES (Generated from ERP_MODULES for detailed views)
+// =============================================================================
+const PROJECT_PHASES = PHASES.map(phase => ({
+  id: phase.name.toLowerCase().replace(/[^a-z]/g, '-'),
+  name: phase.name,
+  color: phase.color,
+  icon: phase.icon,
+  description: `Weeks ${phase.weeks}`,
+  modules: ERP_MODULES
+    .filter(m => m.phase === phase.id)
+    .map(m => ({
+      id: m.name.toLowerCase().replace(/[^a-z]/g, '-'),
+      name: m.name,
+      status: statusToModuleStatus(m.status),
+      icon: moduleIcons[m.id] || <SettingOutlined />,
+      tables: m.tables || [],
+      features: m.features || [],
+      apiBase: m.apiBase || '',
+      notes: m.notes || '',
+    })),
+}));
+
+// =============================================================================
+// DATABASE SCHEMA VISUALIZATION
+// =============================================================================
+const DATABASE_TABLES = [
+  {
+    category: 'Core Sales Data',
+    color: '#1890ff',
+    tables: [
+      {
+        name: 'fp_data_excel',
+        description: 'Main sales data (Actual, Estimate, Budget)',
+        columns: ['division', 'salesrepname', 'customername', 'countryname', 'productgroup', 'year', 'month', 'type', 'values_type', 'values', 'material', 'process'],
+        recordTypes: ['ACTUAL', 'ESTIMATE', 'BUDGET'],
+        usage: 'Primary source for all sales analysis and reporting',
+      },
+    ],
+  },
+  {
+    category: 'Budget Management',
+    color: '#52c41a',
+    tables: [
+      {
+        name: 'fp_sales_rep_budget',
+        description: 'Individual sales rep budget entries',
+        columns: ['division', 'salesrepname', 'customername', 'countryname', 'productgroup', 'budget_year', 'month', 'type', 'values_type', 'values', 'material', 'process'],
+        usage: 'Stores finalized budget data per sales rep',
+      },
+      {
+        name: 'fp_divisional_budget',
+        description: 'Division-level budget summaries',
+        columns: ['division', 'budget_year', 'product_group', 'monthly values'],
+        usage: 'Aggregated budget at division level',
+      },
+      {
+        name: 'fp_budget_bulk_import',
+        description: 'Temporary storage for bulk imports',
+        columns: ['batch_id', 'sales_rep', 'customer', 'budget_year', 'month_1-12', 'status'],
+        usage: 'Draft storage before finalization',
+      },
+      {
+        name: 'fp_sales_rep_budget_draft',
+        description: 'Draft budget before submission',
+        columns: ['salesrepname', 'customername', 'budget_year', 'monthly values'],
+        usage: 'Work-in-progress budget entries',
+      },
+    ],
+  },
+  {
+    category: 'Master Data',
+    color: '#722ed1',
+    tables: [
+      {
+        name: 'fp_product_group_pricing_rounding',
+        description: 'Product pricing by year',
+        columns: ['division', 'product_group', 'year', 'asp_round', 'morm_round'],
+        usage: 'Calculate Amount (KGS × ASP) and MoRM (KGS × MoRM rate)',
+      },
+      {
+        name: 'fp_material_percentages',
+        description: 'Material & Process mapping',
+        columns: ['product_group', 'material', 'process'],
+        usage: 'PE/Non PE/Others and Printed/Unprinted classification',
+      },
+      {
+        name: 'country_coordinates',
+        description: 'Geographic coordinates for mapping',
+        columns: ['country_name', 'lat', 'lng', 'region'],
+        usage: 'Map visualization of sales by country',
+      },
+    ],
+  },
+  {
+    category: 'User & System',
+    color: '#faad14',
+    tables: [
+      {
+        name: 'users',
+        description: 'User accounts and authentication',
+        columns: ['id', 'email', 'password_hash', 'role', 'is_active'],
+        usage: 'Authentication and authorization',
+      },
+      {
+        name: 'sales_rep_groups',
+        description: 'Sales rep groupings per division',
+        columns: ['division', 'group_name', 'members'],
+        usage: 'Organize sales reps into teams',
+      },
+      {
+        name: 'customer_merge_rules',
+        description: 'Rules for merging duplicate customers',
+        columns: ['division', 'source_name', 'target_name', 'status'],
+        usage: 'Customer data normalization',
+      },
+    ],
+  },
+];
+
+// =============================================================================
+// DATA FLOW DEFINITIONS (⚠️ OUTDATED - See DATA_FLOWS_MERMAID.md)
+// =============================================================================
+// NOTE: These flow definitions are simplified and may not reflect the actual current system.
+// For comprehensive, up-to-date Mermaid diagrams showing the actual data flows, see:
+// 📄 DATA_FLOWS_MERMAID.md in the project root
+//
+// Key changes since these were created:
+// - fp_data_excel → fp_raw_data + fp_actualcommon (with trigger sync)
+// - fp_sales_rep_budget → fp_budget_unified (single source of truth with draft/approved)
+// - fp_divisional_budget → fp_budget_unified (merged into unified table)
+// - Added product group pricing materialized view
+// - Added division Oracle code mapping system
+//
+// The definitions below are kept for backward compatibility with this UI component.
+// =============================================================================
+const DATA_FLOWS = [
+  {
+    id: 'actual-flow',
+    name: 'Actual Data Flow',
+    color: '#1890ff',
+    icon: <LineChartOutlined />,
+    steps: [
+      { label: 'Excel/CSV Upload', type: 'input', icon: <FileExcelOutlined /> },
+      { label: 'Data Validation', type: 'process', icon: <CheckCircleOutlined /> },
+      { label: 'fp_data_excel (ACTUAL)', type: 'storage', icon: <DatabaseOutlined /> },
+      { label: 'Actual Tab Display', type: 'output', icon: <TableOutlined /> },
+    ],
+  },
+  {
+    id: 'budget-flow',
+    name: 'Budget Data Flow',
+    color: '#52c41a',
+    icon: <DollarOutlined />,
+    steps: [
+      { label: 'HTML Export to Sales Rep', type: 'output', icon: <ExportOutlined /> },
+      { label: 'Sales Rep Fills Budget', type: 'external', icon: <EditOutlined /> },
+      { label: 'HTML Import', type: 'input', icon: <ImportOutlined /> },
+      { label: 'Pricing Lookup', type: 'process', icon: <CalculatorOutlined /> },
+      { label: 'fp_sales_rep_budget', type: 'storage', icon: <DatabaseOutlined /> },
+    ],
+  },
+  {
+    id: 'bulk-import-flow',
+    name: 'Bulk Import Flow',
+    color: '#722ed1',
+    icon: <CloudUploadOutlined />,
+    steps: [
+      { label: 'Multiple HTML Files', type: 'input', icon: <FileExcelOutlined /> },
+      { label: 'fp_budget_bulk_import (Draft)', type: 'storage', icon: <DatabaseOutlined /> },
+      { label: 'Preview & Validate', type: 'process', icon: <FileSearchOutlined /> },
+      { label: 'Pricing + Material Lookup', type: 'process', icon: <CalculatorOutlined /> },
+      { label: 'Finalize to Budget', type: 'process', icon: <CheckCircleOutlined /> },
+      { label: 'fp_sales_rep_budget', type: 'storage', icon: <DatabaseOutlined /> },
+    ],
+  },
+  {
+    id: 'analytics-flow',
+    name: 'Analytics Generation',
+    color: '#eb2f96',
+    icon: <PieChartOutlined />,
+    steps: [
+      { label: 'fp_data_excel', type: 'storage', icon: <DatabaseOutlined /> },
+      { label: 'Aggregation Queries', type: 'process', icon: <CalculatorOutlined /> },
+      { label: 'Division/Customer/Product Filters', type: 'process', icon: <FilterOutlined /> },
+      { label: 'Charts & Reports', type: 'output', icon: <PieChartOutlined /> },
+    ],
+  },
+];
+
+// =============================================================================
+// COMPONENT: Project Overview
+// =============================================================================
+const ProjectOverview = () => (
+  <div style={{ padding: '20px' }}>
+    {/* Hero Section */}
+    <div style={{
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      borderRadius: '16px',
+      padding: '32px',
+      marginBottom: '24px',
+      color: 'white',
+    }}>
+      <Title level={2} style={{ color: 'white', marginBottom: '8px' }}>
+        🏭 FlexPack ERP System
+      </Title>
+      <Paragraph style={{ color: 'rgba(255,255,255,0.9)', fontSize: '16px', marginBottom: '16px' }}>
+        A comprehensive Enterprise Resource Planning system for Flexible Packaging industry.
+        Built with React, Node.js, and PostgreSQL following a 32-module architecture.
+      </Paragraph>
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <Tag color="cyan" style={{ padding: '4px 12px', fontSize: '14px' }}>
+          React 18+ Frontend
+        </Tag>
+        <Tag color="green" style={{ padding: '4px 12px', fontSize: '14px' }}>
+          Node.js/Express Backend
+        </Tag>
+        <Tag color="blue" style={{ padding: '4px 12px', fontSize: '14px' }}>
+          PostgreSQL Database
+        </Tag>
+        <Tag color="purple" style={{ padding: '4px 12px', fontSize: '14px' }}>
+          JWT Authentication
+        </Tag>
+      </div>
+    </div>
+
+    {/* Progress Overview */}
+    <Card title={<><CheckCircleOutlined /> Implementation Progress</>} style={styles.card}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        {PROJECT_PHASES.map(phase => {
+          const implementedCount = phase.modules.filter(m => m.status === 'IMPLEMENTED').length;
+          const progress = Math.round((implementedCount / phase.modules.length) * 100);
+          return (
+            <div key={phase.id} style={{
+              padding: '16px',
+              borderRadius: '12px',
+              backgroundColor: '#fafafa',
+              border: `2px solid ${phase.color}20`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <span style={{ color: phase.color, fontSize: '20px' }}>{phase.icon}</span>
+                <Text strong>{phase.name}</Text>
+              </div>
+              <Progress 
+                percent={progress} 
+                strokeColor={phase.color}
+                size="small"
+              />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {implementedCount}/{phase.modules.length} modules
+              </Text>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+
+    {/* Legend */}
+    <Card title={<><BookOutlined /> Status Legend</>} style={styles.card}>
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        {Object.entries(MODULE_STATUS).map(([key, value]) => (
+          <div key={key} style={styles.legendItem}>
+            <span style={{ color: value.color }}>{value.icon}</span>
+            <Tag color={value.color}>{value.label}</Tag>
+          </div>
+        ))}
+      </div>
+    </Card>
+  </div>
+);
+
+// =============================================================================
+// COMPONENT: Module Architecture
+// =============================================================================
+const ModuleArchitecture = () => (
+  <div style={{ padding: '20px' }}>
+    {PROJECT_PHASES.map(phase => (
+      <Card 
+        key={phase.id}
+        style={{ ...styles.card, borderTop: `4px solid ${phase.color}` }}
+      >
+        <div style={{
+          ...styles.phaseHeader,
+          backgroundColor: `${phase.color}10`,
+          border: `1px solid ${phase.color}30`,
+        }}>
+          <span style={{ fontSize: '24px', color: phase.color }}>{phase.icon}</span>
+          <div style={{ flex: 1 }}>
+            <Title level={4} style={{ margin: 0, color: phase.color }}>
+              {phase.name}
+            </Title>
+            <Text type="secondary">{phase.description}</Text>
+          </div>
+          <Badge 
+            count={`${phase.modules.length} modules`} 
+            style={{ backgroundColor: phase.color }}
+          />
+        </div>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+          gap: '16px' 
+        }}>
+          {phase.modules.map(module => {
+            const status = MODULE_STATUS[module.status];
+            return (
+              <div 
+                key={module.id}
+                style={{
+                  ...styles.moduleCard,
+                  borderColor: status.color,
+                  backgroundColor: `${status.color}05`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    backgroundColor: `${status.color}15`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: status.color,
+                    fontSize: '20px',
+                  }}>
+                    {module.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text strong style={{ fontSize: '14px' }}>{module.name}</Text>
+                      <Tag color={status.color} style={{ margin: 0 }}>
+                        {status.icon} {status.label}
+                      </Tag>
+                    </div>
+                    <div style={{ marginTop: '8px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>Tables:</Text>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                        {module.tables.map(table => (
+                          <Tag key={table} color="blue" style={{ fontSize: '11px' }}>{table}</Tag>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '8px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>Features:</Text>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                        {module.features.map(feature => (
+                          <Tag key={feature} style={{ fontSize: '11px' }}>{feature}</Tag>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '8px' }}>
+                      <code style={{ 
+                        fontSize: '11px', 
+                        backgroundColor: '#f5f5f5', 
+                        padding: '2px 8px', 
+                        borderRadius: '4px' 
+                      }}>
+                        {module.apiBase}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    ))}
+  </div>
+);
+
+// =============================================================================
+// COMPONENT: Database Schema
+// =============================================================================
+const DatabaseSchema = () => (
+  <div style={{ padding: '20px' }}>
+    <Card 
+      title={<><DatabaseOutlined /> Database Architecture</>} 
+      style={styles.card}
+      extra={
+        <Tag color="blue">PostgreSQL 15+</Tag>
+      }
+    >
+      <Collapse defaultActiveKey={['0', '1']} accordion={false}>
+        {DATABASE_TABLES.map((category, idx) => (
+          <Panel 
+            key={idx}
+            header={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: category.color,
+                }}></span>
+                <Text strong>{category.category}</Text>
+                <Badge count={category.tables.length} style={{ backgroundColor: category.color }} />
+              </div>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {category.tables.map(table => (
+                <div 
+                  key={table.name}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#fafafa',
+                    borderRadius: '8px',
+                    border: `1px solid ${category.color}30`,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <DatabaseOutlined style={{ color: category.color }} />
+                    <Text strong style={{ fontFamily: 'monospace' }}>{table.name}</Text>
+                  </div>
+                  <Paragraph type="secondary" style={{ margin: '0 0 12px 0', fontSize: '13px' }}>
+                    {table.description}
+                  </Paragraph>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>Columns:</Text>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                      {table.columns.map(col => (
+                        <Tag key={col} color="blue" style={{ fontSize: '11px', fontFamily: 'monospace' }}>
+                          {col}
+                        </Tag>
+                      ))}
+                    </div>
+                  </div>
+                  {table.recordTypes && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>Record Types:</Text>
+                      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                        {table.recordTypes.map(type => (
+                          <Tag key={type} color="green" style={{ fontSize: '11px' }}>{type}</Tag>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ 
+                    backgroundColor: '#fff7e6', 
+                    padding: '8px 12px', 
+                    borderRadius: '4px',
+                    border: '1px solid #ffe58f',
+                  }}>
+                    <Text style={{ fontSize: '12px' }}>
+                      <strong>Usage:</strong> {table.usage}
+                    </Text>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        ))}
+      </Collapse>
+    </Card>
+  </div>
+);
+
+// =============================================================================
+// COMPONENT: Data Flows (UPDATED WITH ACTUAL CURRENT SYSTEM)
+// =============================================================================
+const MermaidDiagram = ({ chart, title }) => {
+  const containerRef = useRef(null);
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const renderDiagram = async () => {
+      try {
+        // Load Mermaid dynamically
+        const mermaid = (await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs')).default;
+        
+        mermaid.initialize({ 
+          startOnLoad: false,
+          theme: 'default',
+          flowchart: { 
+            useMaxWidth: true,
+            htmlLabels: false,
+            curve: 'basis'
+          }
+        });
+
+        const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(uniqueId, chart);
+        containerRef.current.innerHTML = svg;
+        setIsError(false);
+      } catch (error) {
+        console.error('Mermaid rendering error:', error);
+        setIsError(true);
+        containerRef.current.innerHTML = `<div style="padding: 20px; color: #ff4d4f; background: #fff2f0; border: 1px solid #ffccc7; border-radius: 8px;">
+          <strong>⚠️ Diagram Rendering Error</strong><br/>
+          <small>Please refresh the page or check console for details.</small>
+        </div>`;
+      }
+    };
+
+    renderDiagram();
+  }, [chart]);
+
+  if (isError) {
+    return (
+      <Card title={title} style={{ ...styles.card, borderLeft: '4px solid #ff4d4f' }}>
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <Text type="danger">Failed to render diagram. Please refresh the page.</Text>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title={title} style={{ ...styles.card, borderLeft: '4px solid #1890ff' }}>
+      <div 
+        ref={containerRef} 
+        style={{ 
+          textAlign: 'center', 
+          overflow: 'auto',
+          maxWidth: '100%',
+          wordBreak: 'break-word'
+        }} 
+      />
+    </Card>
+  );
+};
+
+const DataFlows = () => {
+  // Centralized System Overview - Color Coded by Module
+  const systemOverviewChart = `
+flowchart TB
+    subgraph External["EXTERNAL"]
+        Oracle[(Oracle)]
+        SalesReps([SalesReps])
+    end
+    
+    subgraph ActualFlow["ACTUAL DATA"]
+        Excel[Excel]
+        Import[Import]
+        RawDB[(RawData)]
+        Sync[Sync]
+        ActualDB[(Actualcommon)]
+        ActualUI[ActualTab]
+    end
+    
+    subgraph BudgetFlow["BUDGET DATA"]
+        HTMLExp[HTMLExport]
+        SREdit[SalesRepEdit]
+        HTMLImp[HTMLImport]
+        DivEdit[DivisionalEdit]
+        UnifiedDB[(BudgetUnified)]
+    end
+    
+    subgraph PricingFlow["PRICING"]
+        PricingMV[(PricingMV)]
+        Calculate[Calculate]
+    end
+    
+    Oracle -->|Export| Excel
+    Excel --> Import
+    Import --> RawDB
+    RawDB --> Sync
+    Sync --> ActualDB
+    ActualDB --> ActualUI
+    
+    ActualUI --> HTMLExp
+    HTMLExp --> SalesReps
+    SalesReps --> SREdit
+    SREdit --> HTMLImp
+    HTMLImp --> UnifiedDB
+    
+    ActualUI --> DivEdit
+    DivEdit --> UnifiedDB
+    
+    ActualDB --> PricingMV
+    PricingMV --> Calculate
+    Calculate --> DivEdit
+    Calculate --> SREdit
+    
+    UnifiedDB --> ActualUI
+    
+    style ActualFlow fill:#e6f7ff,stroke:#1890ff,stroke-width:3px
+    style BudgetFlow fill:#f6ffed,stroke:#52c41a,stroke-width:3px
+    style PricingFlow fill:#fff7e6,stroke:#faad14,stroke-width:3px
+    style External fill:#f0f0f0,stroke:#8c8c8c,stroke-width:2px
+  `;
+
+  const actualDataFlowChart = `
+flowchart TD
+    Start([UserSync])
+    Oracle[(Oracle)]
+    Excel[ExcelFile]
+    API[APICall]
+    Script[ImportScript]
+    Disable{DisableTrigger}
+    Batch[BatchINSERT]
+    Enable{EnableTrigger}
+    Sync[SyncFunction]
+    Raw[(RawData)]
+    Actual[(Actualcommon)]
+    UI[Display]
+    
+    Oracle --> Excel
+    Start --> API
+    Excel --> Script
+    API --> Script
+    Script --> Disable
+    Disable --> Batch
+    Batch --> Enable
+    Enable --> Sync
+    Batch --> Raw
+    Sync --> Actual
+    Actual --> UI
+    
+    style Oracle fill:#fff4e6
+    style Raw fill:#ffebee
+    style Actual fill:#e8f5e9
+    style UI fill:#e1f5ff
+  `;
+
+  const budgetDivisionalChart = `
+flowchart TD
+    Start([OpenBudget])
+    Load[LoadData]
+    Check{HasDraft?}
+    
+    Draft[LoadDRAFT]
+    Approved[LoadAPPROVED]
+    
+    Display[EditTable]
+    Save[AutoSave]
+    DB[(BudgetUnified)]
+    
+    Submit([Submit])
+    Final[(SetApproved)]
+    
+    Start --> Load
+    Load --> Check
+    Check -->|Yes| Draft
+    Check -->|No| Approved
+    Draft --> Display
+    Approved --> Display
+    Display --> Save
+    Save --> DB
+    Display --> Submit
+    Submit --> Final
+    
+    style Draft fill:#e6f7ff
+    style Approved fill:#b7eb8f
+    style DB fill:#ffd6e7
+    style Final fill:#d4edda
+  `;
+
+  const budgetSalesRepChart = `
+flowchart TD
+    Start([ExportHTML])
+    Export[GenerateForm]
+    HTML[HTMLFile]
+    
+    Fill([SalesRepFills])
+    Draft[SaveDraft]
+    Final[SaveFinal]
+    
+    Upload([ImportHTML])
+    Parse[ExtractData]
+    DB[(BudgetUnified)]
+    
+    Start --> Export
+    Export --> HTML
+    HTML --> Fill
+    Fill --> Draft
+    Fill --> Final
+    Final --> Upload
+    Upload --> Parse
+    Parse --> DB
+    
+    style HTML fill:#fff4e6
+    style Draft fill:#e6f7ff
+    style Final fill:#b7eb8f
+    style DB fill:#d4edda
+  `;
+
+  const budgetUnifiedChart = `
+flowchart LR
+    subgraph DB["BudgetUnifiedTable"]
+        SR[SalesRep]
+        DR[DivDraft]
+        DA[DivFinal]
+    end
+    
+    SR --> Agg[SUM]
+    DA --> Agg
+    Agg --> Reports[Reports]
+    
+    style SR fill:#b7eb8f
+    style DR fill:#ffd6e7
+    style DA fill:#d4edda
+  `;
+
+  const pricingFlowChart = `
+flowchart TD
+    Actual[(Actuals)]
+    MV[(PricingMV)]
+    
+    Logic{BudgetYear?}
+    Y1[2024-25:SameYear]
+    Y2[2026+:YearMinus1]
+    
+    Calc[CalculateAmount]
+    Save[(Store)]
+    
+    Actual --> MV
+    MV --> Logic
+    Logic --> Y1
+    Logic --> Y2
+    Y1 --> Calc
+    Y2 --> Calc
+    Calc --> Save
+    
+    style MV fill:#fff3e0
+    style Calc fill:#e1f5ff
+    style Save fill:#d4edda
+  `;
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <Alert
+        message="✅ Updated to Current System Architecture"
+        description="These diagrams reflect the actual implementation. The centralized overview shows color-coded modules, detailed flows below show step-by-step processes."
+        type="success"
+        showIcon
+        style={{ marginBottom: '20px', borderRadius: '8px' }}
+      />
+
+      <MermaidDiagram 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ClusterOutlined style={{ color: '#722ed1', fontSize: '20px' }} />
+            <span>🎯 CENTRALIZED SYSTEM OVERVIEW - Color Coded by Module</span>
+          </div>
+        }
+        chart={systemOverviewChart}
+      />
+
+      <Divider style={{ margin: '32px 0' }}>
+        <Text strong style={{ fontSize: '16px' }}>📋 Detailed Process Flows</Text>
+      </Divider>
+
+      <MermaidDiagram 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <DatabaseOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
+            <span>1. Actual Data Flow - Oracle to UI</span>
+          </div>
+        }
+        chart={actualDataFlowChart}
+      />
+
+      <MermaidDiagram 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <EditOutlined style={{ color: '#52c41a', fontSize: '20px' }} />
+            <span>2. Budget Flow - Divisional (Live Editing)</span>
+          </div>
+        }
+        chart={budgetDivisionalChart}
+      />
+
+      <MermaidDiagram 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileExcelOutlined style={{ color: '#52c41a', fontSize: '20px' }} />
+            <span>3. Budget Flow - Sales Rep (HTML Export/Import)</span>
+          </div>
+        }
+        chart={budgetSalesRepChart}
+      />
+
+      <MermaidDiagram 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MergeCellsOutlined style={{ color: '#722ed1', fontSize: '20px' }} />
+            <span>4. Budget Unified Table - Single Source of Truth</span>
+          </div>
+        }
+        chart={budgetUnifiedChart}
+      />
+
+      <MermaidDiagram 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CalculatorOutlined style={{ color: '#fa8c16', fontSize: '20px' }} />
+            <span>5. Product Group Pricing Flow</span>
+          </div>
+        }
+        chart={pricingFlowChart}
+      />
+
+      <Card style={{ ...styles.card, borderLeft: '4px solid #13c2c2' }}>
+        <Title level={4}>📊 Diagram Best Practices</Title>
+        <div style={{ lineHeight: '1.8' }}>
+          <Paragraph>
+            <Text strong>✅ Centralized Overview (Top):</Text>
+            <ul>
+              <li><Text strong style={{ color: '#1890ff' }}>Blue:</Text> Actual Data Flow</li>
+              <li><Text strong style={{ color: '#52c41a' }}>Green:</Text> Budget Data Flow</li>
+              <li><Text strong style={{ color: '#faad14' }}>Orange:</Text> Pricing Flow</li>
+              <li>Shows relationships between all modules at a glance</li>
+              <li>Great for understanding the big picture</li>
+            </ul>
+          </Paragraph>
+          <Paragraph>
+            <Text strong>📋 Detailed Flows (Below):</Text>
+            <ul>
+              <li>Step-by-step process documentation</li>
+              <li>Shows specific APIs, files, and database tables</li>
+              <li>Useful for developers implementing changes</li>
+              <li>Each flow focuses on one specific process</li>
+            </ul>
+          </Paragraph>
+          <Paragraph>
+            <Text strong>💡 Why Both?</Text>
+            <ul>
+              <li><strong>Managers/Stakeholders:</strong> Use centralized overview for quick understanding</li>
+              <li><strong>Developers:</strong> Use detailed flows for implementation</li>
+              <li><strong>Training:</strong> Start with overview, drill down into details</li>
+              <li><strong>Documentation:</strong> Both perspectives provide complete picture</li>
+            </ul>
+          </Paragraph>
+        </div>
+      </Card>
+
+      <Card style={{ ...styles.card, borderLeft: '4px solid #1890ff' }}>
+        <Title level={4}>🔑 Key Implementation Notes</Title>
+        <div style={{ lineHeight: '1.8' }}>
+          <Paragraph>
+            <Text strong>Actual Data:</Text>
+            <ul>
+              <li>Fast import: 1,500 rows/sec (trigger bypass)</li>
+              <li>fp_raw_data: UPPERCASE Oracle format</li>
+              <li>fp_actualcommon: Proper Case (INITCAP)</li>
+            </ul>
+          </Paragraph>
+          <Paragraph>
+            <Text strong>Budget Unified Table:</Text>
+            <ul>
+              <li><code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>sales_rep_name IS NULL</code> = Divisional</li>
+              <li><code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>sales_rep_name = 'Name'</code> = Sales Rep</li>
+              <li><code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>status = 'draft'</code> = Work in progress</li>
+              <li><code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>status = 'approved'</code> = Finalized</li>
+            </ul>
+          </Paragraph>
+          <Paragraph>
+            <Text strong>Pricing Logic:</Text>
+            <ul>
+              <li>Budget 2024-2025: Uses actual year</li>
+              <li>Budget 2026+: Uses (year - 1)</li>
+              <li>Materialized view: Daily refresh</li>
+            </ul>
+          </Paragraph>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+// =============================================================================
+// COMPONENT: Complete System Flow
+// =============================================================================
+const SystemFlow = () => (
+  <div style={{ padding: '20px' }}>
+    <Card title={<><ClusterOutlined /> Complete System Architecture</>} style={styles.card}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        gap: '16px',
+        padding: '20px',
+      }}>
+        {/* User Layer */}
+        <div style={{
+          display: 'flex',
+          gap: '20px',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        }}>
+          <div style={{
+            ...styles.flowBox,
+            borderColor: '#1890ff',
+            backgroundColor: '#e6f7ff',
+            minWidth: '150px',
+          }}>
+            <UserOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+            <span>Admin</span>
+          </div>
+          <div style={{
+            ...styles.flowBox,
+            borderColor: '#52c41a',
+            backgroundColor: '#f6ffed',
+            minWidth: '150px',
+          }}>
+            <UserOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
+            <span>Sales Manager</span>
+          </div>
+          <div style={{
+            ...styles.flowBox,
+            borderColor: '#faad14',
+            backgroundColor: '#fff7e6',
+            minWidth: '150px',
+          }}>
+            <UserOutlined style={{ marginRight: '8px', color: '#faad14' }} />
+            <span>Sales Rep</span>
+          </div>
+        </div>
+
+        <div style={styles.connectionLine}></div>
+
+        {/* Frontend Layer */}
+        <div style={{
+          ...styles.flowBox,
+          borderColor: '#722ed1',
+          backgroundColor: '#f9f0ff',
+          width: '100%',
+          maxWidth: '600px',
+          justifyContent: 'center',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <Title level={5} style={{ margin: 0, color: '#722ed1' }}>
+              React Frontend
+            </Title>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '8px' }}>
+              <Tag>Dashboard</Tag>
+              <Tag>Master Data</Tag>
+              <Tag>AEBF Tabs</Tag>
+              <Tag>Reports</Tag>
+              <Tag>Settings</Tag>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.connectionLine}></div>
+
+        {/* API Layer */}
+        <div style={{
+          ...styles.flowBox,
+          borderColor: '#13c2c2',
+          backgroundColor: '#e6fffb',
+          width: '100%',
+          maxWidth: '700px',
+          justifyContent: 'center',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <Title level={5} style={{ margin: 0, color: '#13c2c2' }}>
+              <ApiOutlined /> REST API (Express.js)
+            </Title>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '8px' }}>
+              <Tag color="blue">/api/auth</Tag>
+              <Tag color="green">/api/aebf</Tag>
+              <Tag color="orange">/api/dashboards</Tag>
+              <Tag color="purple">/api/master-data</Tag>
+              <Tag color="magenta">/api/reports</Tag>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.connectionLine}></div>
+
+        {/* Database Layer */}
+        <div style={{
+          ...styles.flowBox,
+          borderColor: '#eb2f96',
+          backgroundColor: '#fff0f6',
+          width: '100%',
+          maxWidth: '800px',
+          justifyContent: 'center',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <Title level={5} style={{ margin: 0, color: '#eb2f96' }}>
+              <DatabaseOutlined /> PostgreSQL Database
+            </Title>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '8px' }}>
+              <Tag color="blue">fp_data_excel</Tag>
+              <Tag color="green">fp_sales_rep_budget</Tag>
+              <Tag color="orange">fp_divisional_budget</Tag>
+              <Tag color="purple">fp_product_group_pricing</Tag>
+              <Tag>users</Tag>
+              <Tag>+ 10 more tables</Tag>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+
+    {/* Key Relationships */}
+    <Card title={<><NodeIndexOutlined /> Key Data Relationships</>} style={styles.card}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+        <div style={{ padding: '16px', backgroundColor: '#e6f7ff', borderRadius: '8px' }}>
+          <Title level={5} style={{ color: '#1890ff' }}>
+            <LineChartOutlined /> Actual → Reports
+          </Title>
+          <Paragraph style={{ fontSize: '13px' }}>
+            Historical sales data (KGS, Amount, MoRM) flows from <code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>fp_data_excel</code> to generate 
+            divisional dashboards, sales rep reports, and customer analytics.
+          </Paragraph>
+        </div>
+        
+        <div style={{ padding: '16px', backgroundColor: '#f6ffed', borderRadius: '8px' }}>
+          <Title level={5} style={{ color: '#52c41a' }}>
+            <DollarOutlined /> Budget Calculation
+          </Title>
+          <Paragraph style={{ fontSize: '13px' }}>
+            Budget entries (KGS) × Pricing data (ASP, MoRM rates) = Calculated Amount and Margin.
+            Pricing comes from <code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>fp_product_group_pricing_rounding</code>.
+          </Paragraph>
+        </div>
+        
+        <div style={{ padding: '16px', backgroundColor: '#fff7e6', borderRadius: '8px' }}>
+          <Title level={5} style={{ color: '#faad14' }}>
+            <MergeCellsOutlined /> Customer Merging
+          </Title>
+          <Paragraph style={{ fontSize: '13px' }}>
+            Duplicate customers are identified and merged using rules in <code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>customer_merge_rules</code>,
+            ensuring data consistency across all reports.
+          </Paragraph>
+        </div>
+        
+        <div style={{ padding: '16px', backgroundColor: '#f9f0ff', borderRadius: '8px' }}>
+          <Title level={5} style={{ color: '#722ed1' }}>
+            <TeamOutlined /> Sales Rep Groups
+          </Title>
+          <Paragraph style={{ fontSize: '13px' }}>
+            Sales reps can be grouped for combined reporting and budget management.
+            Groups are stored per division in <code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>sales_rep_groups</code>.
+          </Paragraph>
+        </div>
+      </div>
+    </Card>
+  </div>
+);
+
+// =============================================================================
+// COMPONENT: API Reference
+// =============================================================================
+const APIReference = () => {
+  const apiEndpoints = [
+    {
+      category: 'Authentication',
+      color: '#1890ff',
+      endpoints: [
+        { method: 'POST', path: '/api/auth/login', desc: 'User login with JWT' },
+        { method: 'POST', path: '/api/auth/refresh', desc: 'Refresh access token' },
+        { method: 'POST', path: '/api/auth/logout', desc: 'Logout and invalidate token' },
+      ],
+    },
+    {
+      category: 'AEBF Data',
+      color: '#52c41a',
+      endpoints: [
+        { method: 'GET', path: '/api/aebf/actual', desc: 'Get actual/estimate data' },
+        { method: 'GET', path: '/api/aebf/budget', desc: 'Get budget data' },
+        { method: 'POST', path: '/api/aebf/save-html-budget', desc: 'Save budget entry' },
+        { method: 'POST', path: '/api/aebf/bulk-import', desc: 'Bulk import HTML files' },
+        { method: 'POST', path: '/api/aebf/bulk-finalize/:batchId', desc: 'Finalize bulk import' },
+        { method: 'GET', path: '/api/aebf/year-summary', desc: 'Get yearly summaries' },
+      ],
+    },
+    {
+      category: 'Dashboard & Reports',
+      color: '#722ed1',
+      endpoints: [
+        { method: 'POST', path: '/api/dashboards/customer-universal', desc: 'Customer dashboard data' },
+        { method: 'POST', path: '/api/dashboards/amount', desc: 'Amount aggregations' },
+        { method: 'GET', path: '/api/sales-reps-universal', desc: 'Get sales reps by division' },
+        { method: 'POST', path: '/api/sales-by-country-db', desc: 'Sales by country data' },
+      ],
+    },
+    {
+      category: 'Master Data',
+      color: '#faad14',
+      endpoints: [
+        { method: 'GET', path: '/api/fp/master-data/product-pricing', desc: 'Get product pricing' },
+        { method: 'POST', path: '/api/fp/master-data/product-pricing-rounded', desc: 'Save pricing' },
+        { method: 'GET', path: '/api/fp/master-data/material-percentages', desc: 'Get materials' },
+        { method: 'POST', path: '/api/fp/master-data/material-percentages', desc: 'Save materials' },
+      ],
+    },
+  ];
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <Card title={<><ApiOutlined /> API Reference</>} style={styles.card}>
+        <Collapse defaultActiveKey={['0']}>
+          {apiEndpoints.map((cat, idx) => (
+            <Panel
+              key={idx}
+              header={
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: cat.color,
+                  }}></span>
+                  <Text strong>{cat.category}</Text>
+                  <Badge count={cat.endpoints.length} style={{ backgroundColor: cat.color }} />
+                </div>
+              }
+            >
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#fafafa' }}>
+                    <th style={{ padding: '8px', textAlign: 'left', width: '80px' }}>Method</th>
+                    <th style={{ padding: '8px', textAlign: 'left' }}>Endpoint</th>
+                    <th style={{ padding: '8px', textAlign: 'left' }}>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cat.endpoints.map((ep, epIdx) => (
+                    <tr key={epIdx}>
+                      <td style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+                        <Tag color={ep.method === 'GET' ? 'green' : 'blue'}>{ep.method}</Tag>
+                      </td>
+                      <td style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+                        <code style={{ fontSize: '12px', backgroundColor: '#f5f5f5', padding: '2px 6px', borderRadius: '4px' }}>
+                          {ep.path}
+                        </code>
+                      </td>
+                      <td style={{ padding: '8px', borderTop: '1px solid #f0f0f0', color: '#666' }}>
+                        {ep.desc}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Panel>
+          ))}
+        </Collapse>
+      </Card>
+    </div>
+  );
+};
+
+// =============================================================================
+// COMPONENT: ERP Flow Diagram - Clean Card-Based with Progress Tracking
+// Uses ERP_MODULES and PHASES defined at top of file (single source of truth)
+// =============================================================================
+
+const ERPFlowDiagram = () => {
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  // Calculate progress statistics
+  const stats = {
+    total: ERP_MODULES.length,
+    done: ERP_MODULES.filter(m => m.status === 'done').length,
+    partial: ERP_MODULES.filter(m => m.status === 'partial').length,
+    planned: ERP_MODULES.filter(m => m.status === 'planned').length,
+  };
+  const progressPercent = Math.round(((stats.done + stats.partial * 0.5) / stats.total) * 100);
+
+  const handleRefresh = () => {
+    setLastUpdated(new Date());
+  };
+
+  // Module Card Component
+  const ModuleCard = ({ module }) => {
+    const phase = PHASES.find(p => p.id === module.phase);
+    const statusConfig = STATUS_CONFIG[module.status];
+    
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '12px 16px',
+        backgroundColor: statusConfig.bgColor,
+        borderRadius: '8px',
+        border: `2px solid ${module.status === 'done' ? statusConfig.color : '#e8e8e8'}`,
+        marginBottom: '8px',
+        transition: 'all 0.3s ease',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Status indicator */}
+        <div style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          backgroundColor: statusConfig.color,
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          fontSize: '16px',
+          marginRight: '12px',
+          flexShrink: 0,
+        }}>
+          {statusConfig.icon}
+        </div>
+        
+        {/* Module info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            marginBottom: '2px',
+          }}>
+            <span style={{ fontSize: '16px' }}>{module.icon}</span>
+            <Text strong style={{ 
+              fontSize: '13px',
+              color: module.status === 'done' ? '#52c41a' : '#333',
+            }}>
+              Module {module.id}
+            </Text>
+            {module.critical && (
+              <Tag color="red" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
+                CRITICAL
+              </Tag>
+            )}
+          </div>
+          <Text style={{ 
+            fontSize: '12px', 
+            color: '#666',
+            display: 'block',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>
+            {module.name}
+          </Text>
+        </div>
+
+        {/* Status badge */}
+        <Tag 
+          color={statusConfig.color} 
+          style={{ 
+            margin: 0, 
+            fontSize: '11px',
+            flexShrink: 0,
+          }}
+        >
+          {statusConfig.label}
+        </Tag>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      {/* Header with Progress */}
+      <Card style={{ marginBottom: '24px', borderRadius: '12px' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '8px',
+          padding: '24px',
+          marginBottom: '20px',
+          color: 'white',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <Title level={3} style={{ color: 'white', marginBottom: '8px' }}>
+                🏭 FlexPack ERP - 32 Module Roadmap
+              </Title>
+              <Paragraph style={{ color: 'rgba(255,255,255,0.9)', marginBottom: 0 }}>
+                Complete system from Customer Contact → Product Delivery
+              </Paragraph>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '36px', fontWeight: 'bold' }}>{progressPercent}%</div>
+              <div style={{ fontSize: '12px', opacity: 0.9 }}>Overall Progress</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <div style={{ 
+            flex: '1', 
+            minWidth: '120px',
+            padding: '16px', 
+            backgroundColor: '#f6ffed', 
+            borderRadius: '8px',
+            textAlign: 'center',
+            border: '2px solid #52c41a',
+          }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#52c41a' }}>{stats.done}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>✓ Completed</div>
+          </div>
+          <div style={{ 
+            flex: '1', 
+            minWidth: '120px',
+            padding: '16px', 
+            backgroundColor: '#e6f7ff', 
+            borderRadius: '8px',
+            textAlign: 'center',
+            border: '2px solid #1890ff',
+          }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1890ff' }}>{stats.partial}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>◐ In Progress</div>
+          </div>
+          <div style={{ 
+            flex: '1', 
+            minWidth: '120px',
+            padding: '16px', 
+            backgroundColor: '#fafafa', 
+            borderRadius: '8px',
+            textAlign: 'center',
+            border: '2px solid #d9d9d9',
+          }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#8c8c8c' }}>{stats.planned}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>○ Planned</div>
+          </div>
+          <div style={{ 
+            flex: '1', 
+            minWidth: '120px',
+            padding: '16px', 
+            backgroundColor: '#fff7e6', 
+            borderRadius: '8px',
+            textAlign: 'center',
+            border: '2px solid #faad14',
+          }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#faad14' }}>{stats.total}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>Total Modules</div>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <Progress 
+          percent={progressPercent} 
+          strokeColor={{
+            '0%': '#52c41a',
+            '100%': '#1890ff',
+          }}
+          trailColor="#f0f0f0"
+          strokeWidth={12}
+          style={{ marginBottom: '8px' }}
+        />
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            Last updated: {lastUpdated.toLocaleString()}
+          </Text>
+          <button
+            onClick={handleRefresh}
+            style={{
+              padding: '4px 12px',
+              backgroundColor: '#1890ff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            <SyncOutlined /> Refresh
+          </button>
+        </div>
+      </Card>
+
+      {/* Phases Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
+        {PHASES.map(phase => {
+          const phaseModules = ERP_MODULES.filter(m => m.phase === phase.id);
+          const phaseDone = phaseModules.filter(m => m.status === 'done').length;
+          const phaseProgress = Math.round((phaseDone / phaseModules.length) * 100);
+          
+          return (
+            <Card 
+              key={phase.id}
+              style={{ 
+                borderRadius: '12px',
+                borderTop: `4px solid ${phase.color}`,
+              }}
+              title={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>
+                    <span style={{ 
+                      backgroundColor: phase.color, 
+                      color: 'white', 
+                      padding: '2px 8px', 
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      marginRight: '8px',
+                    }}>
+                      Phase {phase.id}
+                    </span>
+                    {phase.name}
+                  </span>
+                  <Tag color={phaseProgress === 100 ? 'green' : 'default'}>
+                    {phaseDone}/{phaseModules.length}
+                  </Tag>
+                </div>
+              }
+              extra={<Text type="secondary" style={{ fontSize: '11px' }}>Weeks {phase.weeks}</Text>}
+            >
+              <Progress 
+                percent={phaseProgress} 
+                size="small" 
+                strokeColor={phase.color}
+                style={{ marginBottom: '12px' }}
+              />
+              
+              {phaseModules.map(module => (
+                <ModuleCard key={module.id} module={module} />
+              ))}
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Flow Summary */}
+      <Card 
+        title={<><ArrowRightOutlined /> Process Flow Summary</>}
+        style={{ marginTop: '24px', borderRadius: '12px' }}
+      >
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: '8px',
+          padding: '20px',
+          backgroundColor: '#fafafa',
+          borderRadius: '8px',
+        }}>
+          {[
+            { label: 'Customer Contact', color: '#52c41a', done: true },
+            { label: 'Lead/Inquiry', color: '#52c41a', done: false },
+            { label: 'Quote', color: '#52c41a', done: true },
+            { label: 'Order', color: '#faad14', done: false },
+            { label: 'Design', color: '#faad14', done: false },
+            { label: 'Production', color: '#722ed1', done: false },
+            { label: 'QC', color: '#13c2c2', done: false },
+            { label: 'Delivery', color: '#f5222d', done: false },
+            { label: 'Invoice', color: '#f5222d', done: false },
+          ].map((step, idx, arr) => (
+            <React.Fragment key={step.label}>
+              <div style={{
+                padding: '8px 16px',
+                backgroundColor: step.done ? '#f6ffed' : '#fff',
+                border: `2px solid ${step.done ? '#52c41a' : '#e8e8e8'}`,
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                {step.done && <span style={{ color: '#52c41a', fontWeight: 'bold' }}>✓</span>}
+                <span style={{ fontSize: '12px', fontWeight: '500' }}>{step.label}</span>
+              </div>
+              {idx < arr.length - 1 && (
+                <ArrowRightOutlined style={{ color: '#d9d9d9' }} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+const ProjectWorkflow = () => {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const tabItems = [
+    {
+      key: 'overview',
+      label: (
+        <span>
+          <DashboardOutlined /> Overview
+        </span>
+      ),
+      children: <ProjectOverview />,
+    },
+    {
+      key: 'modules',
+      label: (
+        <span>
+          <ClusterOutlined /> Modules
+        </span>
+      ),
+      children: <ModuleArchitecture />,
+    },
+    {
+      key: 'database',
+      label: (
+        <span>
+          <DatabaseOutlined /> Database
+        </span>
+      ),
+      children: <DatabaseSchema />,
+    },
+    {
+      key: 'flows',
+      label: (
+        <span>
+          <SyncOutlined /> Data Flows
+        </span>
+      ),
+      children: <DataFlows />,
+    },
+    {
+      key: 'architecture',
+      label: (
+        <span>
+          <NodeIndexOutlined /> Architecture
+        </span>
+      ),
+      children: <SystemFlow />,
+    },
+    {
+      key: 'api',
+      label: (
+        <span>
+          <ApiOutlined /> API Reference
+        </span>
+      ),
+      children: <APIReference />,
+    },
+    {
+      key: 'erp-flow',
+      label: (
+        <span>
+          <PartitionOutlined /> ERP Flow
+        </span>
+      ),
+      children: <ERPFlowDiagram />,
+    },
+  ];
+
+  return (
+    <div style={styles.container}>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        type="card"
+        size="large"
+        items={tabItems}
+        style={{
+          backgroundColor: 'white',
+          padding: '16px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        }}
+      />
+    </div>
+  );
+};
+
+export default ProjectWorkflow;

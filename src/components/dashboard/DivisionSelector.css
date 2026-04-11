@@ -1,0 +1,178 @@
+.division-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.division-selector-label {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 12px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.division-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.division-checkbox-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.division-checkbox-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+  background: white;
+}
+
+.division-checkbox-item:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.division-checkbox {
+  margin-right: 10px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.division-checkbox-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #4a5568;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.default-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.set-default-btn {
+  padding: 4px 12px;
+  background: white;
+  color: #667eea;
+  border: 1.5px solid #667eea;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.set-default-btn:hover:not(:disabled) {
+  background: #667eea;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.set-default-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.division-checkbox:checked + .division-checkbox-label {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.division-checkbox-item:has(.division-checkbox:checked) {
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+@media (max-width: 768px) {
+  .division-checkboxes {
+    gap: 6px;
+  }
+
+  .division-checkbox-item {
+    padding: 6px 10px;
+    border-width: 1.5px;
+  }
+
+  .division-checkbox-label {
+    font-size: 12px;
+  }
+
+  .division-checkbox {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+  }
+
+  .set-default-btn {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+
+  .division-selector-label {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .division-checkboxes {
+    gap: 4px;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .division-checkbox-item {
+    padding: 5px 8px;
+    width: auto;
+  }
+
+  .division-checkbox-label {
+    font-size: 11px;
+  }
+
+  .division-checkbox {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+  }
+
+  .division-selector-label {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+}

@@ -1,0 +1,390 @@
+.waterfall-detail {
+  width: 100%;
+  min-height: 600px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  box-shadow: 
+    0 20px 50px rgba(15, 40, 87, 0.06),
+    0 4px 12px rgba(15, 40, 87, 0.04);
+  overflow: hidden;
+  padding: 32px;
+}
+
+/* Summary Cards */
+.waterfall-detail__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 36px;
+}
+
+.waterfall-detail__summary-card {
+  flex: 1;
+  min-width: 220px;
+  max-width: 300px;
+  background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+  border-radius: 16px;
+  padding: 24px 20px;
+  text-align: center;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.waterfall-detail__summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #64748b, #94a3b8);
+  transition: all 0.3s ease;
+}
+
+.waterfall-detail__summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Card Variants */
+.waterfall-detail__summary-card--base::before {
+  background: linear-gradient(90deg, #8B5CF6, #A78BFA);
+}
+
+.waterfall-detail__summary-card--prev::before {
+  background: linear-gradient(90deg, #3B82F6, #60A5FA);
+}
+
+.waterfall-detail__summary-card--budget {
+  background: linear-gradient(145deg, #FEF3C7 0%, #FDE68A 100%);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.waterfall-detail__summary-card--budget::before {
+  background: linear-gradient(90deg, #F59E0B, #FBBF24);
+}
+
+.waterfall-detail__summary-icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.waterfall-detail__summary-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.waterfall-detail__summary-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+
+.waterfall-detail__summary-metric {
+  font-size: 14px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+}
+
+.waterfall-detail__summary-metric strong {
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+/* Charts Container */
+.waterfall-detail__charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.waterfall-detail__chart-container {
+  background: transparent;
+  border-radius: 16px;
+  padding: 0;
+  border: none;
+}
+
+.waterfall-detail__chart-container--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 440px;
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #e2e8f0;
+  border-radius: 16px;
+}
+
+/* No Data State */
+.waterfall-detail__no-data {
+  text-align: center;
+  padding: 48px 32px;
+}
+
+.waterfall-detail__no-data-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  display: block;
+  opacity: 0.35;
+  filter: grayscale(0.4);
+}
+
+.waterfall-detail__no-data-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+
+.waterfall-detail__no-data-text {
+  font-size: 14px;
+  color: #64748b;
+  max-width: 320px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Legend */
+.waterfall-detail__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  justify-content: center;
+  padding: 20px 32px;
+  background: linear-gradient(145deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.waterfall-detail__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.waterfall-detail__legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.waterfall-detail__legend-color--start {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+}
+
+.waterfall-detail__legend-color--favorable {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.waterfall-detail__legend-color--unfavorable {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
+.waterfall-detail__legend-color--end {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+}
+
+/* How to Read Section */
+.waterfall-detail__how-to-read {
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  padding: 12px 24px;
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 8px;
+  line-height: 1.5;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  margin-top: 8px;
+}
+
+.waterfall-detail__how-to-read strong {
+  color: #475569;
+}
+
+/* Info Note */
+.waterfall-detail__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+  color: #64748b;
+  padding: 18px 24px;
+  background: linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  line-height: 1.6;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.waterfall-detail__note-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.waterfall-detail__note strong {
+  color: #0369a1;
+  font-weight: 600;
+}
+
+/* Empty State */
+.waterfall-detail__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  color: #64748b;
+  font-size: 1.1rem;
+  padding: 48px;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  border: 2px dashed #e2e8f0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .waterfall-detail__charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .waterfall-detail {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+  
+  .waterfall-detail__summary-card {
+    min-width: 100%;
+  }
+  
+  .waterfall-detail__legend {
+    gap: 16px;
+    padding: 16px 20px;
+  }
+  
+  .waterfall-detail__charts {
+    gap: 20px;
+  }
+  
+  .waterfall-detail__note {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .waterfall-detail__recap {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* Recap Summaries */
+.waterfall-detail__recap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  margin: 8px 16px 16px;
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.waterfall-detail__recap-emoji {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.waterfall-detail__recap-text {
+  color: #475569;
+}
+
+.waterfall-detail__recap-text--positive {
+  color: #047857;
+}
+
+.waterfall-detail__recap-text--negative {
+  color: #B91C1C;
+}
+
+.waterfall-detail__recap-text strong {
+  font-weight: 700;
+}
+
+/* ========================================
+   ADDITIONAL RESPONSIVE BREAKPOINTS
+   ======================================== */
+@media (max-width: 768px) {
+  .waterfall-detail {
+    padding: 16px 12px;
+    border-radius: 12px;
+  }
+
+  .waterfall-detail__summary {
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .waterfall-detail__summary-card {
+    min-width: 100%;
+    padding: 18px 16px;
+  }
+
+  .waterfall-detail__summary-value {
+    font-size: 16px;
+  }
+
+  .waterfall-detail__summary-label {
+    font-size: 9px;
+  }
+
+  .waterfall-detail__charts {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .waterfall-detail__legend {
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .waterfall-detail__legend-item {
+    font-size: 12px;
+  }
+}

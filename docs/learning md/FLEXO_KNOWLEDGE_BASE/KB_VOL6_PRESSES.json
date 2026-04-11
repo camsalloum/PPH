@@ -1,0 +1,203 @@
+[
+  {
+    "id": "V6-001",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Presses & Press Equipment",
+    "topic": "Wide-Web Press Types — Stack vs CI vs In-line",
+    "subtopic": "Technical comparison of stack, central impression, and in-line press configurations for wide-web flexible packaging",
+    "tags": ["wide web press", "stack press", "central impression press", "CI press", "in-line press", "register tolerance", "substrate support", "web tension", "extensible film", "flexible packaging press", "BOBST", "UTECO", "CARINT"],
+    "app_modules": ["machine_settings", "job_entry", "estimation", "knowledge_chat"],
+    "trigger_actions": [
+      "user configures machine type in machine settings",
+      "estimation links to a machine for a substrate",
+      "AI recommends press for a substrate type",
+      "user asks about difference between CI and stack press",
+      "AI validates register capability for a process color job"
+    ],
+    "ai_use": "Retrieved when AI validates press selection for a substrate or job type. CI press (BOBST, UTECO, CARINT, M6, KYMC) is mandatory for extensible films (BOPP, PE) and process color work requiring tight register. Stack press is suitable for rigid substrates and two-sided printing.",
+    "text": "Wide-web flexographic presses come in three main types. THE STACK PRESS: Color stations stacked one above the other on one or both sides of a main press frame. Each station is independently driven. Up to eight colors. Three main advantages: (1) Operator can reverse the web to print both sides in one pass — interstation drying area allows complete drying before reverse printing; (2) Good color station accessibility for changeover and washup; (3) Ability to print large repeats. Critical limitation: When printing extensible or very thin gauge substrates, the stack press is restricted to color registrations no greater than ±0.0312 inch (0.8mm) because the web travels unsupported between stations and tension variations cause register shift. Heavier gauge materials (paper, laminated film structures tolerating high web tension) can achieve commercially acceptable registered print on stack presses. THE CENTRAL IMPRESSION (CI) PRESS: All color stations positioned around a single large steel impression cylinder. The web is 'locked' to the impression cylinder as it passes all color stations — this prevents register shift between colors. Key advantage: tightest register capability of all press types — ±0.1-0.15mm for a well-maintained CI press. This makes CI the mainstay of the flexible packaging converting industry. The CI press is the correct choice for: all extensible substrates (BOPP, PE, OPP, CPP); process color printing; reverse printing on transparent films; jobs requiring ≤±0.3mm register. The most common CI press is 6-color, with 8-color becoming standard and 10-color CI presses now built. CI impression cylinders range from 30 to 94 inches diameter. THE IN-LINE PRESS: Color stations in a straight horizontal row. Each station has its own impression cylinder. 6-9 colors common. Register tolerance: ±0.2-0.3mm — between stack and CI. Used primarily for narrow-web label printing. Easily incorporates in-line die-cutting, lamination, and other converting operations. For your plant: BOBST, UTECO, CARINT, M6, KYMC = CI presses. FT = stack or in-line configuration. HONG YANG = specialty press for sleeves and thermoforming.",
+    "cross_references": ["V1-009", "V6-002", "V6-003", "V5-007"]
+  },
+
+  {
+    "id": "V6-002",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Presses & Press Equipment",
+    "topic": "Modern CI Press Technology — Electronic Decks, Register Control, and Automation",
+    "subtopic": "Evolution of CI press from hydraulic to electronic decks — register automation — robotic cylinder handling — central console control",
+    "tags": ["CI press", "electronic deck", "register control", "automatic registration", "robotic cylinder", "central console", "digital drive", "closed loop", "BOBST", "makeready time", "press automation", "electronic impression"],
+    "app_modules": ["machine_settings", "production_log", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "production log entry for BOBST or UTECO",
+      "user asks about automatic register systems",
+      "AI explains press downtime reduction",
+      "machine settings configuration for CI press"
+    ],
+    "ai_use": "Retrieved when AI needs to explain CI press capabilities, particularly for production planning and scheduling. Automatic register and robotic cylinder handling directly affect makeready time and production efficiency metrics.",
+    "text": "Beginning in 1989, major technological advances transformed wide-web CI press construction. The first significant change was making individual printing decks as single-piece castings instead of bolted assemblies — providing a more stable printing platform. Simultaneously, all hydraulics were replaced by digital electronic and pneumatic controls, eliminating messy hydraulic maintenance and reducing gaps in the mechanical structure that caused registration errors. ELECTRONIC PRINTING DECKS: Use true closed-loop digital stepping motors with built-in encoders allowing movement only in the x-axis direction (perpendicular to web, for impression on/off). Previous hydraulic decks moved in three axes (x, y, z), creating more potential for registration errors. Electronic decks provide: better print quality at higher speeds; lower centerline of plate and anilox relative to the printing deck; more stable platform. REGISTER CONTROL: Automatic deck positioning systems allow the operator to automatically center both side and circumferential register devices. With properly positioned plates, the automatic system provides a properly registered print job close to acceptable quality at rack-in without further adjustment. Pulse registration capability: units can be programmed to move precise increments per pushbutton activation — allows fine-tuning from a remote web viewer station without lost motion. ROBOTIC CYLINDER HANDLING: Most modern wide-web CI presses now include robotic loading/unloading systems for both plate cylinders and anilox rolls. Robotic systems: significantly reduce damage risk to press, anilox and cylinders; speed up overall changeover times; eliminate manual lifting of heavy cylinders. CHAMBERED DOCTOR BLADES WITH AUTOMATIC WASH-UP: Integrated with electronic decks and robotic handling, chambered blades allow automated ink changeover reducing color-to-color washup time. CENTRAL OPERATOR CONSOLE: All press components — unwind, infeed, printing deck movement, register correction, drying temperature and airflow, chill roll settings, slitter, winder — are integrated into a single operator console. Job recall capability allows settings from previous runs to be recalled, reducing makeready to 10 minutes or less for repeat jobs.",
+    "cross_references": ["V6-001", "V6-003", "V6-004"]
+  },
+
+  {
+    "id": "V6-003",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Presses & Press Equipment",
+    "topic": "CI Drum Temperature Control and Web Tension",
+    "subtopic": "CI impression drum temperature management — thermal expansion effects on register — web tension control systems",
+    "tags": ["CI drum", "drum temperature", "thermal expansion", "web tension", "tension control", "register drift", "unwind brake", "dancer roll", "constant tension", "substrate elongation", "press temperature"],
+    "app_modules": ["press_characterization", "production_log", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "damage reason includes register issue",
+      "production log shows register-related plate damage",
+      "AI diagnoses systematic register drift",
+      "press characterization includes web tension values"
+    ],
+    "ai_use": "Retrieved when AI diagnoses register-related damage. CI drum temperature variation and web tension imbalance are the two main causes of systematic register drift in CI press printing. Both are controllable but require consistent monitoring.",
+    "text": "CI DRUM TEMPERATURE MANAGEMENT: The large steel impression cylinder (CI drum) on a CI press acts as a heat sink — it absorbs heat from the inter-station dryers. As the drum temperature rises during the press run, the drum expands thermally, causing the effective circumference to increase. This thermal expansion changes the contact geometry between the drum surface and the plate cylinders, causing systematic register drift in the circumferential direction as the drum heats up. Solution: CI drums are temperature-controlled — typically chilled water is circulated through internal passages to maintain a constant drum temperature during the press run. When drum temperature cannot be maintained constant (e.g. at press start-up before the chiller stabilizes), print is produced at substandard register until thermal equilibrium is reached. This is one reason press make-ready waste is higher in the first minutes of a run. WEB TENSION CONTROL: Correct web tension is critical for register control and preventing substrate damage. Too little tension: web sags, creating registration errors. Too much tension: substrate stretches (particularly extensible films like PE, BOPP), causing: dimensional change in the web; register shift between colors; possibility of web break. TENSION CONTROL SYSTEMS: (1) Constant-torque braking: Simple, fixed force applied at unwind core. Acceptable only for small roll diameters (< 15 inches). As roll diameter decreases during unwind, the actual web tension increases unless brake force is adjusted — requiring periodic operator intervention. (2) Constant-tension control: Closed-loop system with a tension sensor (dancer roll or load cell) that continuously monitors actual web tension and adjusts the unwind brake force to maintain constant tension regardless of roll diameter change. Standard on all modern CI presses. (3) Dancer roll: A floating idler roll riding on the web — if web tension drops, the dancer roll drops; the position of the dancer is sensed and feeds back to the brake controller. Provides smooth, continuous tension regulation. SUBSTRATE-SPECIFIC TENSION VALUES: Each substrate has a recommended maximum web tension range (in Newtons/meter of web width or lbs/linear inch). Exceeding this causes permanent elongation and register problems. BOPP: 0.5-1.0 lb/inch maximum; PE: 0.25-0.5 lb/inch maximum.",
+    "cross_references": ["V6-001", "V6-002", "V5-007", "V5-009"]
+  },
+
+  {
+    "id": "V6-004",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Presses & Press Equipment",
+    "topic": "Press Drying Systems — Hot Air, Infrared, and UV Curing",
+    "subtopic": "Inter-station and tunnel dryer operation — air temperature, velocity, volume — NFPA safety — cooling rolls — UV curing units",
+    "tags": ["dryer", "drying system", "hot air dryer", "inter-station dryer", "tunnel dryer", "air temperature", "air velocity", "solvent evaporation", "NFPA", "LEL", "cooling roll", "UV curing", "infrared dryer", "drying capacity", "web temperature"],
+    "app_modules": ["press_characterization", "production_log", "machine_settings", "knowledge_chat"],
+    "trigger_actions": [
+      "damage reason includes solvent retention or blocking",
+      "production log includes ink drying issue",
+      "machine settings configure dryer parameters",
+      "user asks about drying capacity for a substrate"
+    ],
+    "ai_use": "Retrieved when AI diagnoses drying-related print defects (blocking, solvent retention, fisheyes) or configures press characterization dryer parameters. Inadequate drying between colors causes ink back-trap and blocking in rewind.",
+    "text": "Flexographic press drying systems remove the volatile components of ink between color stations and after the last print unit. Three considerations govern any dryer: DRYING VARIABLES: (1) Air Temperature: Higher temperature accelerates volatilization but risks substrate damage (polymeric films soften above their transition temperature). If temperature is too high, the top surface of the ink dries forming a crust — trapping solvent beneath creates 'fisheyes' or pock-marks on the print surface. (2) Air Velocity and Volume: Greater velocity and volume of heated air accelerates evaporation. Air is directed to the substrate through narrow slots running perpendicular to web travel, across the web width. Moving air carries away the volatilized ink components — without air movement, the boundary layer above the ink becomes saturated and drying stops. (3) Time: The length of the dryer versus the linear press speed determines drying time. Increasing press speed reduces drying time — at some point speed is limited by drying capacity. HOW DRYERS WORK: Supply fan draws air from roof or plant interior → passes a gas-fired burner → directed through nozzle slots onto the substrate. Exhaust fan pulls drying air through the dryer — maintained at slight negative pressure to prevent volatile air escaping into the plant. Exhaust volume is always greater than supply volume. NFPA SAFETY REQUIREMENT: The ventilation or exhaust rate must maintain solvent vapor concentration in the dryer below 25% of the Lower Explosive Limit (LEL). Above 25% LEL creates explosion risk. Recirculation systems recycle solvent-laden air back through the burner (where it is oxidized) reducing the total air volume that must be exhausted — meeting EPA VOC capture requirements while reducing energy consumption. COOLING ROLLS: After the final dryer, cooling rolls are used to reduce the substrate temperature before rewinding. Polymeric films that are rewound hot (> 40°C) can: stick to themselves (blocking); distort dimensionally; lose gloss. Cooling rolls use chilled water (typically 15-20°C). Substrate must be below 35°C before winding. UV CURING (for UV inks): UV radiation (200-400nm wavelength) initiates photopolymerization of UV-curable inks. No solvents to evaporate — curing is instantaneous when correct UV dose is delivered. UV curing units are positioned at each color station and/or after the final color. UV presses run without interstation hot-air dryers — enabling very compact press configurations.",
+    "cross_references": ["V6-001", "V5-002", "V5-003", "V6-005"]
+  },
+
+  {
+    "id": "V6-005",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Pressroom Practices",
+    "topic": "Press Makeready — Step-by-Step Job Setup Procedure",
+    "subtopic": "Complete press setup sequence from substrate loading to first approved print — dry registration, ink setup, impression setting",
+    "tags": ["makeready", "press setup", "job setup", "dry registration", "impression setting", "edge guide", "setup stock", "plate mounting on press", "ink setup", "register", "color-to-color", "check gauge wheel", "waste reduction"],
+    "app_modules": ["production_log", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "job status changes to IN_PRODUCTION",
+      "production log entry created for a job",
+      "operator asks about press setup sequence",
+      "AI explains what happens between plates being mounted and printing starting"
+    ],
+    "ai_use": "Retrieved when AI assists operators with press setup or explains the production workflow from plates-ready to first good print. Understanding makeready helps AI estimate makeready waste and time for production scheduling.",
+    "text": "Press makeready is the complete process of preparing the press for a new job from the previous state. A well-executed makeready minimizes substrate waste and time to first approved print. SETUP SEQUENCE: (1) USE SETUP STOCK: Load cheaper, lower-grade substrate (similar gauge to actual job) for the setup process. This prevents wasting expensive production substrate during impression and register setting. (2) SET EDGE GUIDES: Position the web edge guide sensor at the correct edge of the substrate. The edge guide keeps one edge of the web in constant position to provide side-to-side register during production. (3) SET AUXILIARY STATIONS: Configure slitters, laminators, and other inline operations before printing begins. (4) DRY REGISTRATION: Set plate cylinders in print stations as close as possible to the required register position before inking. Procedure: draw a register mark on the web → align mark with the mark on each successive plate cylinder gear → this achieves close color-to-color alignment (within one gear tooth) reducing register adjustment waste. Use a CHECK GAUGE WHEEL (diameter = plate cylinder repeat) to set parallel impression: place wheel on plate cylinder shaft; adjust settings so wheel barely touches anilox and impression cylinder with a thin paper feeler gauge. This establishes parallelism before plates are installed. (5) SET INK DISTRIBUTION: Clean all fountain pans; install wiper assemblies; install paper or plastic fountain liners (saves changeover cleanup time on short runs); install ink pumps for long runs; add ink to fountain; verify pH (water-based: 8.6-9.4) and viscosity before starting. (6) SET FOUNTAIN ROLL / DOCTOR BLADE: Set blade angle (30°), pressure, and alignment per manufacturer specification. Ensure anilox runs continuously during setup — do not allow ink to dry in cells. (7) INSTALL PLATE CYLINDERS: Load cylinders with same gear-tooth reference mark aligned to maintain dry-registration achieved in step 4. (8) SET IMPRESSION: With plates inked, bring into impression one station at a time. Adjust impression to minimum (kiss impression) — just enough contact for complete ink transfer without dot gain. Too much impression = dot gain, halos, fill-in, shortened plate life. (9) ACHIEVE REGISTER: Fine-tune circumferential and side register per color, starting with the key color (typically process black or dominant color). (10) FIRST PRINT APPROVAL: Run press slowly, pull printed samples, compare against color standard and job ticket. Adjust until approved, then ramp to production speed.",
+    "cross_references": ["V6-006", "V6-007", "V4-010", "V1-012"]
+  },
+
+  {
+    "id": "V6-006",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Pressroom Practices",
+    "topic": "On-Press Ink Control During Production Run",
+    "subtopic": "Viscosity and pH monitoring frequency — solvent/water addition procedures — automatic viscosity controllers — color consistency",
+    "tags": ["on-press ink control", "viscosity check", "pH check", "Zahn cup", "solvent addition", "ink reducer", "color consistency", "automatic viscosity controller", "pressrun", "ink starvation", "doctor blade"],
+    "app_modules": ["production_log", "press_characterization", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "production log entry shows ink-related damage",
+      "damage reason includes color inconsistency",
+      "user asks about ink control during press run",
+      "AI diagnoses color drift during a press run"
+    ],
+    "ai_use": "Retrieved when AI diagnoses ink-related production issues. Viscosity drift is the most common cause of color variation during a press run — solvent evaporation increases viscosity → darker print → plates can overload → damage. AI links ink control failures to specific damage categories.",
+    "text": "Maintaining correct ink viscosity and pH throughout the production run is essential for consistent color quality and plate longevity. MONITORING FREQUENCY: Solvent-based inks: check viscosity every 10-15 minutes (solvent evaporates quickly, viscosity rises faster). Water-based inks: check pH and viscosity every 30 minutes. ALWAYS check pH first, then viscosity for water-based inks — viscosity is affected by pH level. EFFECTS OF VISCOSITY DRIFT: Too high viscosity (solvent evaporated): ink becomes too thick → prints darker → excess ink deposited on plate → anilox cells cannot reload properly (ink starvation in chamber blade systems) → color inconsistency → plate loading (ink buildup on plate shoulders) → fill-in of screens and reverses → premature plate damage. Too low viscosity (over-reduced): insufficient color density → mottled solids → color too light → possible pinholes in heavy solids. VISCOSITY CORRECTION — SOLVENT-BASED: Add a reducer with slightly faster evaporation rate than the make-up solvent. Never add single-component fast solvents alone — upsets solvent balance. Add small amounts and recheck. VISCOSITY CORRECTION — WATER-BASED: First adjust pH if outside 8.0-9.3 range: prepare diluted amine in water → add slowly while agitating → check pH frequently. After pH is correct, add plain water if viscosity still too high. Never add acid to lower pH — destroys resins. Adding water without fixing pH first causes further resin instability. AUTOMATIC VISCOSITY CONTROLLERS: Wide-web presses used for long runs are commonly equipped with automatic viscosity controllers that dispense predetermined amounts of solvent into the ink system automatically. These maintain viscosity stability but must be verified manually — automatic systems can malfunction and controllers cannot detect pH changes. DOCUMENTATION: At job start, record exact ink viscosity (and pH for water-based) and color density measurements. Compare readings every check interval against the start-of-run standard. Document any additions made during the run. This data enables consistent reprint conditions and troubleshoot diagnosis if defects appear.",
+    "cross_references": ["V5-002", "V5-003", "V5-005", "V6-005"]
+  },
+
+  {
+    "id": "V6-007",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Pressroom Practices",
+    "topic": "Print Defects — Causes and Corrective Actions",
+    "subtopic": "Identification and correction of common flexographic print defects — fill-in, dot gain, halos, banding, streaking, picking, plate damage causes",
+    "tags": ["print defect", "fill-in", "dot gain", "halo", "banding", "streaking", "ghosting", "picking", "plate loading", "slur", "registration error", "impression pressure", "ink starvation", "plate bounce", "anilox streak", "doctor blade streak", "colour variation"],
+    "app_modules": ["damage_log", "production_log", "knowledge_chat"],
+    "trigger_actions": [
+      "user enters damage reason in damage log",
+      "AI diagnoses damage category from reason text",
+      "operator asks why a plate is damaged",
+      "production log shows DAMAGE remark",
+      "AI suggests root cause for a damage pattern"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI analyzes damage log entries or diagnoses print defects. This is the troubleshooting reference that maps defect descriptions to root causes. Links directly to damage categories in your production system.",
+    "text": "Common flexographic print defects, their causes, and corrective actions: FILL-IN (screens and reverses filling solid): Causes: excessive impression pressure; ink viscosity too high; incorrect anilox selection (BCM too high for halftone work); plate too soft (too compressible); plate overloaded with ink; doctor blade not seating correctly. Corrective actions: reduce impression; check and reduce viscosity; change anilox to higher cell count/lower BCM; check doctor blade condition and angle. EXCESSIVE DOT GAIN (dots printing larger than specified, 'Screen Dot Gain More'): Causes: excessive impression pressure (most common); anilox BCM too high; ink viscosity too high; stickyback too thick or too soft (cushion foam where solid vinyl required); plate durometer too low; plate distortion compensation incorrect. Corrective actions: reduce impression to kiss impression; check anilox selection; check viscosity; review stickyback specification; verify distortion compensation in prepress. HALO EFFECT (light ring around printed elements): Causes: excessive impression pressing plate against impression cylinder surface; plate material too soft; stickyback compressing unevenly. Corrective action: reduce impression; check stickyback condition. BANDING (periodic light/dark streaks across web width): Causes: plate cylinder or anilox roll runout (TIR too high); gear damage or wear; doctor blade flutter; uneven stickyback causing periodic impression variation. Corrective actions: check cylinder TIR with dial indicator (max 0.0005\" for process); inspect gears; check doctor blade contact and blade condition. STREAKING (continuous lines parallel to web direction, 'Doctor Blade Streak'): Causes: nicks or damage in doctor blade edge; hard particle embedded in blade; debris on anilox cell walls; damaged anilox cell line. Corrective actions: replace doctor blade; clean anilox; inspect anilox for cell damage. PICKING (ink not fully adhering to substrate, leaving holes in solids): Causes: ink tack too high for substrate; substrate surface energy too low; insufficient corona treatment. Corrective action: reduce ink tack; verify corona treatment level (dyne test). PLATE BOUNCE/VIBRATION (periodic missing print, 'Bouncing Line Issue'): Causes: plate not fully adhered to stickyback; plate edges lifting; cylinder speed too high; worn gear backlash. Corrective actions: remount plate ensuring full adhesion; seal plate edges; reduce speed. PATCHY SOLIDS ('Solid Area Patches Showing', 'B/G Plate Patches Showing'): Causes: plate surface deteriorated (old plate worn, sticky); inadequate ink coverage from worn anilox; substrate surface irregularity. Corrective action: replace plate; check anilox BCM; verify substrate surface. OLD PLATE LESS COVERING: Plate printing surface has worn beyond usable life — dot erosion, loss of relief depth. Replace plate.",
+    "cross_references": ["V6-005", "V6-006", "V4-010", "V1-013", "V2-015"]
+  },
+
+  {
+    "id": "V6-008",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Pressroom Practices",
+    "topic": "Press Washup and Job Changeover Procedures",
+    "subtopic": "Efficient washup sequence — ink conservation — plate cleaning — preparation for next job — changeover time reduction",
+    "tags": ["washup", "cleanup", "press changeover", "ink conservation", "plate cleaning", "color change", "wash-up solvent", "changeover time", "next job setup", "anilox cleaning", "ink return", "plate storage after run"],
+    "app_modules": ["production_log", "plate_warehouse", "knowledge_chat"],
+    "trigger_actions": [
+      "production log entry marks job as completed",
+      "plates moved to warehouse after press run",
+      "user asks about washup procedure",
+      "AI tracks production efficiency for changeover time"
+    ],
+    "ai_use": "Retrieved when AI guides post-press procedures. Proper washup prevents ink contamination between jobs and preserves plate life. Plate cleaning before storage directly affects whether plates can be successfully reused on the next run.",
+    "text": "An efficient cleanup program minimizes downtime between jobs and maintains the press in good working condition. The press is profitable only when in production — changeover time is non-productive time. PREPARATION BEFORE PRESS STOP: During the current press run, begin preparing for the next job: locate and inspect stock for next job (correct grade, size, condition); locate and inspect ink (correct formula, sufficient quantity); review color standards for the next job; check that plates and tooling for the next job are available and in good condition; review the upcoming job order and plan the fastest changeover sequence. INK CONSERVATION: Before washup begins, lower the ink pan and squeegee liquid ink down the ink-return hose back into the ink pump or bucket — recovering reusable ink. Switch the return hose to the wash-up container or drain, then begin washup. MANUAL WASHUP PROCEDURE: (1) Turn off ink pump and disconnect power to stop ink flow; (2) Pump cleaning solution through the entire system to loosen ink; (3) Remove ink supply hose from the deck; (4) Stop rotation of the rubber/fountain roll; (5) Release pressure between rubber roll and anilox roll; (6) Move ink-return hose to wash-up container; (7) Reset pressure and restart rotation; (8) Flood anilox and rubber rolls with wash-up solution while slowly turning — solution removes ink from roll surfaces. Several passes with fresh solution may be needed; (9) Release pressure on one end only; (10) Wipe anilox roll with folded rag soaked with cleaning solution, working from the released-pressure side. For water-based ink: keep fountain roll and anilox roll wet until ink is fully washed off — dried water-based ink is very difficult to remove. PLATE CLEANING: Printing plates must be cleaned and rinsed after each production run before being placed in storage. Use soft-bristle brushes and plate-compatible cleaning solvent only. Do not use harsh solvents or stiff brushes that could damage the plate relief image or plate backing. Cleaned plates should be inspected for damage, wrapped, and returned to the warehouse with the FAP.NO and job reference. ANILOX ROLL CLEANING: Use brass brush for chrome anilox rolls; stainless steel brush for ceramic anilox rolls. Coarse cleaning leaves ink in cells — cells must be fully clean for consistent ink delivery on the next job. Automated anilox cleaning systems (ultrasonic or chemical) are available on modern presses.",
+    "cross_references": ["V6-005", "V6-006", "V4-008", "plate_warehouse"]
+  },
+
+  {
+    "id": "V6-009",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Pressroom Practices",
+    "topic": "Pressroom Safety — Personal Protection, Lockout/Tagout, Chemical Handling",
+    "subtopic": "Personal protective equipment, press nip points, solvent handling safety, lockout/tagout procedure, safety signage",
+    "tags": ["safety", "PPE", "personal protective equipment", "lockout", "tagout", "nip point", "solvent safety", "fire hazard", "VOC", "flammable", "press safety", "chemical handling", "grounding", "explosion risk"],
+    "app_modules": ["knowledge_chat", "production_log"],
+    "trigger_actions": [
+      "user asks about safety procedures",
+      "training content generation",
+      "onboarding new press operator",
+      "production log includes safety incident"
+    ],
+    "ai_use": "Retrieved for safety training content or when AI generates operator onboarding materials. Pressroom safety is non-negotiable — all operators must understand these rules before working on press.",
+    "text": "Pressroom safety is a critical concern for every flexographic printing company and individual. Printing presses have numerous pinch points that cause serious injury. PERSONAL PROTECTIVE EQUIPMENT (PPE): Clothing must be relatively tight-fitting — short sleeves, regular work pants. Loose clothing catches on moving parts. Steel-toed shoes prevent foot injury — clamp-on steel boots provide additional protection. No jewelry (rings, watches, chains, long earrings) around machinery — caught in moving parts. Long hair must be tied back or contained in a hair net. Eye protection must be worn during cleanup — ink and wash-up solvent splashing into eyes. Personal eyeglasses must meet safety glasses standards. Ear protection should be worn to minimize noise exposure. Tight-fitting protective gloves during ink wash-ups prevent skin contact with solvents and inks. COMMON SENSE RULES: Keep hands away from moving parts. Know all nip points on the press — a nip is where two rolls contact; rags, clothing, and fingers are easily drawn in. Use proper lifting techniques — back straight, knees bent. Fold rags neatly during washups — loose corners get caught in moving parts. Never smoke on the press floor — fire hazard with flammable solvents. Note excessive solvent smell — indicates faulty or insufficient ventilation. Inspect all equipment for strange noises or oil leaks before running — investigate immediately. LOCKOUT/TAGOUT (LOTO): Any time a press is opened for cleaning, maintenance, or adjustment: (1) Turn off all power at the main switch; (2) Apply a lockout device that physically prevents the power switch from being turned on; (3) Attach a tag identifying the person working on the equipment; (4) Verify the machine cannot be started before entering; (5) Only the person who locked out can remove the lock. OSHA requires lockout/tagout during all repair or service. SOLVENT HANDLING: Use UL-approved containers for all flammable solvents. Ground all containers to the press using alligator-type clips attached to unpainted metal. Flammable gases or liquids are easily ignitable by electrical hand tools. Prevent metal-to-metal sparks in solvent areas. SAFETY SIGNAGE: Caution (yellow/black/white) = possible danger. Danger (red/black/white) = condition could cause injury or equipment damage. Warning (orange/black/white) = danger area such as a nip. Note (green/white) = requires special attention. Never run press sections with safety guards removed.",
+    "cross_references": ["V6-005", "V6-008"]
+  },
+
+  {
+    "id": "V6-010",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 6,
+    "chapter": "Pressroom Practices",
+    "topic": "Production Quality Control During Press Run",
+    "subtopic": "Quality checks during production — register monitoring — density checks — defect identification — approval form — housekeeping",
+    "tags": ["quality control", "press approval", "production QC", "register check", "density check", "color standard", "approval form", "pressrun monitoring", "defect detection", "web inspection", "densitometer", "production monitoring"],
+    "app_modules": ["production_log", "damage_log", "knowledge_chat"],
+    "trigger_actions": [
+      "production log entry created",
+      "damage remark is DAMAGE or CHANGES",
+      "user asks about quality checks during printing",
+      "AI generates quality control checklist for operators"
+    ],
+    "ai_use": "Retrieved when AI assists with production quality monitoring procedures. Systematic QC during the press run catches defects early, reducing damage and waste. Links to damage log entries when defects are detected.",
+    "text": "Quality control during the press run must be systematic and consistent to catch defects before they generate large amounts of waste or damaged plates. CONTINUOUS MONITORING DURING RUN: (1) Print registration — check color-to-color register visually and with registration targets. On CI presses, register should be stable once set; if register drifts, check web tension or drum temperature. (2) Cleanliness and sharpness of print — inspect for fill-in, dot gain, halo, streaks. (3) Ink or impression misses — areas that fail to print completely. (4) Ink picking — ink not fully adhering, leaving holes in solids. (5) Flaws caused by plate lift, lint, or debris — foreign material on plate surface causing missing dots or lines. (6) Print quality against color standard — pull prints at regular intervals and compare in standard viewing light (D50 or D65 light booth). Use densitometer to measure solid ink density and compare to approved standard. (7) Board defects (corrugated) — inspect incoming substrate for quality issues. (8) Fill-in — halftone screens and reverses filling solid during run. (9) Excessive impression pressure — visible by dot gain or halos. (10) Print-to-cut registration (if die cutting inline). INK VISCOSITY AND pH: Check every 10-15 minutes (solvent) or 30 minutes (water-based). Document all ink additions. INK HUE: Check visually in light booth or with spectrophotometer. Add correct ink bases to reach color standard. Document changes for reprints. APPROVAL FORM: Many companies use a checklist approval form completed after setup is approved — covering: color registration; copy read position; impression quality; color separations; list of PMS colors; ink systems; tape test; rub test. This form should be completed and filed in the job jacket. HOUSEKEEPING: General housekeeping is continuous — keep work area clean and workable. Monitor all consumables (substrate, ink, additives, rags, reports) to ensure steady supply — a machine shutdown due to lack of consumables is avoidable lost production time.",
+    "cross_references": ["V6-005", "V6-006", "V6-007", "V2-015"]
+  }
+]

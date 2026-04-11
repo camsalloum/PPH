@@ -1,0 +1,87 @@
+/* Product Group Master Data Container */
+.product-group-master-data {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Sub-Tab Navigation */
+.sub-tab-navigation {
+  display: flex;
+  gap: 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid #dee2e6;
+  padding: 0;
+}
+
+.sub-tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-textSecondary);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.sub-tab-button:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+  color: var(--color-primary);
+}
+
+.sub-tab-button.active {
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.sub-tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #fff;
+}
+
+.sub-tab-button .tab-icon {
+  font-size: 18px;
+}
+
+.sub-tab-button .tab-label {
+  font-size: 14px;
+}
+
+/* Sub-Tab Content */
+.sub-tab-content {
+  padding: 0;
+  min-height: 400px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .sub-tab-button {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sub-tab-button .tab-icon {
+    font-size: 20px;
+  }
+
+  .sub-tab-button .tab-label {
+    font-size: 12px;
+  }
+}

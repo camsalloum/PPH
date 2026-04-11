@@ -1,0 +1,4442 @@
+/**
+ * MES Pre-Sales API Routes
+ * Base path: /api/mes/presales
+ *
+ * Tenant: Interplast – Flexible Packaging (division = 'FP')
+ * Sales reps identified by sales_rep_groups.group_name
+ *
+ * Endpoints:
+ *   GET    /sales-reps                  — List FP sales rep groups
+ *   GET    /product-groups              — List product groups for inquiry form
+ *   GET    /inquiries                   — List inquiries (filtered by role)
+ *   POST   /inquiries                   — Create new inquiry
+ *   GET    /inquiries/:id               — Get single inquiry with prospect data
+ *   PATCH  /inquiries/:id/status        — Update inquiry status
+ *   DELETE /inquiries/:id               — Delete inquiry (own + admin only)
+ *   POST   /inquiries/:id/prospect      — Create & link prospect record
+ *   PATCH  /prospects/:prospectId       — Update prospect details
+ *   PATCH  /prospects/:prospectId/approve  — Admin approves prospect
+ *   PATCH  /prospects/:prospectId/reject   — Admin rejects prospect
+ */
+
+const express = require('express');
+const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const { pool, authPool } = require('../../database/config');
+const { authenticate } = require('../../middleware/auth');
+const logger = require('../../utils/logger');
+const { notifyQCSamplesReceived } = require('../../services/emailService');
+const { notifyUsers, notifyRoleUsers } = require('../../services/notificationService');
+const { logAudit } = require('../../utils/auditLogger');
+const crypto = require('crypto');
+
+// ── Multer setup for inquiry attachments ────────────────────────────────────
+const UPLOAD_DIR = path.join(__dirname, '../../uploads/inquiry-attachments');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const ts = Date.now();
+    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, `${req.params.id}-${ts}-${safe}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  fileFilter: (req, file, cb) => {
+    // Allow common file types
+    const allowed = /pdf|doc|docx|xls|xlsx|png|jpg|jpeg|gif|bmp|tif|tiff|svg|ai|eps|psd|zip|rar|msg|eml|csv|txt/;
+    const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+    cb(null, allowed.test(ext));
+  },
+});
+
+const DIVISION = 'FP';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: resolve sales rep group for the logged-in user
+// Returns { groupId, groupName } or null if user is not a recognised sales rep
+// ─────────────────────────────────────────────────────────────────────────────
+async function getSalesRepGroup(userId) {
+  try {
+    // Get full_name from crm_sales_reps view (ip_auth_database)
+    const repResult = await authPool.query(
+      'SELECT full_name FROM crm_sales_reps WHERE user_id = $1',
+      [userId]
+    );
+    if (repResult.rows.length === 0) return null;
+
+    const fullName = repResult.rows[0].full_name;
+
+    // Match against sales_rep_groups in fp_database using first name (same logic as existing code)
+    const firstName = fullName.split(' ')[0];
+    const groupResult = await pool.query(
+      `SELECT id, group_name
+       FROM sales_rep_groups
+       WHERE division = $1
+         AND (group_name ILIKE $2 OR group_name ILIKE $3)
+       ORDER BY id LIMIT 1`,
+      [DIVISION, `%${firstName}%`, `%${fullName}%`]
+    );
+
+    if (groupResult.rows.length === 0) return null;
+    return {
+      groupId: groupResult.rows[0].id,
+      groupName: groupResult.rows[0].group_name,
+    };
+  } catch (err) {
+    logger.warn('getSalesRepGroup error:', err.message);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: is user admin or management?
+// ─────────────────────────────────────────────────────────────────────────────
+function isAdminOrMgmt(user) {
+  return ['admin', 'manager', 'sales_manager', 'sales_coordinator'].includes(user?.role);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: check if a user has access to a specific inquiry
+// Returns true if: admin/mgmt, QC role, or their sales_rep_group owns the inquiry
+// ─────────────────────────────────────────────────────────────────────────────
+async function checkInquiryOwnership(user, inquiryId) {
+  if (!user) return false;
+  if (isAdminOrMgmt(user)) return true;
+  if (canAccessQCDashboard(user)) return true;
+  // Sales rep: check their group owns this inquiry
+  const group = await getSalesRepGroup(user.id);
+  if (!group) return false;
+  const inq = await pool.query(
+    'SELECT id FROM mes_presales_inquiries WHERE id = $1 AND sales_rep_group_id = $2',
+    [inquiryId, group.groupId]
+  );
+  return inq.rows.length > 0;
+}
+
+const QC_ACCESS_ROLES = ['quality_control', 'qc_manager', 'qc_lab'];
+const QC_NOTIFY_ROLES = [...QC_ACCESS_ROLES, 'manager'];
+
+function canAccessQCDashboard(user) {
+  if (!user) return false;
+  if (['admin', 'manager', ...QC_ACCESS_ROLES].includes(user.role)) return true;
+  // Legacy 'user' role: allow if their department is QC (stored in JWT from login)
+  if (user.department === 'QC') return true;
+  return false;
+}
+
+function normalizeQcOverallResult(value) {
+  if (!value) return null;
+  const normalized = String(value).toLowerCase().trim();
+  if (['pass', 'fail', 'conditional'].includes(normalized)) return normalized;
+  return null;
+}
+
+function actorName(user) {
+  return user?.name || user?.full_name || user?.username || user?.email || 'System User';
+}
+
+function canAccessCSEWorkflow(user) {
+  if (!user) return false;
+  if (['admin', 'manager', ...QC_ACCESS_ROLES, 'production_manager'].includes(user.role)) return true;
+  if (user.department === 'QC') return true;
+  return false;
+}
+
+function canApproveQCStage(user) {
+  if (!user) return false;
+  if (['admin', 'manager', ...QC_ACCESS_ROLES].includes(user.role)) return true;
+  if (user.department === 'QC') return true;
+  return false;
+}
+
+function canApproveProductionStage(user) {
+  return ['admin', 'manager', 'production_manager'].includes(user?.role);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: log activity on an inquiry
+// ─────────────────────────────────────────────────────────────────────────────
+async function logActivity(inquiryId, action, details, user, client) {
+  const q = `INSERT INTO mes_presales_activity_log
+    (inquiry_id, action, details, user_id, user_name)
+    VALUES ($1, $2, $3, $4, $5)`;
+  const conn = client || pool;
+  try {
+    await conn.query(q, [
+      inquiryId,
+      action,
+      JSON.stringify(details || {}),
+      user?.id || null,
+      user?.full_name || user?.name || user?.username || null,
+    ]);
+  } catch (err) {
+    logger.warn('Activity log write failed:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEC-003: Validate all numeric route params as positive integers
+// ─────────────────────────────────────────────────────────────────────────────
+const _intParamValidator = (req, res, next, val, name) => {
+  const n = parseInt(val, 10);
+  if (isNaN(n) || n <= 0 || String(n) !== String(val)) {
+    return res.status(400).json({ success: false, error: `Invalid ${name}: must be a positive integer` });
+  }
+  req.params[name] = n;
+  next();
+};
+['id', 'sampleId', 'checkId', 'prospectId', 'attId', 'repGroupId', 'inquiryId'].forEach(p => {
+  router.param(p, (req, res, next, val) => _intParamValidator(req, res, next, val, p));
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /sales-reps  — all FP sales rep groups
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/sales-reps', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, group_name AS name
+       FROM sales_rep_groups
+       WHERE division = $1
+       ORDER BY group_name`,
+      [DIVISION]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching sales reps', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch sales reps' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /product-groups  — product groups for inquiry form dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/product-groups', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, product_group AS name
+       FROM crm_product_groups
+       WHERE is_active = true
+       ORDER BY display_order, product_group`
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching product groups', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch product groups' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /inquiries  — list inquiries
+//   Admin/Mgmt: all inquiries, optional ?rep_group_id=x filter
+//   Sales Rep: only their own group
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/inquiries', authenticate, async (req, res) => {
+  try {
+    const { status, priority, customer_type, rep_group_id, search, page = 1, limit = 50 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let groupFilter = null;
+
+    if (isAdminOrMgmt(req.user)) {
+      // Admin can filter by a specific rep group or see all
+      if (rep_group_id && rep_group_id !== 'all') {
+        groupFilter = parseInt(rep_group_id);
+      }
+    } else {
+      // Regular user: must restrict to their own group
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup) {
+        return res.json({ success: true, data: { inquiries: [], total: 0 } });
+      }
+      groupFilter = repGroup.groupId;
+    }
+
+    const params = [DIVISION];
+    const conditions = ['i.division = $1'];
+    let p = 2;
+
+    if (groupFilter) {
+      conditions.push(`i.sales_rep_group_id = $${p++}`);
+      params.push(groupFilter);
+    }
+    if (status) {
+      conditions.push(`i.status = $${p++}`);
+      params.push(status);
+    }
+    if (priority) {
+      conditions.push(`i.priority = $${p++}`);
+      params.push(priority);
+    }
+    if (customer_type) {
+      conditions.push(`i.customer_type = $${p++}`);
+      params.push(customer_type);
+    }
+    if (search) {
+      conditions.push(`(i.customer_name ILIKE $${p} OR i.inquiry_number ILIKE $${p})`);
+      params.push(`%${search}%`);
+      p++;
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Count query
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM mes_presales_inquiries i ${where}`,
+      params
+    );
+    const total = parseInt(countRes.rows[0].count);
+
+    // Data query (with prospect status join)
+    const dataRes = await pool.query(
+      `SELECT
+         i.*,
+         srg.group_name            AS rep_group_display,
+         p.id                      AS prospect_id_ref,
+         p.approval_status         AS prospect_approval_status,
+         p.customer_name           AS prospect_company_name
+       FROM mes_presales_inquiries i
+       LEFT JOIN sales_rep_groups srg ON srg.id = i.sales_rep_group_id
+       LEFT JOIN fp_prospects p ON p.id = i.prospect_id
+       ${where}
+       ORDER BY i.created_at DESC
+       LIMIT $${p} OFFSET $${p + 1}`,
+      [...params, parseInt(limit), offset]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        inquiries: dataRes.rows,
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+      },
+    });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching inquiries', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /inquiries  — create new inquiry
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/inquiries', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const {
+      source,
+      source_detail,
+      customer_type,    // 'new' | 'existing' | 'prospect'
+      customer_id,
+      customer_name,
+      customer_country,
+      product_groups = [],
+      estimated_quantity,
+      quantity_unit = 'KGS',
+      priority = 'normal',
+      notes,
+      follow_up_date,
+      // Sample evaluation
+      sample_required = false,
+      sample_type = null,
+      sample_notes = null,
+      // For admin creating on behalf of a rep
+      sales_rep_group_id,
+      // For prospect flow: link existing fp_prospects record
+      prospect_id: existingProspectId,
+    } = req.body;
+
+    // Validation
+    if (!source) return res.status(400).json({ success: false, error: 'Source is required' });
+    if (!customer_type) return res.status(400).json({ success: false, error: 'Customer type is required' });
+    if (!customer_name) return res.status(400).json({ success: false, error: 'Customer name is required' });
+
+    // Determine which group to assign
+    let repGroupId = sales_rep_group_id;
+    let repGroupName = null;
+
+    if (!isAdminOrMgmt(req.user) || !repGroupId) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'You are not registered as a sales rep. Contact admin.' });
+      }
+      repGroupId = repGroup.groupId;
+      repGroupName = repGroup.groupName;
+    } else {
+      // Admin specified a rep group — fetch the name
+      const gr = await pool.query('SELECT group_name FROM sales_rep_groups WHERE id = $1', [repGroupId]);
+      repGroupName = gr.rows[0]?.group_name || null;
+    }
+
+    // Generate inquiry number
+    const numRes = await client.query(
+      `SELECT generate_inquiry_number($1) AS num`,
+      [DIVISION]
+    );
+    const inquiryNumber = numRes.rows[0].num;
+
+    // Insert
+    const insertRes = await client.query(
+      `INSERT INTO mes_presales_inquiries (
+         inquiry_number, division,
+         sales_rep_group_id, sales_rep_group_name,
+         source, source_detail,
+         customer_type, customer_id, customer_name, customer_country,
+         product_groups, estimated_quantity, quantity_unit,
+         priority, notes, follow_up_date, prospect_id,
+         sample_required, sample_type, sample_notes
+       ) VALUES (
+         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::text,$20::text
+       ) RETURNING *`,
+      [
+        inquiryNumber, DIVISION,
+        repGroupId, repGroupName,
+        source, source_detail || null,
+        customer_type, customer_id || null, customer_name, customer_country || null,
+        JSON.stringify(product_groups), estimated_quantity || null, quantity_unit,
+        priority, notes || null, follow_up_date || null,
+        // prospect_id — link for 'prospect' type, or for 'new' when already registered via modal
+        existingProspectId || null,
+        !!sample_required, sample_type || null, sample_notes || null,
+      ]
+    );
+
+    // If customer_type is 'new' and new_prospect data provided,
+    // create fp_prospects entry atomically within this transaction
+    let newProspectId = existingProspectId || null;
+    if (!newProspectId && customer_type === 'new' && req.body.new_prospect) {
+      const np = req.body.new_prospect;
+      if (!np.company_name) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ success: false, error: 'company_name is required for new prospect' });
+      }
+      const prospectInsert = await client.query(
+        `INSERT INTO fp_prospects
+           (customer_name, country, mobile_number, telephone_number, contact_name, contact_email,
+            sales_rep_group, division, source, approval_status, budget_year)
+         VALUES ($1,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8,'inquiry','pending',
+                 EXTRACT(YEAR FROM CURRENT_DATE)::integer)
+         RETURNING id`,
+        [
+          np.company_name,
+          np.country || null,
+          np.mobile_number || null,
+          np.telephone_number || null,
+          np.contact_name || null,
+          np.contact_email || null,
+          repGroupName,
+          DIVISION,
+        ]
+      );
+      newProspectId = prospectInsert.rows[0].id;
+      await client.query(
+        `UPDATE mes_presales_inquiries SET prospect_id = $1 WHERE id = $2`,
+        [newProspectId, insertRes.rows[0].id]
+      );
+      insertRes.rows[0].prospect_id = newProspectId;
+    }
+
+    await client.query('COMMIT');
+    logger.info(`MES PreSales: inquiry created ${inquiryNumber}`);
+
+    // Log activity (fire-and-forget, outside transaction)
+    logActivity(insertRes.rows[0].id, 'inquiry_created', {
+      inquiry_number: inquiryNumber,
+      source, customer_type, customer_name,
+      product_groups,
+    }, req.user);
+
+    res.status(201).json({
+      success: true,
+      data: insertRes.rows[0],
+      message: `Inquiry ${inquiryNumber} created successfully`,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error creating inquiry', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /inquiries/:id  — single inquiry + registration form
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/inquiries/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const inquiryRes = await pool.query(
+      `SELECT i.*, srg.group_name AS rep_group_display
+       FROM mes_presales_inquiries i
+       LEFT JOIN sales_rep_groups srg ON srg.id = i.sales_rep_group_id
+       WHERE i.id = $1 AND i.division = $2`,
+      [id, DIVISION]
+    );
+
+    if (inquiryRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+
+    const inquiry = inquiryRes.rows[0];
+
+    // Access check: non-admin can only see their own group
+    if (!isAdminOrMgmt(req.user)) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup || repGroup.groupId !== inquiry.sales_rep_group_id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+    }
+
+    // Fetch linked prospect if it exists
+    let prospect = null;
+    if (inquiry.prospect_id) {
+      const prospectRes = await pool.query(
+        `SELECT * FROM fp_prospects WHERE id = $1`,
+        [inquiry.prospect_id]
+      );
+      prospect = prospectRes.rows[0] || null;
+    }
+
+    // Fetch attachments
+    const attachmentsRes = await pool.query(
+      `SELECT * FROM inquiry_attachments WHERE inquiry_id = $1 ORDER BY created_at DESC`,
+      [id]
+    );
+
+    // Fetch samples
+    const samplesRes = await pool.query(
+      `SELECT * FROM mes_presales_samples WHERE inquiry_id = $1 ORDER BY created_at DESC`,
+      [id]
+    );
+
+    // Fetch MOQ checks
+    const moqRes = await pool.query(
+      `SELECT m.*, s.sample_number
+       FROM mes_presales_moq_checks m
+       LEFT JOIN mes_presales_samples s ON s.id = m.sample_id
+       WHERE m.inquiry_id = $1 ORDER BY m.created_at ASC`,
+      [id]
+    );
+
+    // Fetch material checks
+    const materialRes = await pool.query(
+      `SELECT * FROM mes_presales_material_checks WHERE inquiry_id = $1 ORDER BY created_at ASC`,
+      [id]
+    );
+
+    // F-005: Fetch CSE reports per sample for Sales Rep view
+    const cseRes = await pool.query(
+      `SELECT id, cse_number, sample_id, sample_number, overall_result,
+              status, qc_manager_status, prod_manager_status, final_status,
+              created_at, updated_at
+       FROM mes_cse_reports
+       WHERE inquiry_id = $1 ORDER BY created_at DESC`,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        inquiry,
+        prospect,
+        attachments: attachmentsRes.rows,
+        samples: samplesRes.rows,
+        moq_checks: moqRes.rows,
+        material_checks: materialRes.rows,
+        cse_reports: cseRes.rows,
+      },
+    });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching inquiry', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /inquiries/:id/status  — update status
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/inquiries/:id/status', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, lost_reason, converted_to_so,
+            lost_reason_category, lost_reason_notes, lost_to_competitor } = req.body;
+
+    const VALID_STATUSES = ['new', 'in_progress', 'customer_registered', 'qualified', 'converted', 'lost', 'on_hold'];
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
+    }
+
+    // Fetch existing
+    const existing = await pool.query(
+      'SELECT * FROM mes_presales_inquiries WHERE id = $1 AND division = $2',
+      [id, DIVISION]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+
+    // Access check
+    if (!isAdminOrMgmt(req.user)) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup || repGroup.groupId !== existing.rows[0].sales_rep_group_id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+    }
+
+    const oldStatus = existing.rows[0].status;
+    const updated = await pool.query(
+      `UPDATE mes_presales_inquiries
+       SET status              = $1,
+           lost_reason         = COALESCE($2, lost_reason),
+           converted_to_so     = COALESCE($3, converted_to_so),
+           lost_reason_category = CASE WHEN $1 = 'lost' THEN COALESCE($6, lost_reason_category) ELSE lost_reason_category END,
+           lost_reason_notes   = CASE WHEN $1 = 'lost' THEN COALESCE($7, lost_reason_notes)   ELSE lost_reason_notes   END,
+           lost_to_competitor  = CASE WHEN $1 = 'lost' THEN COALESCE($8, lost_to_competitor)  ELSE lost_to_competitor  END,
+           lost_at             = CASE WHEN $1 = 'lost' AND lost_at IS NULL THEN NOW() ELSE lost_at END,
+           updated_at          = NOW()
+       WHERE id = $4 AND division = $5
+       RETURNING *`,
+      [status, lost_reason || null, converted_to_so || null, id, DIVISION,
+       lost_reason_category || null, lost_reason_notes || null, lost_to_competitor || null]
+    );
+
+    logActivity(id, 'status_changed', { from: oldStatus, to: status, lost_reason, lost_reason_category }, req.user);
+    logAudit(pool, 'mes_presales_inquiries', id, 'updated', existing.rows[0], updated.rows[0], req.user);
+
+    res.json({ success: true, data: updated.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error updating inquiry status', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /inquiries/:id  — only own group or admin, only if status = 'new'
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/inquiries/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await pool.query(
+      'SELECT * FROM mes_presales_inquiries WHERE id = $1 AND division = $2',
+      [id, DIVISION]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+
+    const inq = existing.rows[0];
+
+    if (!isAdminOrMgmt(req.user)) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup || repGroup.groupId !== inq.sales_rep_group_id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+      if (inq.status !== 'new') {
+        return res.status(400).json({ success: false, error: 'Only inquiries with status "new" can be deleted by the rep.' });
+      }
+    }
+
+    await pool.query('DELETE FROM mes_presales_inquiries WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Inquiry deleted' });
+  } catch (err) {
+    logger.error('MES PreSales: error deleting inquiry', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /inquiries/:id/prospect  — create & link a prospect record to an inquiry
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/inquiries/:id/prospect', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+
+    const inqRes = await client.query(
+      'SELECT * FROM mes_presales_inquiries WHERE id = $1 AND division = $2',
+      [id, DIVISION]
+    );
+    if (inqRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+
+    if (!isAdminOrMgmt(req.user)) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup || repGroup.groupId !== inqRes.rows[0].sales_rep_group_id) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+    }
+
+    const inq = inqRes.rows[0];
+    if (inq.prospect_id) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'Prospect already linked to this inquiry. Use PATCH /prospects/:id to update.' });
+    }
+
+    const { company_name, country, mobile_number, telephone_number, contact_name, contact_email } = req.body;
+
+    if (!company_name) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'Company name is required' });
+    }
+
+    const groupRes = await client.query('SELECT group_name FROM sales_rep_groups WHERE id = $1', [inq.sales_rep_group_id]);
+    const repGroupName = groupRes.rows[0]?.group_name || null;
+
+    const prospectRes = await client.query(
+      `INSERT INTO fp_prospects
+         (customer_name, country, mobile_number, telephone_number, contact_name, contact_email,
+          sales_rep_group, division, source, approval_status, budget_year)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'inquiry','pending',
+               EXTRACT(YEAR FROM CURRENT_DATE)::integer)
+       RETURNING *`,
+      [company_name, country || null, mobile_number || null, telephone_number || null,
+       contact_name || null, contact_email || null, repGroupName, DIVISION]
+    );
+
+    const newProspect = prospectRes.rows[0];
+
+    await client.query(
+      `UPDATE mes_presales_inquiries
+       SET prospect_id = $1, status = 'customer_registered'
+       WHERE id = $2 AND status IN ('new','in_progress')`,
+      [newProspect.id, id]
+    );
+
+    await client.query('COMMIT');
+    logActivity(parseInt(id), 'prospect_registered', {
+      prospect_id: newProspect.id,
+      company_name,
+    }, req.user);
+    // F-008: Notify admins/management that a new prospect needs approval
+    try {
+      await notifyRoleUsers(
+        ['admin', 'manager'],
+        {
+          type: 'prospect_pending_approval',
+          title: `New prospect needs approval — ${company_name}`,
+          message: `Submitted by ${actorName(req.user)}`,
+          link: `/crm/inquiries/${id}`,
+          referenceType: 'inquiry',
+          referenceId: parseInt(id),
+        },
+        { excludeUserIds: [req.user?.id] }
+      );
+    } catch (notifyErr) {
+      logger.warn('MES PreSales: prospect_registered notification failed', notifyErr.message);
+    }
+    res.status(201).json({ success: true, data: newProspect, message: 'Prospect created and linked to inquiry — pending manager approval' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error creating prospect', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /prospects/:prospectId  — update prospect details
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/prospects/:prospectId', authenticate, async (req, res) => {
+  try {
+    const { prospectId } = req.params;
+
+    // Verify ownership via linked inquiry
+    const linkedInquiry = await pool.query(
+      'SELECT id FROM mes_presales_inquiries WHERE prospect_id = $1',
+      [parseInt(prospectId, 10)]
+    );
+    if (linkedInquiry.rows.length > 0) {
+      const canAccess = await checkInquiryOwnership(req.user, linkedInquiry.rows[0].id);
+      if (!canAccess) return res.status(403).json({ success: false, error: 'Access denied' });
+    } else if (!isAdminOrMgmt(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const fields = req.body;
+
+    const allowed = ['customer_name','country','mobile_number','telephone_number','contact_name','contact_email','notes'];
+    const setClauses = [];
+    const values = [];
+    let p = 1;
+
+    for (const key of allowed) {
+      if (key in fields) {
+        setClauses.push(`${key} = $${p++}`);
+        values.push(fields[key]);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({ success: false, error: 'No valid fields to update' });
+    }
+
+    values.push(parseInt(prospectId));
+    const result = await pool.query(
+      `UPDATE fp_prospects SET ${setClauses.join(', ')} WHERE id = $${p} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Prospect not found' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error updating prospect', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /prospects/:prospectId/approve  — Admin approves prospect
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/prospects/:prospectId/approve', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Only admins can approve prospects' });
+  }
+  try {
+    const { prospectId } = req.params;
+    const approverName = req.user.email || `User ${req.user.id}`;
+
+    const result = await pool.query(
+      `UPDATE fp_prospects
+       SET approval_status = 'approved', approved_by = $1, approved_at = NOW()
+       WHERE id = $2 AND division = $3
+       RETURNING *`,
+      [approverName, parseInt(prospectId), DIVISION]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Prospect not found' });
+    }
+
+    // Advance linked inquiry to 'qualified'
+    const advancedRes = await pool.query(
+      `UPDATE mes_presales_inquiries SET status = 'qualified'
+       WHERE prospect_id = $1 AND status = 'customer_registered'
+       RETURNING id`,
+      [parseInt(prospectId)]
+    );
+
+    // Log activity on linked inquiry + F-008 notify the inquiry creator
+    if (advancedRes.rows.length > 0) {
+      const inquiryId = advancedRes.rows[0].id;
+      logActivity(inquiryId, 'prospect_approved', {
+        prospect_id: parseInt(prospectId),
+        approved_by: approverName,
+      }, req.user);
+      try {
+        const ownerRes = await pool.query(
+          `SELECT created_by FROM mes_presales_inquiries WHERE id = $1`,
+          [inquiryId]
+        );
+        const ownerId = ownerRes.rows[0]?.created_by || null;
+        if (ownerId) {
+          await notifyUsers(
+            [ownerId],
+            {
+              type: 'prospect_approved',
+              title: `Prospect approved — ${result.rows[0].company_name || result.rows[0].customer_name}`,
+              message: `Approved by ${approverName}. Inquiry moved to Qualified.`,
+              link: `/crm/inquiries/${inquiryId}`,
+              referenceType: 'inquiry',
+              referenceId: inquiryId,
+            },
+            { excludeUserIds: [req.user?.id] }
+          );
+        }
+      } catch (notifyErr) {
+        logger.warn('MES PreSales: prospect_approved notification failed', notifyErr.message);
+      }
+    }
+
+    res.json({ success: true, data: result.rows[0], message: 'Prospect approved' });
+  } catch (err) {
+    logger.error('MES PreSales: error approving prospect', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /prospects/:prospectId/reject  — Admin rejects prospect
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/prospects/:prospectId/reject', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Only admins can reject prospects' });
+  }
+  try {
+    const { prospectId } = req.params;
+    const { rejection_reason } = req.body;
+
+    const result = await pool.query(
+      `UPDATE fp_prospects
+       SET approval_status = 'rejected', rejection_reason = $1
+       WHERE id = $2 AND division = $3
+       RETURNING *`,
+      [rejection_reason || null, parseInt(prospectId), DIVISION]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Prospect not found' });
+    }
+
+    // Log activity on linked inquiry + F-008: notify the inquiry owner
+    const linkedInq = await pool.query(
+      `SELECT id, created_by FROM mes_presales_inquiries WHERE prospect_id = $1`,
+      [parseInt(prospectId)]
+    );
+    if (linkedInq.rows.length > 0) {
+      const inquiryId = linkedInq.rows[0].id;
+      logActivity(inquiryId, 'prospect_rejected', {
+        prospect_id: parseInt(prospectId),
+        rejection_reason,
+      }, req.user);
+      try {
+        const ownerId = linkedInq.rows[0].created_by || null;
+        if (ownerId) {
+          await notifyUsers(
+            [ownerId],
+            {
+              type: 'prospect_rejected',
+              title: `Prospect not approved — ${result.rows[0].customer_name}`,
+              message: rejection_reason
+                ? `Reason: ${rejection_reason}`
+                : `Rejected by ${actorName(req.user)}`,
+              link: `/crm/inquiries/${inquiryId}`,
+              referenceType: 'inquiry',
+              referenceId: inquiryId,
+            },
+            { excludeUserIds: [req.user?.id] }
+          );
+        }
+      } catch (notifyErr) {
+        logger.warn('MES PreSales: prospect_rejected notification failed', notifyErr.message);
+      }
+    }
+
+    res.json({ success: true, data: result.rows[0], message: 'Prospect rejected' });
+  } catch (err) {
+    logger.error('MES PreSales: error rejecting prospect', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /stats  — summary stats for dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/stats', authenticate, async (req, res) => {
+  try {
+    let groupFilter = null;
+
+    if (!isAdminOrMgmt(req.user)) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup) return res.json({ success: true, data: {} });
+      groupFilter = repGroup.groupId;
+    }
+
+    const params = [DIVISION];
+    let whereClause = 'WHERE division = $1';
+    if (groupFilter) {
+      whereClause += ' AND sales_rep_group_id = $2';
+      params.push(groupFilter);
+    }
+
+    // Stagnant thresholds (days per stage before an inquiry is considered stagnant)
+    const STAGNANT_THRESHOLDS = {
+      new:                 3,
+      in_progress:         7,
+      customer_registered: 14,
+      qualified:           10,
+      on_hold:             21,
+    };
+
+    const statsRes = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE status = 'new')                  AS new_count,
+         COUNT(*) FILTER (WHERE status = 'in_progress')          AS in_progress_count,
+         COUNT(*) FILTER (WHERE status = 'customer_registered')  AS registered_count,
+         COUNT(*) FILTER (WHERE status = 'qualified')            AS qualified_count,
+         COUNT(*) FILTER (WHERE status = 'converted')            AS converted_count,
+         COUNT(*) FILTER (WHERE status = 'lost')                 AS lost_count,
+         COUNT(*) FILTER (WHERE status = 'on_hold')              AS on_hold_count,
+         COUNT(*) FILTER (WHERE inquiry_date >= CURRENT_DATE - INTERVAL '7 days') AS this_week,
+         COUNT(*) FILTER (WHERE inquiry_date >= DATE_TRUNC('month', CURRENT_DATE)) AS this_month,
+         -- Open = not terminal
+         COUNT(*) FILTER (WHERE status NOT IN ('converted', 'lost'))  AS open_count,
+         -- Stagnant = open and stuck past threshold for its stage
+         COUNT(*) FILTER (
+           WHERE status = 'new'                 AND updated_at < NOW() - INTERVAL '3 days'
+           OR    status = 'in_progress'         AND updated_at < NOW() - INTERVAL '7 days'
+           OR    status = 'customer_registered' AND updated_at < NOW() - INTERVAL '14 days'
+           OR    status = 'qualified'           AND updated_at < NOW() - INTERVAL '10 days'
+           OR    status = 'on_hold'             AND updated_at < NOW() - INTERVAL '21 days'
+         ) AS stagnant_count
+       FROM mes_presales_inquiries ${whereClause}`,
+      params
+    );
+
+    res.json({ success: true, data: { ...statsRes.rows[0], stagnant_thresholds: STAGNANT_THRESHOLDS } });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching stats', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /register-prospect
+// Immediately register a new company as a prospect (fp_prospects).
+// For sales reps: auto-assigns to their rep group.
+// For admin: uses provided sales_rep_group_name (or null = unassigned pool).
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/register-prospect', authenticate, async (req, res) => {
+  try {
+    const { company_name, country, mobile_number, telephone_number, contact_name, contact_email, sales_rep_group_name: adminGroupName, source } = req.body;
+    if (!company_name || !company_name.trim()) {
+      return res.status(400).json({ success: false, error: 'Company name is required' });
+    }
+
+    // Resolve rep group
+    let repGroupName = null;
+    if (!isAdminOrMgmt(req.user)) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup) return res.status(403).json({ success: false, error: 'You are not registered as a sales rep' });
+      repGroupName = repGroup.groupName;
+    } else {
+      // Admin: use provided group name
+      repGroupName = adminGroupName || null;
+    }
+
+    // Duplicate check (same company name + division)
+    const dup = await pool.query(
+      `SELECT id, customer_name FROM fp_prospects
+       WHERE UPPER(TRIM(customer_name)) = UPPER(TRIM($1)) AND UPPER(division) = $2 LIMIT 1`,
+      [company_name.trim(), DIVISION]
+    );
+    if (dup.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: `A prospect named "${dup.rows[0].customer_name}" already exists`,
+        existing_id: dup.rows[0].id,
+      });
+    }
+
+    const approvalStatus = 'pending';
+
+    const result = await pool.query(
+      `INSERT INTO fp_prospects
+         (customer_name, country, mobile_number, telephone_number, contact_name, contact_email,
+          sales_rep_group, division, source, approval_status, budget_year)
+       VALUES ($1,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8,$9,$10,
+               EXTRACT(YEAR FROM CURRENT_DATE)::integer)
+       RETURNING *`,
+      [
+        company_name.trim(),
+        country || null,
+        mobile_number || null,
+        telephone_number || null,
+        contact_name || null,
+        contact_email || null,
+        repGroupName,
+        DIVISION,
+        source || 'other',
+        approvalStatus,
+      ]
+    );
+
+    logger.info(`MES PreSales: registered new prospect "${company_name}" (id=${result.rows[0].id})`);
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error registering prospect', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /inquiries/:id/attachments  — Upload a file to an inquiry
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/inquiries/:id/attachments', authenticate, upload.single('file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { attachment_type = 'other', sample_id = null, analysis_id = null } = req.body; // analysis_id used for qc_evidence (F-002)
+
+    // Verify inquiry exists
+    const inqCheck = await pool.query(
+      'SELECT id FROM mes_presales_inquiries WHERE id = $1 AND division = $2',
+      [id, DIVISION]
+    );
+    if (inqCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+
+    const canAccess = await checkInquiryOwnership(req.user, id);
+    if (!canAccess) return res.status(403).json({ success: false, error: 'Access denied' });
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    const filePath = `/uploads/inquiry-attachments/${req.file.filename}`;
+    const result = await pool.query(
+      `INSERT INTO inquiry_attachments
+         (inquiry_id, file_name, file_path, file_size, mime_type, attachment_type, uploaded_by, uploaded_by_name, sample_id, analysis_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [
+        id,
+        req.file.originalname,
+        filePath,
+        req.file.size,
+        req.file.mimetype,
+        attachment_type,
+        req.user.id,
+        req.user.email || `User ${req.user.id}`,
+        sample_id || null,
+        analysis_id || null,
+      ]
+    );
+
+    logger.info(`MES PreSales: attachment uploaded for inquiry #${id}: ${req.file.originalname}`);
+    logActivity(parseInt(id), 'attachment_uploaded', {
+      file_name: req.file.originalname,
+      attachment_type,
+      file_size: req.file.size,
+    }, req.user);
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error uploading attachment', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /inquiries/:id/attachments  — List attachments for an inquiry
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/inquiries/:id/attachments', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const canAccess = await checkInquiryOwnership(req.user, id);
+    if (!canAccess) return res.status(403).json({ success: false, error: 'Access denied' });
+    const result = await pool.query(
+      `SELECT * FROM inquiry_attachments
+       WHERE inquiry_id = $1
+       ORDER BY created_at DESC`,
+      [id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching attachments', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /inquiries/:id/attachments/:attId  — Remove an attachment
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/inquiries/:id/attachments/:attId', authenticate, async (req, res) => {
+  try {
+    const { id, attId } = req.params;
+
+    // Get file path so we can delete from disk
+    const att = await pool.query(
+      'SELECT * FROM inquiry_attachments WHERE id = $1 AND inquiry_id = $2',
+      [attId, id]
+    );
+    if (att.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Attachment not found' });
+    }
+
+    const canAccess = await checkInquiryOwnership(req.user, id);
+    if (!canAccess) return res.status(403).json({ success: false, error: 'Access denied' });
+
+    // Delete from DB
+    await pool.query('DELETE FROM inquiry_attachments WHERE id = $1', [attId]);
+
+    // Delete from disk (best-effort)
+    const diskPath = path.join(__dirname, '../..', att.rows[0].file_path);
+    fs.unlink(diskPath, (err) => {
+      if (err) logger.warn(`Could not delete file: ${diskPath}`, err.message);
+    });
+
+    logActivity(parseInt(id), 'attachment_deleted', { file_name: att.rows[0].file_name }, req.user);
+    logger.info(`MES PreSales: attachment #${attId} deleted from inquiry #${id}`);
+    res.json({ success: true, message: 'Attachment deleted' });
+  } catch (err) {
+    logger.error('MES PreSales: error deleting attachment', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SAMPLE REGISTRATION  — register / list / update samples per inquiry
+// ═════════════════════════════════════════════════════════════════════════════
+
+// POST /inquiries/:id/samples — register a new sample
+router.post('/inquiries/:id/samples', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const {
+      product_group,
+      description = null,
+      sample_type = 'physical',
+      estimated_quantity = null,
+      quantity_unit = 'Kgs',
+    } = req.body;
+
+    if (!product_group) {
+      return res.status(400).json({ success: false, error: 'product_group is required' });
+    }
+
+    // Verify inquiry exists
+    const inq = await client.query(
+      'SELECT id, inquiry_number, customer_name FROM mes_presales_inquiries WHERE id = $1 AND division = $2',
+      [id, DIVISION]
+    );
+    if (inq.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+
+    const canAccess = await checkInquiryOwnership(req.user, id);
+    if (!canAccess) {
+      client.release();
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    await client.query('BEGIN');
+
+    // Generate sample number
+    const numRes = await client.query(`SELECT generate_sample_number($1) AS num`, [DIVISION]);
+    const sampleNumber = numRes.rows[0].num;
+
+    const insertRes = await client.query(
+      `INSERT INTO mes_presales_samples (
+        inquiry_id, sample_number, product_group, customer_name,
+        description, sample_type, estimated_quantity, quantity_unit,
+        created_by, created_by_name
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *`,
+      [
+        id, sampleNumber, product_group, inq.rows[0].customer_name,
+        description, sample_type, estimated_quantity || null, quantity_unit,
+        req.user?.id || null,
+        actorName(req.user),
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    logActivity(parseInt(id), 'sample_registered', {
+      sample_number: sampleNumber,
+      product_group,
+      sample_type,
+    }, req.user);
+
+    logger.info(`MES PreSales: sample ${sampleNumber} registered for inquiry #${id}`);
+    res.status(201).json({ success: true, data: insertRes.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error registering sample', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /inquiries/:id/samples — list samples for an inquiry
+router.get('/inquiries/:id/samples', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const canAccess = await checkInquiryOwnership(req.user, id);
+    if (!canAccess) return res.status(403).json({ success: false, error: 'Access denied' });
+    const result = await pool.query(
+      `SELECT * FROM mes_presales_samples WHERE inquiry_id = $1 ORDER BY created_at DESC`,
+      [id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES PreSales: error listing samples', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// DELETE /samples/:sampleId — delete a sample (only if status = 'registered', i.e. before QC submission)
+router.delete('/samples/:sampleId', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { sampleId } = req.params;
+
+    const sampleRes = await client.query(
+      'SELECT s.*, i.division FROM mes_presales_samples s JOIN mes_presales_inquiries i ON i.id = s.inquiry_id WHERE s.id = $1',
+      [sampleId]
+    );
+    if (sampleRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+    const sample = sampleRes.rows[0];
+    if (sample.division !== DIVISION) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+
+    const canAccess = await checkInquiryOwnership(req.user, sample.inquiry_id);
+    if (!canAccess) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    if (sample.status !== 'registered') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'Can only delete samples that have not been submitted to QC yet' });
+    }
+
+    // Delete associated attachments first
+    await client.query('DELETE FROM inquiry_attachments WHERE sample_id = $1', [sampleId]);
+    // Delete the sample
+    await client.query('DELETE FROM mes_presales_samples WHERE id = $1', [sampleId]);
+
+    // Log activity
+    await client.query(
+      `INSERT INTO mes_presales_activity_log (inquiry_id, user_id, action, details)
+       VALUES ($1, $2, 'sample_deleted', $3)`,
+      [sample.inquiry_id, req.user.id, JSON.stringify({ sample_number: sample.sample_number, product_group: sample.product_group })]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Sample deleted' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error deleting sample', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// PATCH /samples/:sampleId/status — update sample status (sent_to_qc, etc.)
+router.patch('/samples/:sampleId/status', authenticate, async (req, res) => {
+  // BUG-001 fix: use parameterized queries (no string interpolation of user data)
+  // BUG-002 fix: wrap SELECT + UPDATE in transaction with FOR UPDATE to prevent race conditions
+  const client = await pool.connect();
+  try {
+    const sampleId = parseInt(req.params.sampleId, 10);
+    if (isNaN(sampleId)) {
+      return res.status(400).json({ success: false, error: 'Invalid sample ID' });
+    }
+    const { status } = req.body;
+
+    const VALID = ['registered', 'sent_to_qc', 'received_by_qc', 'testing', 'tested', 'approved', 'rejected'];
+    if (!VALID.includes(status)) {
+      return res.status(400).json({ success: false, error: `Invalid status. Must be one of: ${VALID.join(', ')}` });
+    }
+
+    await client.query('BEGIN');
+
+    // Lock row — prevents concurrent requests from double-processing the same sample
+    const existing = await client.query(
+      'SELECT * FROM mes_presales_samples WHERE id = $1 FOR UPDATE',
+      [sampleId]
+    );
+    if (existing.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+
+    const sample = existing.rows[0];
+    const oldStatus = sample.status;
+
+    // Build fully parameterized SET clause — no user data ever interpolated into SQL
+    const params = [status, sampleId];
+    let extra = '';
+    if (status === 'received_by_qc') {
+      extra = `, received_by_qc_user = $3, received_by_qc_name = $4, received_at = NOW()`;
+      params.push(req.user?.id || null, actorName(req.user));
+    } else if (status === 'testing') {
+      extra = `, qc_started_at = NOW()`;
+    } else if (['tested', 'approved', 'rejected'].includes(status)) {
+      extra = `, qc_completed_at = NOW()`;
+    }
+
+    const updated = await client.query(
+      `UPDATE mes_presales_samples SET status = $1 ${extra} WHERE id = $2 RETURNING *`,
+      params
+    );
+
+    // H-002: set SLA deadline for time-sensitive stages
+    const SLA_HOURS = { sent_to_qc: 4, received_by_qc: 24, testing: 24 };
+    if (SLA_HOURS[status]) {
+      await client.query(
+        `UPDATE mes_presales_samples
+         SET sla_due_at = NOW() + ($1 || ' hours')::INTERVAL,
+             sla_stage  = $2
+         WHERE id = $3`,
+        [SLA_HOURS[status], status, sampleId]
+      );
+    } else {
+      // Clear SLA once past the tracked stage
+      await client.query(
+        `UPDATE mes_presales_samples SET sla_due_at = NULL, sla_stage = NULL WHERE id = $1`,
+        [sampleId]
+      );
+    }
+
+    await client.query(
+      `INSERT INTO mes_presales_activity_log (inquiry_id, user_id, action, details)
+       VALUES ($1, $2, 'sample_status_changed', $3)`,
+      [sample.inquiry_id, req.user?.id, JSON.stringify({ sample_number: sample.sample_number, from: oldStatus, to: status })]
+    );
+
+    await client.query('COMMIT');
+
+    // Also update in-memory log (fire-and-forget, uses pool not client)
+    logActivity(sample.inquiry_id, 'sample_status_changed', {
+      sample_number: sample.sample_number,
+      from: oldStatus,
+      to: status,
+    }, req.user);
+
+    // ── Email QC Lab + QC Manager when sample is sent to QC ──────────────
+    if (status === 'sent_to_qc') {
+      // Auto-advance presales_phase to sample_qc
+      pool.query(`UPDATE mes_presales_inquiries SET presales_phase = 'sample_qc' WHERE id = $1 AND presales_phase = 'inquiry'`, [sample.inquiry_id]).catch(() => {});
+
+      // Fire-and-forget: load inquiry + all samples being sent + attachments
+      (async () => {
+        try {
+          const inqRes = await pool.query(
+            'SELECT * FROM mes_presales_inquiries WHERE id = $1',
+            [sample.inquiry_id]
+          );
+          const allSamples = await pool.query(
+            `SELECT * FROM mes_presales_samples WHERE inquiry_id = $1 AND status = 'sent_to_qc'`,
+            [sample.inquiry_id]
+          );
+          const allAttachments = await pool.query(
+            'SELECT * FROM inquiry_attachments WHERE inquiry_id = $1',
+            [sample.inquiry_id]
+          );
+          await notifyQCSamplesReceived({
+            inquiry: inqRes.rows[0],
+            samples: allSamples.rows,
+            attachments: allAttachments.rows,
+            senderName: actorName(req.user),
+            appUrl: process.env.APP_URL || `${req.protocol}://${req.get('host')}`,
+          });
+
+          await notifyRoleUsers(
+            QC_NOTIFY_ROLES,
+            {
+              type: 'sar_submitted',
+              title: `New SAR submitted — ${inqRes.rows[0]?.inquiry_number}`,
+              message: `${allSamples.rows.length} sample(s) sent to QC by ${actorName(req.user)}`,
+              link: '/mes/qc',
+              referenceType: 'inquiry',
+              referenceId: sample.inquiry_id,
+            },
+            { excludeUserIds: [req.user?.id] }
+          );
+        } catch (emailErr) {
+          logger.error('MES PreSales: failed to send QC notifications', emailErr);
+        }
+      })();
+    }
+
+    res.json({ success: true, data: updated.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    logger.error('MES PreSales: error updating sample status', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /inquiries/:id/submit-to-qc — Batch submit ALL registered samples to QC
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/inquiries/:id/submit-to-qc', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    const inq = await client.query(
+      `SELECT * FROM mes_presales_inquiries WHERE id = $1 AND division = $2`,
+      [id, DIVISION]
+    );
+    if (inq.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+
+    const registeredSamples = await client.query(
+      `SELECT * FROM mes_presales_samples WHERE inquiry_id = $1 AND status = 'registered'`,
+      [id]
+    );
+    if (registeredSamples.rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'No registered samples to submit. Register at least one sample first.' });
+    }
+
+    await client.query('BEGIN');
+
+    // Batch-update all registered samples to sent_to_qc
+    await client.query(
+      `UPDATE mes_presales_samples SET status = 'sent_to_qc' WHERE inquiry_id = $1 AND status = 'registered'`,
+      [id]
+    );
+
+    // Advance inquiry: status → in_progress (if still new), phase → sample_qc
+    await client.query(
+      `UPDATE mes_presales_inquiries
+       SET status = CASE WHEN status = 'new' THEN 'in_progress' ELSE status END,
+           presales_phase = 'sample_qc'
+       WHERE id = $1`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    logActivity(parseInt(id), 'submitted_to_qc', {
+      sample_count: registeredSamples.rows.length,
+      samples: registeredSamples.rows.map(s => s.sample_number),
+    }, req.user);
+
+    // Fire-and-forget: send QC notification email
+    (async () => {
+      try {
+        const allSamples = await pool.query(
+          `SELECT * FROM mes_presales_samples WHERE inquiry_id = $1 AND status = 'sent_to_qc'`,
+          [id]
+        );
+        const allAttachments = await pool.query(
+          'SELECT * FROM inquiry_attachments WHERE inquiry_id = $1',
+          [id]
+        );
+        await notifyQCSamplesReceived({
+          inquiry: inq.rows[0],
+          samples: allSamples.rows,
+          attachments: allAttachments.rows,
+          senderName: actorName(req.user),
+          appUrl: process.env.APP_URL || `${req.protocol}://${req.get('host')}`,
+        });
+
+        await notifyRoleUsers(
+          QC_NOTIFY_ROLES,
+          {
+            type: 'sar_submitted',
+            title: `New SAR submitted — ${inq.rows[0]?.inquiry_number}`,
+            message: `${allSamples.rows.length} sample(s) sent to QC by ${actorName(req.user)}`,
+            link: '/mes/qc',
+            referenceType: 'inquiry',
+            referenceId: parseInt(id, 10),
+          },
+          { excludeUserIds: [req.user?.id] }
+        );
+      } catch (emailErr) {
+        logger.error('MES PreSales: failed to send QC notifications on batch submit', emailErr);
+      }
+    })();
+
+    logger.info(`MES PreSales: ${registeredSamples.rows.length} samples batch-submitted to QC for inquiry #${id}`);
+    res.json({ success: true, data: { submitted_count: registeredSamples.rows.length } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error batch-submitting to QC', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /inquiries/:id/recall — Recall samples from QC (before QC starts processing)
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/inquiries/:id/recall', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    // Check if any samples have advanced beyond sent_to_qc (QC started processing)
+    const advancedCount = await client.query(
+      `SELECT COUNT(*) FROM mes_presales_samples
+       WHERE inquiry_id = $1 AND status NOT IN ('registered', 'sent_to_qc')`,
+      [id]
+    );
+    if (parseInt(advancedCount.rows[0].count, 10) > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot recall — QC has already started processing some samples. Contact QC Lab to coordinate.',
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // Move all sent_to_qc samples back to registered
+    const recalled = await client.query(
+      `UPDATE mes_presales_samples SET status = 'registered'
+       WHERE inquiry_id = $1 AND status = 'sent_to_qc' RETURNING *`,
+      [id]
+    );
+
+    // Move phase back to inquiry (keep status as in_progress — work has started)
+    await client.query(
+      `UPDATE mes_presales_inquiries SET presales_phase = 'inquiry' WHERE id = $1`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    logActivity(parseInt(id), 'samples_recalled', {
+      sample_count: recalled.rows.length,
+      samples: recalled.rows.map(s => s.sample_number),
+    }, req.user);
+
+    logger.info(`MES PreSales: ${recalled.rows.length} samples recalled from QC for inquiry #${id}`);
+    res.json({ success: true, data: { recalled_count: recalled.rows.length } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error recalling samples', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// PATCH /samples/:sampleId/qc-result — QC submits test result
+router.patch('/samples/:sampleId/qc-result', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user)) {
+    return res.status(403).json({ success: false, error: 'QC role required' });
+  }
+  try {
+    const { sampleId } = req.params;
+    const { qc_result, qc_notes } = req.body;
+
+    if (!['pass', 'fail', 'conditional'].includes(qc_result)) {
+      return res.status(400).json({ success: false, error: 'qc_result must be pass, fail, or conditional' });
+    }
+
+    const existing = await pool.query('SELECT * FROM mes_presales_samples WHERE id = $1', [sampleId]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+
+    const sample = existing.rows[0];
+    const newStatus = qc_result === 'pass' ? 'approved' : qc_result === 'fail' ? 'rejected' : 'tested';
+
+    const updated = await pool.query(
+      `UPDATE mes_presales_samples
+       SET qc_result = $1, qc_notes = $2, status = $3, qc_completed_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      [qc_result, qc_notes || null, newStatus, sampleId]
+    );
+
+    logActivity(sample.inquiry_id, 'qc_result_submitted', {
+      sample_number: sample.sample_number,
+      result: qc_result,
+      notes: qc_notes,
+    }, req.user);
+
+    // Auto-advance presales_phase: if ALL samples for this inquiry are now done (approved/rejected/tested),
+    // move directly to clearance phase (MOQ & Material checks are handled in pre-production, not pre-sales)
+    if (['approved', 'rejected', 'tested'].includes(newStatus)) {
+      const pendingSamples = await pool.query(
+        `SELECT COUNT(*) FROM mes_presales_samples
+         WHERE inquiry_id = $1 AND status NOT IN ('approved','rejected','tested')`,
+        [sample.inquiry_id]
+      );
+      if (parseInt(pendingSamples.rows[0].count, 10) === 0) {
+        pool.query(
+          `UPDATE mes_presales_inquiries SET presales_phase = 'clearance' WHERE id = $1 AND presales_phase = 'sample_qc'`,
+          [sample.inquiry_id]
+        ).catch(() => {});
+      }
+    }
+
+    res.json({ success: true, data: updated.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error submitting QC result', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /samples/by-number/:sampleNumber — lookup by sample number (for QR scan)
+router.get('/samples/by-number/:sampleNumber', authenticate, async (req, res) => {
+  try {
+    const { sampleNumber } = req.params;
+    const result = await pool.query(
+      `SELECT s.*, i.inquiry_number, i.status AS inquiry_status,
+              i.product_groups, i.customer_country, i.notes AS inquiry_notes
+       FROM mes_presales_samples s
+       JOIN mes_presales_inquiries i ON i.id = s.inquiry_id
+       WHERE s.sample_number = $1`,
+      [sampleNumber]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+
+    // Also fetch attachments with type 'tds' or 'specification' for QC
+    const sample = result.rows[0];
+    const tdsRes = await pool.query(
+      `SELECT * FROM inquiry_attachments
+       WHERE inquiry_id = $1 AND attachment_type IN ('tds', 'specification')
+       ORDER BY created_at DESC`,
+      [sample.inquiry_id]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        sample,
+        tds_attachments: tdsRes.rows,
+      },
+    });
+  } catch (err) {
+    logger.error('MES PreSales: error looking up sample by number', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QC DASHBOARD / INBOX
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /qc/inbox — list samples for QC dashboard
+router.get('/qc/inbox', authenticate, async (req, res) => {
+  try {
+    if (!canAccessQCDashboard(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const allowedStatuses = ['sent_to_qc', 'received_by_qc', 'testing', 'tested', 'approved', 'rejected'];
+    const rawStatuses = (req.query.status || 'sent_to_qc')
+      .toString()
+      .split(',')
+      .map((status) => status.trim())
+      .filter(Boolean);
+
+    const statuses = rawStatuses.filter((status) => allowedStatuses.includes(status));
+    if (statuses.length === 0) {
+      return res.status(400).json({ success: false, error: `Invalid status filter. Allowed: ${allowedStatuses.join(', ')}` });
+    }
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+    const offset = (page - 1) * limit;
+
+    const totalRes = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM mes_presales_samples s
+       WHERE s.status = ANY($1::text[])`,
+      [statuses]
+    );
+
+    const listRes = await pool.query(
+      `SELECT
+         s.id,
+         s.sample_number,
+         i.id AS inquiry_id,
+         i.inquiry_number,
+         i.customer_name,
+         i.customer_country,
+         i.priority,
+         s.product_group,
+         s.sample_type,
+         s.description,
+         s.status,
+         s.created_at,
+         s.created_by_name,
+         s.received_at,
+         s.received_by_qc_name,
+         CASE WHEN s.status IN ('sent_to_qc', 'received_by_qc', 'testing', 'tested', 'approved', 'rejected') THEN s.updated_at ELSE NULL END AS submitted_at,
+         COALESCE(att.attachment_count, 0) AS attachment_count,
+         NULL::text AS cse_status
+       FROM mes_presales_samples s
+       JOIN mes_presales_inquiries i ON i.id = s.inquiry_id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS attachment_count
+         FROM inquiry_attachments a
+         WHERE a.inquiry_id = s.inquiry_id
+           AND (a.sample_id = s.id OR a.sample_id IS NULL)
+       ) att ON TRUE
+       WHERE s.status = ANY($1::text[])
+       ORDER BY
+         CASE i.priority
+           WHEN 'high' THEN 1
+           WHEN 'medium' THEN 2
+           WHEN 'normal' THEN 3
+           WHEN 'low' THEN 4
+           ELSE 5
+         END,
+         s.updated_at DESC
+       LIMIT $2 OFFSET $3`,
+      [statuses, limit, offset]
+    );
+
+    res.json({
+      success: true,
+      data: listRes.rows,
+      pagination: {
+        page,
+        limit,
+        total: parseInt(totalRes.rows[0].total, 10) || 0,
+      },
+    });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching QC inbox', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /qc/stats — dashboard cards for QC
+router.get('/qc/stats', authenticate, async (req, res) => {
+  try {
+    if (!canAccessQCDashboard(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const statsRes = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE status = 'sent_to_qc') AS pending_receipt,
+         COUNT(*) FILTER (WHERE status = 'received_by_qc') AS received,
+         COUNT(*) FILTER (WHERE status = 'testing') AS testing,
+         COUNT(*) FILTER (WHERE status IN ('tested', 'approved', 'rejected') AND DATE(updated_at) = CURRENT_DATE) AS completed_today,
+         COUNT(*) FILTER (WHERE status IN ('tested', 'approved', 'rejected') AND updated_at >= NOW() - INTERVAL '7 days') AS completed_this_week
+       FROM mes_presales_samples`
+    );
+
+    res.json({ success: true, data: statsRes.rows[0] || {} });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching QC stats', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /qc/batch-receive — mark many samples as received
+router.post('/qc/batch-receive', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!canAccessQCDashboard(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const sampleIds = Array.isArray(req.body?.sample_ids)
+      ? req.body.sample_ids.map((id) => parseInt(id, 10)).filter((id) => Number.isInteger(id) && id > 0)
+      : [];
+
+    if (sampleIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'sample_ids must be a non-empty array of numbers' });
+    }
+
+    await client.query('BEGIN');
+
+    const updateRes = await client.query(
+      `UPDATE mes_presales_samples
+       SET status = 'received_by_qc',
+           received_by_qc_user = $1,
+           received_by_qc_name = $2,
+           received_at = NOW(),
+           updated_at = NOW()
+       WHERE id = ANY($3::int[])
+         AND status = 'sent_to_qc'
+       RETURNING id, inquiry_id, sample_number`,
+      [req.user?.id || null, actorName(req.user), sampleIds]
+    );
+
+    const byInquiry = updateRes.rows.reduce((acc, sample) => {
+      if (!acc[sample.inquiry_id]) acc[sample.inquiry_id] = [];
+      acc[sample.inquiry_id].push(sample.sample_number);
+      return acc;
+    }, {});
+
+    const inquiryIds = Object.keys(byInquiry).map((id) => parseInt(id, 10));
+    for (const inquiryId of inquiryIds) {
+      await logActivity(inquiryId, 'qc_batch_received', {
+        sample_count: byInquiry[inquiryId]?.length || 0,
+        samples: byInquiry[inquiryId] || [],
+      }, req.user, client);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      data: {
+        received_count: updateRes.rows.length,
+        sample_ids: updateRes.rows.map((row) => row.id),
+      },
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error in QC batch receive', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// G-010: BATCH SAMPLE ANALYSIS
+// Create individual analysis drafts for multiple samples using a shared parameter template.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// POST /qc/batch-analyses — create draft analyses for multiple samples at once
+router.post('/qc/batch-analyses', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user)) {
+    return res.status(403).json({ success: false, error: 'QC access required' });
+  }
+
+  const { sample_ids, test_category = 'physical', test_parameters = [] } = req.body || {};
+  const ids = Array.isArray(sample_ids)
+    ? sample_ids.map((id) => parseInt(id, 10)).filter((id) => Number.isInteger(id) && id > 0)
+    : [];
+
+  if (ids.length < 2) {
+    return res.status(400).json({ success: false, error: 'At least 2 sample_ids required for batch analysis' });
+  }
+  if (!Array.isArray(test_parameters) || test_parameters.length === 0) {
+    return res.status(400).json({ success: false, error: 'test_parameters must be a non-empty array' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Verify all samples exist and belong to QC-visible states
+    const sampleRes = await client.query(
+      `SELECT s.id, s.sample_number, s.inquiry_id, s.product_group, s.status
+       FROM mes_presales_samples s
+       WHERE s.id = ANY($1::int[])`,
+      [ids]
+    );
+
+    if (sampleRes.rows.length !== ids.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'One or more sample IDs not found' });
+    }
+
+    const DIVISION = process.env.DIVISION || 'FP';
+    const analystName = actorName(req.user);
+    const created = [];
+
+    for (const sample of sampleRes.rows) {
+      // Build per-sample parameter rows — template structure, empty results
+      const perSampleParams = test_parameters.map((p) => ({
+        name:               p.name || '',
+        spec:               p.spec || '',
+        result:             p.results?.[sample.id] ?? '',   // pre-fill if caller passed per-sample results
+        unit:               p.unit || '',
+        method:             p.method || '',
+        min_value:          p.min_value ?? null,
+        max_value:          p.max_value ?? null,
+        acceptance_formula: p.acceptance_formula || '',
+        status:             p.results?.[sample.id] ? 'pass' : 'pending', // will be computed on submit
+      }));
+
+      // Check for existing draft
+      const existingDraft = await client.query(
+        `SELECT id FROM mes_qc_analyses
+         WHERE sample_id = $1 AND status = 'draft'
+         ORDER BY created_at DESC LIMIT 1`,
+        [sample.id]
+      );
+
+      let analysisRow;
+      if (existingDraft.rows.length > 0) {
+        // Update existing draft's parameters
+        const upd = await client.query(
+          `UPDATE mes_qc_analyses
+           SET test_category     = $1,
+               test_parameters   = $2,
+               analyzed_by       = $3,
+               analyzed_by_name  = $4,
+               updated_at        = NOW()
+           WHERE id = $5
+           RETURNING id`,
+          [test_category, JSON.stringify(perSampleParams), req.user?.id || null, analystName, existingDraft.rows[0].id]
+        );
+        analysisRow = upd.rows[0];
+      } else {
+        // Create a new draft
+        const ins = await client.query(
+          `INSERT INTO mes_qc_analyses
+             (sample_id, inquiry_id, test_category, test_parameters,
+              analyzed_by, analyzed_by_name, status, division)
+           VALUES ($1, $2, $3, $4, $5, $6, 'draft', $7)
+           RETURNING id`,
+          [sample.id, sample.inquiry_id, test_category, JSON.stringify(perSampleParams),
+           req.user?.id || null, analystName, DIVISION]
+        );
+        analysisRow = ins.rows[0];
+      }
+
+      created.push({ sample_id: sample.id, sample_number: sample.sample_number, analysis_id: analysisRow.id });
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      success: true,
+      data: {
+        created_count: created.length,
+        analyses: created,
+      },
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES: error creating batch analyses', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /qc/analyses/:sampleId — load sample + latest analysis draft/submission
+router.get('/qc/analyses/:sampleId', authenticate, async (req, res) => {
+  try {
+    if (!canAccessQCDashboard(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const sampleId = parseInt(req.params.sampleId, 10);
+    if (!Number.isInteger(sampleId) || sampleId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid sample id' });
+    }
+
+    const sampleRes = await pool.query(
+      `SELECT s.*, i.inquiry_number, i.customer_name, i.customer_country, i.priority, i.status AS inquiry_status
+       FROM mes_presales_samples s
+       JOIN mes_presales_inquiries i ON i.id = s.inquiry_id
+       WHERE s.id = $1`,
+      [sampleId]
+    );
+
+    if (sampleRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+
+    const sample = sampleRes.rows[0];
+
+    const analysisRes = await pool.query(
+      `SELECT *
+       FROM mes_qc_analyses
+       WHERE sample_id = $1
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [sampleId]
+    );
+
+    const attachmentsRes = await pool.query(
+      `SELECT id, file_name, file_path, file_size, attachment_type, created_at, sample_id
+       FROM inquiry_attachments
+       WHERE inquiry_id = $1
+         AND (sample_id = $2 OR sample_id IS NULL)
+       ORDER BY created_at DESC`,
+      [sample.inquiry_id, sampleId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        sample,
+        analysis: analysisRes.rows[0] || null,
+        attachments: attachmentsRes.rows || [],
+      },
+    });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching QC analysis by sample', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /qc/analyses — create or update draft analysis for sample
+router.post('/qc/analyses', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!canAccessQCDashboard(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const sampleId = parseInt(req.body?.sample_id, 10);
+    if (!Number.isInteger(sampleId) || sampleId <= 0) {
+      return res.status(400).json({ success: false, error: 'sample_id is required' });
+    }
+
+    const sampleRes = await client.query(
+      `SELECT s.id, s.inquiry_id, s.sample_number, i.inquiry_number
+       FROM mes_presales_samples s
+       JOIN mes_presales_inquiries i ON i.id = s.inquiry_id
+       WHERE s.id = $1`,
+      [sampleId]
+    );
+
+    if (sampleRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+
+    const sample = sampleRes.rows[0];
+    const {
+      test_category = null,
+      test_parameters = [],
+      visual_inspection = null,
+      print_quality = null,
+      seal_strength_value = null,
+      seal_strength_unit = null,
+      seal_strength_status = null,
+      observations = null,
+      overall_result = null,
+      recommendation = null,
+    } = req.body;
+
+    const normalizedResult = normalizeQcOverallResult(overall_result);
+    if (overall_result && !normalizedResult) {
+      return res.status(400).json({ success: false, error: 'overall_result must be pass, fail, or conditional' });
+    }
+
+    await client.query('BEGIN');
+
+    const existingDraft = await client.query(
+      `SELECT id
+       FROM mes_qc_analyses
+       WHERE sample_id = $1 AND status = 'draft'
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [sampleId]
+    );
+
+    let analysisRow;
+    if (existingDraft.rows.length > 0) {
+      const updateRes = await client.query(
+        `UPDATE mes_qc_analyses
+         SET test_category = $1,
+             test_parameters = $2::jsonb,
+             visual_inspection = $3,
+             print_quality = $4,
+             seal_strength_value = $5,
+             seal_strength_unit = $6,
+             seal_strength_status = $7,
+             observations = $8,
+             overall_result = $9,
+             recommendation = $10,
+             analyzed_by = $11,
+             analyzed_by_name = $12,
+             started_at = COALESCE(started_at, NOW()),
+             updated_at = NOW()
+         WHERE id = $13
+         RETURNING *`,
+        [
+          test_category,
+          JSON.stringify(Array.isArray(test_parameters) ? test_parameters : []),
+          visual_inspection,
+          print_quality,
+          seal_strength_value,
+          seal_strength_unit,
+          seal_strength_status,
+          observations,
+          normalizedResult,
+          recommendation,
+          req.user?.id || null,
+          actorName(req.user),
+          existingDraft.rows[0].id,
+        ]
+      );
+      analysisRow = updateRes.rows[0];
+    } else {
+      const insertRes = await client.query(
+        `INSERT INTO mes_qc_analyses (
+           sample_id, inquiry_id,
+           test_category, test_parameters,
+           visual_inspection, print_quality,
+           seal_strength_value, seal_strength_unit, seal_strength_status,
+           observations, overall_result, recommendation,
+           status,
+           analyzed_by, analyzed_by_name,
+           started_at
+         )
+         VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9,$10,$11,$12,'draft',$13,$14,NOW())
+         RETURNING *`,
+        [
+          sampleId,
+          sample.inquiry_id,
+          test_category,
+          JSON.stringify(Array.isArray(test_parameters) ? test_parameters : []),
+          visual_inspection,
+          print_quality,
+          seal_strength_value,
+          seal_strength_unit,
+          seal_strength_status,
+          observations,
+          normalizedResult,
+          recommendation,
+          req.user?.id || null,
+          actorName(req.user),
+        ]
+      );
+      analysisRow = insertRes.rows[0];
+    }
+
+    await logActivity(sample.inquiry_id, 'qc_analysis_saved', {
+      sample_number: sample.sample_number,
+      analysis_id: analysisRow.id,
+      status: analysisRow.status,
+    }, req.user, client);
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: analysisRow });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error saving QC analysis draft', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// PATCH /qc/analyses/:id — update analysis draft fields
+router.patch('/qc/analyses/:id', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!canAccessQCDashboard(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const analysisId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(analysisId) || analysisId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid analysis id' });
+    }
+
+    const fields = [
+      'test_category',
+      'visual_inspection',
+      'print_quality',
+      'seal_strength_value',
+      'seal_strength_unit',
+      'seal_strength_status',
+      'observations',
+      'recommendation',
+    ];
+
+    const sets = [];
+    const values = [];
+    let idx = 1;
+
+    for (const field of fields) {
+      if (req.body[field] !== undefined) {
+        sets.push(`${field} = $${idx++}`);
+        values.push(req.body[field]);
+      }
+    }
+
+    if (req.body.test_parameters !== undefined) {
+      sets.push(`test_parameters = $${idx++}::jsonb`);
+      values.push(JSON.stringify(Array.isArray(req.body.test_parameters) ? req.body.test_parameters : []));
+    }
+
+    if (req.body.overall_result !== undefined) {
+      const normalizedResult = normalizeQcOverallResult(req.body.overall_result);
+      if (!normalizedResult) {
+        return res.status(400).json({ success: false, error: 'overall_result must be pass, fail, or conditional' });
+      }
+      sets.push(`overall_result = $${idx++}`);
+      values.push(normalizedResult);
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+
+    sets.push(`analyzed_by = $${idx++}`);
+    values.push(req.user?.id || null);
+    sets.push(`analyzed_by_name = $${idx++}`);
+    values.push(actorName(req.user));
+    sets.push(`updated_at = NOW()`);
+    values.push(analysisId);
+
+    await client.query('BEGIN');
+
+    const updateRes = await client.query(
+      `UPDATE mes_qc_analyses
+       SET ${sets.join(', ')}
+       WHERE id = $${idx}
+       RETURNING *`,
+      values
+    );
+
+    if (updateRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Analysis not found' });
+    }
+
+    const updated = updateRes.rows[0];
+    await logActivity(updated.inquiry_id, 'qc_analysis_updated', {
+      sample_id: updated.sample_id,
+      analysis_id: updated.id,
+      status: updated.status,
+    }, req.user, client);
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error updating QC analysis', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /qc/analyses/:id/submit — submit analysis and mark sample tested
+router.post('/qc/analyses/:id/submit', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!canAccessQCDashboard(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const analysisId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(analysisId) || analysisId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid analysis id' });
+    }
+
+    await client.query('BEGIN');
+
+    const analysisRes = await client.query(
+      `SELECT a.*, s.id AS sample_id, s.sample_number, s.inquiry_id
+       FROM mes_qc_analyses a
+       JOIN mes_presales_samples s ON s.id = a.sample_id
+       WHERE a.id = $1
+       FOR UPDATE`,
+      [analysisId]
+    );
+
+    if (analysisRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Analysis not found' });
+    }
+
+    const current = analysisRes.rows[0];
+    const submitResult = req.body.overall_result !== undefined
+      ? normalizeQcOverallResult(req.body.overall_result)
+      : normalizeQcOverallResult(current.overall_result);
+
+    if (!submitResult) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'overall_result is required for submit' });
+    }
+
+    const updatedAnalysisRes = await client.query(
+      `UPDATE mes_qc_analyses
+       SET test_category = COALESCE($1, test_category),
+           test_parameters = COALESCE($2::jsonb, test_parameters),
+           visual_inspection = COALESCE($3, visual_inspection),
+           print_quality = COALESCE($4, print_quality),
+           seal_strength_value = COALESCE($5, seal_strength_value),
+           seal_strength_unit = COALESCE($6, seal_strength_unit),
+           seal_strength_status = COALESCE($7, seal_strength_status),
+           observations = COALESCE($8, observations),
+           overall_result = $9,
+           recommendation = COALESCE($10, recommendation),
+           status = 'submitted',
+           analyzed_by = $11,
+           analyzed_by_name = $12,
+           submitted_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $13
+       RETURNING *`,
+      [
+        req.body.test_category,
+        req.body.test_parameters !== undefined
+          ? JSON.stringify(Array.isArray(req.body.test_parameters) ? req.body.test_parameters : [])
+          : null,
+        req.body.visual_inspection,
+        req.body.print_quality,
+        req.body.seal_strength_value,
+        req.body.seal_strength_unit,
+        req.body.seal_strength_status,
+        req.body.observations,
+        submitResult,
+        req.body.recommendation,
+        req.user?.id || null,
+        actorName(req.user),
+        analysisId,
+      ]
+    );
+
+    const updatedAnalysis = updatedAnalysisRes.rows[0];
+
+    await client.query(
+      `UPDATE mes_presales_samples
+       SET status = 'tested',
+           qc_result = $1,
+           qc_notes = $2,
+           qc_completed_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $3`,
+      [submitResult, updatedAnalysis.observations || null, current.sample_id]
+    );
+
+    await logActivity(current.inquiry_id, 'qc_result_submitted', {
+      sample_number: current.sample_number,
+      result: submitResult,
+      notes: updatedAnalysis.observations || null,
+      analysis_id: updatedAnalysis.id,
+    }, req.user, client);
+
+    let cseReport = null;
+    const existingCseRes = await client.query(
+      `SELECT * FROM mes_cse_reports WHERE analysis_id = $1 LIMIT 1`,
+      [updatedAnalysis.id]
+    );
+
+    if (existingCseRes.rows.length > 0) {
+      cseReport = existingCseRes.rows[0];
+    } else {
+      const cseNoRes = await client.query(`SELECT generate_cse_number($1) AS cse_number`, [DIVISION]);
+      const cseNumber = cseNoRes.rows[0]?.cse_number;
+
+      const inquiryRes = await client.query(
+        `SELECT inquiry_number, customer_name
+         FROM mes_presales_inquiries
+         WHERE id = $1`,
+        [current.inquiry_id]
+      );
+      const inquiry = inquiryRes.rows[0] || {};
+
+      const cseInsertRes = await client.query(
+        `INSERT INTO mes_cse_reports (
+           cse_number,
+           sample_id,
+           inquiry_id,
+           analysis_id,
+           customer_name,
+           product_group,
+           sample_number,
+           inquiry_number,
+           test_summary,
+           overall_result,
+           observations,
+           recommendation,
+           status,
+           created_by,
+           created_by_name
+         )
+         VALUES (
+           $1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,'pending_qc_manager',$13,$14
+         )
+         RETURNING *`,
+        [
+          cseNumber,
+          current.sample_id,
+          current.inquiry_id,
+          updatedAnalysis.id,
+          inquiry.customer_name || null,
+          current.product_group || null,
+          current.sample_number,
+          inquiry.inquiry_number || null,
+          JSON.stringify({
+            test_category: updatedAnalysis.test_category,
+            test_parameters: updatedAnalysis.test_parameters,
+            visual_inspection: updatedAnalysis.visual_inspection,
+            print_quality: updatedAnalysis.print_quality,
+            seal_strength_value: updatedAnalysis.seal_strength_value,
+            seal_strength_unit: updatedAnalysis.seal_strength_unit,
+            seal_strength_status: updatedAnalysis.seal_strength_status,
+          }),
+          submitResult,
+          updatedAnalysis.observations || null,
+          updatedAnalysis.recommendation || null,
+          req.user?.id || null,
+          actorName(req.user),
+        ]
+      );
+
+      cseReport = cseInsertRes.rows[0];
+
+      // H-002: QC Manager review SLA (24 h)
+      await client.query(
+        `UPDATE mes_cse_reports SET sla_due_at = NOW() + INTERVAL '24 hours' WHERE id = $1`,
+        [cseReport.id]
+      );
+
+      await logActivity(current.inquiry_id, 'cse_generated', {
+        sample_number: current.sample_number,
+        cse_number: cseReport.cse_number,
+        cse_id: cseReport.id,
+      }, req.user, client);
+    }
+
+    const pendingSamples = await client.query(
+      `SELECT COUNT(*) AS count
+       FROM mes_presales_samples
+       WHERE inquiry_id = $1
+         AND status NOT IN ('tested', 'approved', 'rejected')`,
+      [current.inquiry_id]
+    );
+
+    if (parseInt(pendingSamples.rows[0].count, 10) === 0) {
+      await client.query(
+        `UPDATE mes_presales_inquiries
+         SET presales_phase = 'clearance'
+         WHERE id = $1 AND presales_phase = 'sample_qc'`,
+        [current.inquiry_id]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    try {
+      await notifyRoleUsers(
+        QC_NOTIFY_ROLES,
+        {
+          type: 'cse_pending_approval',
+          title: `CSE ready for QC review — ${cseReport.cse_number}`,
+          message: `Sample ${current.sample_number} submitted by ${actorName(req.user)}`,
+          link: `/mes/qc/cse/${cseReport.id}`,
+          referenceType: 'cse',
+          referenceId: cseReport.id,
+        },
+        { excludeUserIds: [req.user?.id] }
+      );
+    } catch (notifyErr) {
+      logger.warn('MES PreSales: CSE QC-approval notification failed', notifyErr.message);
+    }
+
+    res.json({ success: true, data: { analysis: updatedAnalysis, cse: cseReport } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error submitting QC analysis', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /cse — list CSE reports
+router.get('/cse', authenticate, async (req, res) => {
+  try {
+    if (!canAccessCSEWorkflow(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 30, 1), 200);
+    const offset = (page - 1) * limit;
+
+    const rawStatus = (req.query.status || '').toString();
+    const statusList = rawStatus
+      ? rawStatus.split(',').map((status) => status.trim()).filter(Boolean)
+      : [];
+
+    const params = [];
+    const conditions = [];
+    let idx = 1;
+
+    if (statusList.length > 0) {
+      conditions.push(`c.status = ANY($${idx++}::text[])`);
+      params.push(statusList);
+    }
+
+    if (req.query.inquiry_id) {
+      conditions.push(`c.inquiry_id = $${idx++}`);
+      params.push(parseInt(req.query.inquiry_id, 10));
+    }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) AS total FROM mes_cse_reports c ${whereClause}`,
+      params
+    );
+
+    const listRes = await pool.query(
+      `SELECT
+         c.id,
+         c.cse_number,
+         c.sample_id,
+         c.inquiry_id,
+         c.analysis_id,
+         c.customer_name,
+         c.product_group,
+         c.sample_number,
+         c.inquiry_number,
+         c.overall_result,
+         c.status,
+         c.final_status,
+         c.created_by_name,
+         c.created_at,
+         c.updated_at
+       FROM mes_cse_reports c
+       ${whereClause}
+       ORDER BY c.updated_at DESC
+       LIMIT $${idx++} OFFSET $${idx++}`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      success: true,
+      data: listRes.rows,
+      pagination: {
+        page,
+        limit,
+        total: parseInt(countRes.rows[0]?.total, 10) || 0,
+      },
+    });
+  } catch (err) {
+    logger.error('MES PreSales: error listing CSE reports', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /cse/:id — CSE full detail
+router.get('/cse/:id', authenticate, async (req, res) => {
+  try {
+    if (!canAccessCSEWorkflow(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const cseId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(cseId) || cseId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid CSE id' });
+    }
+
+    const detailRes = await pool.query(
+      `SELECT
+         c.*,
+         a.test_category,
+         a.test_parameters,
+         a.visual_inspection,
+         a.print_quality,
+         a.seal_strength_value,
+         a.seal_strength_unit,
+         a.seal_strength_status,
+         a.observations AS analysis_observations,
+         a.recommendation AS analysis_recommendation,
+         a.analyzed_by_name,
+         a.submitted_at AS analysis_submitted_at,
+         s.status AS sample_status
+       FROM mes_cse_reports c
+       LEFT JOIN mes_qc_analyses a ON a.id = c.analysis_id
+       LEFT JOIN mes_presales_samples s ON s.id = c.sample_id
+       WHERE c.id = $1`,
+      [cseId]
+    );
+
+    if (detailRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'CSE not found' });
+    }
+
+    res.json({ success: true, data: detailRes.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error loading CSE detail', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /cse/:id/approve — stage approval (QC Manager / Production Manager)
+router.post('/cse/:id/approve', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!canAccessCSEWorkflow(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const cseId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(cseId) || cseId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid CSE id' });
+    }
+
+    const notes = req.body?.notes || null;
+
+    await client.query('BEGIN');
+
+    const cseRes = await client.query(
+      `SELECT * FROM mes_cse_reports WHERE id = $1 FOR UPDATE`,
+      [cseId]
+    );
+    if (cseRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'CSE not found' });
+    }
+
+    const cse = cseRes.rows[0];
+    let updateRes;
+
+    if (cse.status === 'pending_qc_manager') {
+      if (!canApproveQCStage(req.user)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Only QC manager roles can approve at this stage' });
+      }
+
+      updateRes = await client.query(
+        `UPDATE mes_cse_reports
+         SET qc_manager_status = 'approved',
+             qc_manager_notes = $1,
+             qc_manager_user_id = $2,
+             qc_manager_name = $3,
+             qc_manager_acted_at = NOW(),
+             status = 'pending_production',
+             sla_due_at = NOW() + INTERVAL '24 hours',
+             updated_at = NOW()
+         WHERE id = $4
+         RETURNING *`,
+        [notes, req.user?.id || null, actorName(req.user), cseId]
+      );
+
+      await logActivity(cse.inquiry_id, 'cse_qc_manager_approved', {
+        cse_number: cse.cse_number,
+        cse_id: cse.id,
+      }, req.user, client);
+    } else if (cse.status === 'pending_production') {
+      if (!canApproveProductionStage(req.user)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Only production manager roles can approve at this stage' });
+      }
+
+      updateRes = await client.query(
+        `UPDATE mes_cse_reports
+         SET prod_manager_status = 'approved',
+             prod_manager_notes = $1,
+             prod_manager_user_id = $2,
+             prod_manager_name = $3,
+             prod_manager_acted_at = NOW(),
+             status = 'approved',
+             final_status = 'approved',
+             completed_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $4
+         RETURNING *`,
+        [notes, req.user?.id || null, actorName(req.user), cseId]
+      );
+
+      await client.query(
+        `UPDATE mes_presales_samples
+         SET status = 'approved',
+             updated_at = NOW()
+         WHERE id = $1`,
+        [cse.sample_id]
+      );
+
+      await logActivity(cse.inquiry_id, 'cse_production_approved', {
+        cse_number: cse.cse_number,
+        cse_id: cse.id,
+      }, req.user, client);
+    } else {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: `CSE cannot be approved from status: ${cse.status}` });
+    }
+
+    // G-006: log revision entry
+    await insertCSERevision(client, cseId, cse, 'approved', notes, req.user);
+    logAudit(pool, 'mes_cse_reports', cseId, 'updated', cse, updateRes.rows[0], req.user);
+
+    await client.query('COMMIT');
+
+    try {
+      if (cse.status === 'pending_qc') {
+        await notifyRoleUsers(
+          ['production_manager', 'manager'],
+          {
+            type: 'cse_pending_production',
+            title: `CSE pending production approval — ${cse.cse_number}`,
+            message: `QC stage approved by ${actorName(req.user)}`,
+            link: `/mes/qc/cse/${cse.id}`,
+            referenceType: 'cse',
+            referenceId: cse.id,
+          },
+          { excludeUserIds: [req.user?.id] }
+        );
+      } else if (cse.status === 'pending_production') {
+        const inqOwner = await pool.query(
+          `SELECT created_by FROM mes_presales_inquiries WHERE id = $1`,
+          [cse.inquiry_id]
+        );
+        const ownerId = inqOwner.rows[0]?.created_by || null;
+        if (ownerId) {
+          await notifyUsers(
+            [ownerId],
+            {
+              type: 'cse_approved',
+              title: `CSE approved — ${cse.cse_number}`,
+              message: `Final approval completed by ${actorName(req.user)}`,
+              link: `/mes/qc/cse/${cse.id}`,
+              referenceType: 'cse',
+              referenceId: cse.id,
+            },
+            { excludeUserIds: [req.user?.id] }
+          );
+        }
+      }
+    } catch (notifyErr) {
+      logger.warn('MES PreSales: CSE approval notification failed', notifyErr.message);
+    }
+
+    res.json({ success: true, data: updateRes.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error approving CSE', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /cse/:id/reject — reject and close CSE
+router.post('/cse/:id/reject', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!canAccessCSEWorkflow(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const cseId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(cseId) || cseId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid CSE id' });
+    }
+
+    const notes = req.body?.notes || null;
+
+    await client.query('BEGIN');
+
+    const cseRes = await client.query(
+      `SELECT * FROM mes_cse_reports WHERE id = $1 FOR UPDATE`,
+      [cseId]
+    );
+    if (cseRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'CSE not found' });
+    }
+
+    const cse = cseRes.rows[0];
+    let updateRes;
+
+    if (cse.status === 'pending_qc_manager') {
+      if (!canApproveQCStage(req.user)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Only QC manager roles can reject at this stage' });
+      }
+
+      updateRes = await client.query(
+        `UPDATE mes_cse_reports
+         SET qc_manager_status = 'rejected',
+             qc_manager_notes = $1,
+             qc_manager_user_id = $2,
+             qc_manager_name = $3,
+             qc_manager_acted_at = NOW(),
+             status = 'rejected',
+             final_status = 'rejected',
+             completed_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $4
+         RETURNING *`,
+        [notes, req.user?.id || null, actorName(req.user), cseId]
+      );
+    } else if (cse.status === 'pending_production') {
+      if (!canApproveProductionStage(req.user)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Only production manager roles can reject at this stage' });
+      }
+
+      updateRes = await client.query(
+        `UPDATE mes_cse_reports
+         SET prod_manager_status = 'rejected',
+             prod_manager_notes = $1,
+             prod_manager_user_id = $2,
+             prod_manager_name = $3,
+             prod_manager_acted_at = NOW(),
+             status = 'rejected',
+             final_status = 'rejected',
+             completed_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $4
+         RETURNING *`,
+        [notes, req.user?.id || null, actorName(req.user), cseId]
+      );
+    } else {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: `CSE cannot be rejected from status: ${cse.status}` });
+    }
+
+    await client.query(
+      `UPDATE mes_presales_samples
+       SET status = 'rejected',
+           updated_at = NOW()
+       WHERE id = $1`,
+      [cse.sample_id]
+    );
+
+    await logActivity(cse.inquiry_id, 'cse_rejected', {
+      cse_number: cse.cse_number,
+      cse_id: cse.id,
+      notes,
+    }, req.user, client);
+
+    // G-006: log revision entry
+    await insertCSERevision(client, cseId, cse, 'rejected', notes, req.user);
+    logAudit(pool, 'mes_cse_reports', cseId, 'updated', cse, updateRes.rows[0], req.user);
+
+    await client.query('COMMIT');
+
+    try {
+      if (cse.created_by) {
+        await notifyUsers(
+          [cse.created_by],
+          {
+            type: 'cse_rejected',
+            title: `CSE rejected — ${cse.cse_number}`,
+            message: notes || `Rejected by ${actorName(req.user)}`,
+            link: `/mes/qc/cse/${cse.id}`,
+            referenceType: 'cse',
+            referenceId: cse.id,
+          },
+          { excludeUserIds: [req.user?.id] }
+        );
+      }
+    } catch (notifyErr) {
+      logger.warn('MES PreSales: CSE reject notification failed', notifyErr.message);
+    }
+
+    res.json({ success: true, data: updateRes.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error rejecting CSE', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /cse/:id/request-revision — send CSE back to QC analysis
+router.post('/cse/:id/request-revision', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!canAccessCSEWorkflow(req.user)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const cseId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(cseId) || cseId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid CSE id' });
+    }
+
+    const notes = req.body?.notes || null;
+
+    await client.query('BEGIN');
+    const cseRes = await client.query(
+      `SELECT * FROM mes_cse_reports WHERE id = $1 FOR UPDATE`,
+      [cseId]
+    );
+    if (cseRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'CSE not found' });
+    }
+
+    const cse = cseRes.rows[0];
+    let updateRes;
+
+    if (cse.status === 'pending_qc_manager') {
+      if (!canApproveQCStage(req.user)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Only QC manager roles can request revision at this stage' });
+      }
+      updateRes = await client.query(
+        `UPDATE mes_cse_reports
+         SET qc_manager_status = 'revision_requested',
+             qc_manager_notes = $1,
+             qc_manager_user_id = $2,
+             qc_manager_name = $3,
+             qc_manager_acted_at = NOW(),
+             status = 'revision_requested',
+             updated_at = NOW()
+         WHERE id = $4
+         RETURNING *`,
+        [notes, req.user?.id || null, actorName(req.user), cseId]
+      );
+    } else if (cse.status === 'pending_production') {
+      if (!canApproveProductionStage(req.user)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Only production manager roles can request revision at this stage' });
+      }
+      updateRes = await client.query(
+        `UPDATE mes_cse_reports
+         SET prod_manager_status = 'revision_requested',
+             prod_manager_notes = $1,
+             prod_manager_user_id = $2,
+             prod_manager_name = $3,
+             prod_manager_acted_at = NOW(),
+             status = 'revision_requested',
+             updated_at = NOW()
+         WHERE id = $4
+         RETURNING *`,
+        [notes, req.user?.id || null, actorName(req.user), cseId]
+      );
+    } else {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: `Revision cannot be requested from status: ${cse.status}` });
+    }
+
+    await client.query(
+      `UPDATE mes_qc_analyses
+       SET status = 'draft',
+           updated_at = NOW()
+       WHERE id = $1`,
+      [cse.analysis_id]
+    );
+
+    await client.query(
+      `UPDATE mes_presales_samples
+       SET status = 'testing',
+           updated_at = NOW()
+       WHERE id = $1`,
+      [cse.sample_id]
+    );
+
+    await logActivity(cse.inquiry_id, 'cse_revision_requested', {
+      cse_number: cse.cse_number,
+      cse_id: cse.id,
+      notes,
+    }, req.user, client);
+
+    // G-006: log revision entry
+    await insertCSERevision(client, cseId, cse, 'revision_requested', notes, req.user);
+    logAudit(pool, 'mes_cse_reports', cseId, 'updated', cse, updateRes.rows[0], req.user);
+
+    await client.query('COMMIT');
+
+    try {
+      if (cse.created_by) {
+        await notifyUsers(
+          [cse.created_by],
+          {
+            type: 'cse_revision_requested',
+            title: `CSE revision requested — ${cse.cse_number}`,
+            message: notes || `Revision requested by ${actorName(req.user)}`,
+            link: `/mes/qc/samples/${cse.sample_id}`,
+            referenceType: 'cse',
+            referenceId: cse.id,
+          },
+          { excludeUserIds: [req.user?.id] }
+        );
+      }
+    } catch (notifyErr) {
+      logger.warn('MES PreSales: CSE revision notification failed', notifyErr.message);
+    }
+
+    res.json({ success: true, data: updateRes.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('MES PreSales: error requesting CSE revision', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// INQUIRY HISTORY — activity log timeline
+// ═════════════════════════════════════════════════════════════════════════════
+
+router.get('/inquiries/:id/history', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const canAccess = await checkInquiryOwnership(req.user, id);
+    if (!canAccess) return res.status(403).json({ success: false, error: 'Access denied' });
+    const result = await pool.query(
+      `SELECT * FROM mes_presales_activity_log
+       WHERE inquiry_id = $1
+       ORDER BY created_at DESC`,
+      [id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching history', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MOQ & FEASIBILITY CHECKS
+// ═════════════════════════════════════════════════════════════════════════════
+
+// List MOQ checks for an inquiry
+router.get('/inquiries/:id/moq-checks', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT m.*, s.sample_number
+       FROM mes_presales_moq_checks m
+       LEFT JOIN mes_presales_samples s ON s.id = m.sample_id
+       WHERE m.inquiry_id = $1
+       ORDER BY m.created_at ASC`,
+      [req.params.id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching MOQ checks', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Create MOQ check
+router.post('/inquiries/:id/moq-checks', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    const {
+      sample_id, product_group, customer_qty, moq_required, unit,
+      meets_moq, production_capacity, production_days,
+      tooling_available, tooling_notes, feasibility_status, notes
+    } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO mes_presales_moq_checks
+       (inquiry_id, sample_id, product_group, customer_qty, moq_required, unit,
+        meets_moq, production_capacity, production_days,
+        tooling_available, tooling_notes, feasibility_status, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       RETURNING *`,
+      [id, sample_id || null, product_group, customer_qty, moq_required, unit || 'Kgs',
+       meets_moq, production_capacity, production_days,
+       tooling_available, tooling_notes, feasibility_status || 'pending', notes]
+    );
+
+    await logActivity(id, 'moq_check_added', {
+      product_group,
+      customer_qty,
+      moq_required,
+      meets_moq,
+      feasibility_status: feasibility_status || 'pending',
+    }, req.user);
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error creating MOQ check', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Update MOQ check
+router.patch('/moq-checks/:checkId', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { checkId } = req.params;
+    const fields = ['sample_id','product_group','customer_qty','moq_required','unit',
+                    'meets_moq','production_capacity','production_days',
+                    'tooling_available','tooling_notes','feasibility_status','notes'];
+    const sets = [];
+    const vals = [];
+    let idx = 1;
+    for (const f of fields) {
+      if (req.body[f] !== undefined) {
+        sets.push(`${f} = $${idx++}`);
+        vals.push(req.body[f]);
+      }
+    }
+    if (sets.length === 0) return res.status(400).json({ success: false, error: 'No fields to update' });
+
+    // If verifying, stamp the user
+    if (req.body.feasibility_status && req.body.feasibility_status !== 'pending') {
+      sets.push(`verified_by = $${idx++}`);     vals.push(req.user?.id);
+      sets.push(`verified_by_name = $${idx++}`); vals.push(actorName(req.user));
+      sets.push(`verified_at = $${idx++}`);      vals.push(new Date());
+    }
+    sets.push(`updated_at = $${idx++}`); vals.push(new Date());
+    vals.push(checkId);
+
+    const result = await pool.query(
+      `UPDATE mes_presales_moq_checks SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+      vals
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Check not found' });
+
+    // F-004: log activity
+    if (result.rows[0]?.inquiry_id) {
+      logActivity(result.rows[0].inquiry_id, 'moq_check_updated', { check_id: parseInt(checkId) }, req.user);
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error updating MOQ check', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Delete MOQ check
+router.delete('/moq-checks/:checkId', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    await pool.query('DELETE FROM mes_presales_moq_checks WHERE id = $1', [req.params.checkId]);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('MES PreSales: error deleting MOQ check', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Update inquiry MOQ overall status
+router.patch('/inquiries/:id/moq-status', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    const { moq_status } = req.body;
+    const allowed = ['pending', 'verified', 'failed', 'partial'];
+    if (!allowed.includes(moq_status)) {
+      return res.status(400).json({ success: false, error: `moq_status must be one of: ${allowed.join(', ')}` });
+    }
+    await pool.query('UPDATE mes_presales_inquiries SET moq_status = $1 WHERE id = $2', [moq_status, id]);
+
+    await logActivity(id, 'moq_status_changed', { moq_status }, req.user);
+
+    // Auto-advance presales_phase
+    if (moq_status === 'verified') {
+      await pool.query(`UPDATE mes_presales_inquiries SET presales_phase = 'material_check' WHERE id = $1 AND presales_phase = 'moq_review'`, [id]);
+    }
+
+    res.json({ success: true, data: { moq_status } });
+  } catch (err) {
+    logger.error('MES PreSales: error updating MOQ status', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MATERIAL AVAILABILITY CHECKS
+// ═════════════════════════════════════════════════════════════════════════════
+
+// List material checks for an inquiry
+router.get('/inquiries/:id/material-checks', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM mes_presales_material_checks
+       WHERE inquiry_id = $1
+       ORDER BY created_at ASC`,
+      [req.params.id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES PreSales: error fetching material checks', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Create material check
+router.post('/inquiries/:id/material-checks', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    const {
+      material_type, material_name, specification, required_qty, available_qty,
+      unit, is_available, supplier, lead_time_days, estimated_cost, currency,
+      status, notes
+    } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO mes_presales_material_checks
+       (inquiry_id, material_type, material_name, specification, required_qty,
+        available_qty, unit, is_available, supplier, lead_time_days,
+        estimated_cost, currency, status, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       RETURNING *`,
+      [id, material_type, material_name, specification, required_qty,
+       available_qty, unit || 'Kgs', is_available, supplier, lead_time_days,
+       estimated_cost, currency || 'AED', status || 'pending', notes]
+    );
+
+    await logActivity(id, 'material_check_added', {
+      material_type,
+      material_name,
+      status: status || 'pending',
+    }, req.user);
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error creating material check', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Update material check
+router.patch('/material-checks/:checkId', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { checkId } = req.params;
+    const fields = ['material_type','material_name','specification','required_qty',
+                    'available_qty','unit','is_available','supplier','lead_time_days',
+                    'estimated_cost','currency','status','notes'];
+    const sets = [];
+    const vals = [];
+    let idx = 1;
+    for (const f of fields) {
+      if (req.body[f] !== undefined) {
+        sets.push(`${f} = $${idx++}`);
+        vals.push(req.body[f]);
+      }
+    }
+    if (sets.length === 0) return res.status(400).json({ success: false, error: 'No fields to update' });
+
+    if (req.body.status && req.body.status !== 'pending') {
+      sets.push(`checked_by = $${idx++}`);     vals.push(req.user?.id);
+      sets.push(`checked_by_name = $${idx++}`); vals.push(actorName(req.user));
+      sets.push(`checked_at = $${idx++}`);      vals.push(new Date());
+    }
+    sets.push(`updated_at = $${idx++}`); vals.push(new Date());
+    vals.push(checkId);
+
+    const result = await pool.query(
+      `UPDATE mes_presales_material_checks SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+      vals
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Check not found' });
+
+    // F-004: log activity
+    if (result.rows[0]?.inquiry_id) {
+      logActivity(result.rows[0].inquiry_id, 'material_check_updated', { check_id: parseInt(checkId) }, req.user);
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES PreSales: error updating material check', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Delete material check
+router.delete('/material-checks/:checkId', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    await pool.query('DELETE FROM mes_presales_material_checks WHERE id = $1', [req.params.checkId]);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('MES PreSales: error deleting material check', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Update inquiry material overall status
+router.patch('/inquiries/:id/material-status', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    const { material_status } = req.body;
+    const allowed = ['pending', 'available', 'partial', 'not_available', 'ordered'];
+    if (!allowed.includes(material_status)) {
+      return res.status(400).json({ success: false, error: `material_status must be one of: ${allowed.join(', ')}` });
+    }
+    await pool.query('UPDATE mes_presales_inquiries SET material_status = $1 WHERE id = $2', [material_status, id]);
+
+    await logActivity(id, 'material_status_changed', { material_status }, req.user);
+
+    if (material_status === 'available') {
+      await pool.query(`UPDATE mes_presales_inquiries SET presales_phase = 'clearance' WHERE id = $1 AND presales_phase = 'material_check'`, [id]);
+    }
+
+    res.json({ success: true, data: { material_status } });
+  } catch (err) {
+    logger.error('MES PreSales: error updating material status', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PRE-SALES CLEARANCE
+// ═════════════════════════════════════════════════════════════════════════════
+
+router.patch('/inquiries/:id/clearance', authenticate, async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Only admin can grant or revoke pre-sales clearance.' });
+    }
+
+    const { id } = req.params;
+    const { cleared } = req.body; // true or false
+
+    if (cleared) {
+      await pool.query(
+        `UPDATE mes_presales_inquiries
+         SET presales_cleared = TRUE,
+             clearance_by = $1, clearance_by_name = $2, clearance_at = NOW(),
+             presales_phase = 'cleared', status = 'converted'
+         WHERE id = $3`,
+        [req.user?.id, actorName(req.user), id]
+      );
+      await logActivity(id, 'presales_cleared', { cleared_by: actorName(req.user) }, req.user);
+      // F-008: Notify inquiry owner that pre-sales clearance was granted
+      try {
+        const ownerRes = await pool.query(
+          `SELECT created_by, inquiry_number FROM mes_presales_inquiries WHERE id = $1`,
+          [id]
+        );
+        const ownerId = ownerRes.rows[0]?.created_by || null;
+        const inqNum = ownerRes.rows[0]?.inquiry_number || `#${id}`;
+        if (ownerId) {
+          await notifyUsers(
+            [ownerId],
+            {
+              type: 'presales_cleared',
+              title: `Pre-sales clearance granted — ${inqNum}`,
+              message: `Cleared by ${actorName(req.user)}. Inquiry is now converted.`,
+              link: `/crm/inquiries/${id}`,
+              referenceType: 'inquiry',
+              referenceId: parseInt(id),
+            },
+            { excludeUserIds: [req.user?.id] }
+          );
+        }
+      } catch (notifyErr) {
+        logger.warn('MES PreSales: presales_cleared notification failed', notifyErr.message);
+      }
+    } else {
+      await pool.query(
+        `UPDATE mes_presales_inquiries
+         SET presales_cleared = FALSE, clearance_by = NULL, clearance_by_name = NULL, clearance_at = NULL,
+             presales_phase = 'clearance'
+         WHERE id = $1`,
+        [id]
+      );
+      await logActivity(id, 'presales_clearance_revoked', {}, req.user);
+    }
+
+    res.json({ success: true, data: { cleared } });
+  } catch (err) {
+    logger.error('MES PreSales: error updating clearance', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Update presales phase manually
+router.patch('/inquiries/:id/presales-phase', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    const { phase } = req.body;
+    const allowed = ['inquiry', 'sample_qc', 'moq_review', 'material_check', 'clearance', 'cleared'];
+    if (!allowed.includes(phase)) {
+      return res.status(400).json({ success: false, error: `phase must be one of: ${allowed.join(', ')}` });
+    }
+    await pool.query('UPDATE mes_presales_inquiries SET presales_phase = $1 WHERE id = $2', [phase, id]);
+    await logActivity(id, 'presales_phase_changed', { phase }, req.user);
+    res.json({ success: true, data: { phase } });
+  } catch (err) {
+    logger.error('MES PreSales: error updating presales phase', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// H-005: CSE PUBLIC SHARE LINK
+// ═════════════════════════════════════════════════════════════════════════════
+
+// POST /cse/:id/share — generate (or refresh) a public share link (admin/manager only)
+router.post('/cse/:id/share', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const cseId = parseInt(req.params.id, 10);
+    const expiryDays = parseInt(req.body?.expiry_days) || 30;
+    const token = crypto.randomBytes(40).toString('hex'); // 80-char hex
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + expiryDays);
+
+    const result = await pool.query(
+      `UPDATE mes_cse_reports
+       SET public_token     = $1,
+           public_token_exp = $2,
+           public_shared_by = $3,
+           public_shared_at = NOW()
+       WHERE id = $4
+       RETURNING id, cse_number, public_token, public_token_exp`,
+      [token, expiry, req.user?.id || null, cseId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'CSE not found' });
+    }
+    const shareUrl = `${process.env.APP_URL || ''}/mes/public/cse/${token}`;
+    res.json({ success: true, data: { ...result.rows[0], share_url: shareUrl } });
+  } catch (err) {
+    logger.error('MES: error generating CSE share link', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// DELETE /cse/:id/share — revoke share link
+router.delete('/cse/:id/share', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    await pool.query(
+      `UPDATE mes_cse_reports
+       SET public_token = NULL, public_token_exp = NULL,
+           public_shared_by = NULL, public_shared_at = NULL
+       WHERE id = $1`,
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('MES: error revoking CSE share link', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /public/cse/:token — PUBLIC (no auth) — return sanitised CSE report
+router.get('/public/cse/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token || token.length < 20) {
+      return res.status(400).json({ success: false, error: 'Invalid token' });
+    }
+    const result = await pool.query(
+      `SELECT
+         c.id, c.cse_number, c.status, c.overall_result,
+         c.customer_name, c.product_group, c.sample_number, c.inquiry_number,
+         c.test_summary, c.observations, c.recommendation,
+         c.qc_manager_status, c.qc_manager_name,
+         c.prod_manager_status, c.prod_manager_name,
+         c.analysis_submitted_at, c.completed_at,
+         c.public_token_exp,
+         a.test_parameters, a.test_category,
+         a.observations AS analysis_observations,
+         a.recommendation AS analysis_recommendation,
+         a.overall_result AS analysis_result,
+         a.analyzed_by_name
+       FROM mes_cse_reports c
+       LEFT JOIN mes_qc_analyses a ON a.id = c.analysis_id
+       WHERE c.public_token = $1
+         AND (c.public_token_exp IS NULL OR c.public_token_exp > NOW())`,
+      [token]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Share link not found or expired' });
+    }
+    const row = result.rows[0];
+    // Merge test_parameters from analysis or test_summary
+    if (!row.test_parameters && row.test_summary?.test_parameters) {
+      row.test_parameters = row.test_summary.test_parameters;
+    }
+    delete row.test_summary;
+    res.json({ success: true, data: row });
+  } catch (err) {
+    logger.error('MES: error serving public CSE', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// H-008: AUDIT TRAIL ENDPOINT
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /inquiries/:id/audit-trail — field-level audit history (admin only)
+router.get('/inquiries/:id/audit-trail', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    // Get audit logs for the inquiry itself + its samples and CSEs
+    const result = await pool.query(
+      `SELECT al.*
+       FROM mes_audit_log al
+       WHERE (al.table_name = 'mes_presales_inquiries' AND al.record_id = $1)
+          OR (al.table_name = 'mes_presales_samples' AND al.record_id IN
+              (SELECT id FROM mes_presales_samples WHERE inquiry_id = $1))
+          OR (al.table_name = 'mes_cse_reports' AND al.record_id IN
+              (SELECT id FROM mes_cse_reports WHERE inquiry_id = $1))
+       ORDER BY al.created_at DESC
+       LIMIT 200`,
+      [id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching audit trail', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /admin/audit-log — global audit log (admin only, filterable by table/user/date)
+router.get('/admin/audit-log', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Admin role required' });
+  }
+  try {
+    const { table_name, user_id, days = 7, limit = 100 } = req.query;
+    let query = `SELECT * FROM mes_audit_log WHERE created_at >= NOW() - ($1 || ' days')::INTERVAL`;
+    const params = [days];
+    if (table_name) { params.push(table_name); query += ` AND table_name = $${params.length}`; }
+    if (user_id)    { params.push(user_id);    query += ` AND user_id = $${params.length}`; }
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
+    params.push(limit);
+    const result = await pool.query(query, params);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching admin audit log', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /analytics/lost-reasons — breakdown chart for InquiryBoard sidebar
+router.get('/analytics/lost-reasons', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const days = parseInt(req.query.days) || 90;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const [byCategory, byCompetitor, winLoss] = await Promise.all([
+      pool.query(
+        `SELECT
+           COALESCE(lost_reason_category, 'not_specified') AS category,
+           COUNT(*) AS count
+         FROM mes_presales_inquiries
+         WHERE status = 'lost' AND created_at >= $1
+         GROUP BY category ORDER BY count DESC`,
+        [since.toISOString()]
+      ),
+      pool.query(
+        `SELECT
+           lost_to_competitor AS competitor,
+           COUNT(*) AS count
+         FROM mes_presales_inquiries
+         WHERE status = 'lost'
+           AND lost_to_competitor IS NOT NULL
+           AND lost_to_competitor <> ''
+           AND created_at >= $1
+         GROUP BY competitor ORDER BY count DESC
+         LIMIT 10`,
+        [since.toISOString()]
+      ),
+      pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE status = 'converted') AS won,
+           COUNT(*) FILTER (WHERE status = 'lost')      AS lost,
+           COUNT(*) FILTER (WHERE status NOT IN ('converted','lost')) AS open
+         FROM mes_presales_inquiries
+         WHERE division = $1 AND created_at >= $2`,
+        [DIVISION, since.toISOString()]
+      ),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        period_days:   days,
+        by_category:   byCategory.rows,
+        by_competitor: byCompetitor.rows,
+        win_loss:      winLoss.rows[0],
+      },
+    });
+  } catch (err) {
+    logger.error('MES: error fetching lost reason analytics', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// H-006: KANBAN POSITION UPDATE
+// ═════════════════════════════════════════════════════════════════════════════
+
+// PATCH /inquiries/:id/kanban-position — update drag position
+router.patch('/inquiries/:id/kanban-position', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { kanban_position } = req.body;
+    if (kanban_position == null || isNaN(Number(kanban_position))) {
+      return res.status(400).json({ success: false, error: 'kanban_position is required (number)' });
+    }
+
+    const existing = await pool.query(
+      'SELECT id, sales_rep_group_id FROM mes_presales_inquiries WHERE id = $1',
+      [id]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+    if (!isAdminOrMgmt(req.user)) {
+      const repGroup = await getSalesRepGroup(req.user.id);
+      if (!repGroup || repGroup.groupId !== existing.rows[0].sales_rep_group_id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+    }
+
+    await pool.query(
+      `UPDATE mes_presales_inquiries SET kanban_position = $1, updated_at = NOW() WHERE id = $2`,
+      [Number(kanban_position), id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('MES: error updating kanban position', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// H-002: SLA OVERVIEW — overdue samples + CSEs by SLA stage
+// ═════════════════════════════════════════════════════════════════════════════
+
+router.get('/qc/sla-overview', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user)) {
+    return res.status(403).json({ success: false, error: 'QC access required' });
+  }
+  try {
+    const [samplesRes, cseRes] = await Promise.all([
+      pool.query(
+        `SELECT s.id, s.sample_number, s.status, s.sla_due_at, s.sla_stage,
+                i.customer_name, i.inquiry_number
+         FROM mes_presales_samples s
+         JOIN mes_presales_inquiries i ON i.id = s.inquiry_id
+         WHERE s.sla_due_at IS NOT NULL
+           AND s.status IN ('sent_to_qc', 'received_by_qc', 'testing')
+         ORDER BY s.sla_due_at ASC
+         LIMIT 50`
+      ),
+      pool.query(
+        `SELECT c.id, c.cse_number, c.status, c.sla_due_at,
+                c.customer_name, c.inquiry_number
+         FROM mes_cse_reports c
+         WHERE c.sla_due_at IS NOT NULL
+           AND c.status IN ('pending_qc_manager', 'pending_production')
+         ORDER BY c.sla_due_at ASC
+         LIMIT 50`
+      ),
+    ]);
+
+    const now = new Date();
+    const classify = (due) => {
+      if (!due) return 'none';
+      const diffH = (new Date(due) - now) / 36e5;
+      if (diffH < 0)  return 'breached';
+      if (diffH < 4)  return 'warning';
+      return 'ok';
+    };
+
+    res.json({
+      success: true,
+      data: {
+        samples: samplesRes.rows.map(r => ({ ...r, sla_status: classify(r.sla_due_at) })),
+        cse:     cseRes.rows.map(r => ({ ...r, sla_status: classify(r.sla_due_at) })),
+        breached_count: [
+          ...samplesRes.rows.filter(r => classify(r.sla_due_at) === 'breached'),
+          ...cseRes.rows.filter(r => classify(r.sla_due_at) === 'breached'),
+        ].length,
+      },
+    });
+  } catch (err) {
+    logger.error('MES: error fetching SLA overview', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// G-008: QC EQUIPMENT REGISTRY
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /qc/equipment — list active equipment (for analysis form dropdowns)
+router.get('/qc/equipment', authenticate, async (req, res) => {
+  try {
+    const { category, all } = req.query;
+    let query = `SELECT id, name, equipment_code, category, calibration_due, is_active
+                 FROM mes_qc_equipment`;
+    const params = [];
+    if (all === 'true' && isAdminOrMgmt(req.user)) {
+      query += ' ORDER BY category, name';
+    } else {
+      query += ' WHERE is_active = TRUE';
+      if (category) {
+        params.push(category);
+        query += ` AND category = $${params.length}`;
+      }
+      query += ' ORDER BY category, name';
+    }
+    const result = await pool.query(query, params);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching equipment', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /qc/equipment — create new equipment (admin only)
+router.post('/qc/equipment', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Admin role required' });
+  }
+  try {
+    const {
+      name, equipment_code, category = 'general',
+      manufacturer, model_number, serial_number, location,
+      calibration_due, calibrated_at, notes,
+    } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'name is required' });
+    const result = await pool.query(
+      `INSERT INTO mes_qc_equipment
+         (name, equipment_code, category, manufacturer, model_number, serial_number,
+          location, calibration_due, calibrated_at, notes, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING *`,
+      [name, equipment_code || null, category, manufacturer || null, model_number || null,
+       serial_number || null, location || null, calibration_due || null,
+       calibrated_at || null, notes || null, req.user?.id || null]
+    );
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    if (err.constraint === 'idx_qc_equipment_code') {
+      return res.status(409).json({ success: false, error: 'Equipment code already exists' });
+    }
+    logger.error('MES: error creating equipment', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// PATCH /qc/equipment/:id — update equipment
+router.patch('/qc/equipment/:id', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Admin role required' });
+  }
+  try {
+    const equipId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(equipId) || equipId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid equipment id' });
+    }
+    const {
+      name, equipment_code, category, manufacturer, model_number, serial_number,
+      location, calibration_due, calibrated_at, is_active, notes,
+    } = req.body;
+    const result = await pool.query(
+      `UPDATE mes_qc_equipment
+       SET name            = COALESCE($1, name),
+           equipment_code  = COALESCE($2, equipment_code),
+           category        = COALESCE($3, category),
+           manufacturer    = COALESCE($4, manufacturer),
+           model_number    = COALESCE($5, model_number),
+           serial_number   = COALESCE($6, serial_number),
+           location        = COALESCE($7, location),
+           calibration_due = COALESCE($8, calibration_due),
+           calibrated_at   = COALESCE($9, calibrated_at),
+           is_active       = COALESCE($10, is_active),
+           notes           = COALESCE($11, notes),
+           updated_at      = NOW()
+       WHERE id = $12
+       RETURNING *`,
+      [name || null, equipment_code || null, category || null,
+       manufacturer || null, model_number || null, serial_number || null,
+       location || null, calibration_due || null, calibrated_at || null,
+       is_active != null ? is_active : null, notes || null, equipId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Equipment not found' });
+    }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error updating equipment', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /qc/equipment-used/:analysisId — list equipment used in an analysis
+router.get('/qc/equipment-used/:analysisId', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ae.*, e.name AS equipment_name, e.equipment_code, e.calibration_due
+       FROM mes_analysis_equipment ae
+       JOIN mes_qc_equipment e ON e.id = ae.equipment_id
+       WHERE ae.analysis_id = $1
+       ORDER BY ae.parameter_name`,
+      [req.params.analysisId]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching equipment used', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /qc/equipment-used — log equipment usage for an analysis
+router.post('/qc/equipment-used', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user)) {
+    return res.status(403).json({ success: false, error: 'QC access required' });
+  }
+  try {
+    const { analysis_id, equipment_id, parameter_name } = req.body;
+    if (!analysis_id || !equipment_id) {
+      return res.status(400).json({ success: false, error: 'analysis_id and equipment_id are required' });
+    }
+    // Upsert — avoid duplicate rows for same analysis+equipment+parameter
+    const result = await pool.query(
+      `INSERT INTO mes_analysis_equipment (analysis_id, equipment_id, parameter_name)
+       VALUES ($1, $2, $3)
+       ON CONFLICT DO NOTHING
+       RETURNING *`,
+      [analysis_id, equipment_id, parameter_name || null]
+    );
+    res.json({ success: true, data: result.rows[0] || null });
+  } catch (err) {
+    logger.error('MES: error logging equipment use', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /qc/templates — list templates, optional ?product_group=X
+router.get('/qc/templates', authenticate, async (req, res) => {
+  try {
+    const { product_group, all } = req.query;
+    let query = `SELECT * FROM mes_qc_templates WHERE is_active = TRUE`;
+    const params = [];
+    if (product_group) {
+      params.push(product_group);
+      query += ` AND (product_group = $${params.length} OR product_group IS NULL)`;
+    }
+    if (all === 'true' && isAdminOrMgmt(req.user)) {
+      query = `SELECT * FROM mes_qc_templates`;
+    }
+    query += ` ORDER BY product_group NULLS LAST, name`;
+    const result = await pool.query(query, params);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching QC templates', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /qc/templates — create template (admin/manager)
+router.post('/qc/templates', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { name, product_group, test_category, parameters, notes } = req.body;
+    if (!name || !parameters) {
+      return res.status(400).json({ success: false, error: 'name and parameters are required' });
+    }
+    const result = await pool.query(
+      `INSERT INTO mes_qc_templates (name, product_group, test_category, parameters, notes, created_by)
+       VALUES ($1, $2, $3, $4::jsonb, $5, $6)
+       RETURNING *`,
+      [name, product_group || null, test_category || 'physical', JSON.stringify(parameters), notes || null, req.user?.id || null]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error creating QC template', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// PATCH /qc/templates/:id — update template (admin/manager)
+router.patch('/qc/templates/:id', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    const { name, product_group, test_category, parameters, notes, is_active } = req.body;
+    const result = await pool.query(
+      `UPDATE mes_qc_templates
+       SET name          = COALESCE($1, name),
+           product_group = COALESCE($2, product_group),
+           test_category = COALESCE($3, test_category),
+           parameters    = COALESCE($4::jsonb, parameters),
+           notes         = COALESCE($5, notes),
+           is_active     = COALESCE($6, is_active),
+           updated_at    = NOW()
+       WHERE id = $7
+       RETURNING *`,
+      [name || null, product_group || null, test_category || null,
+       parameters ? JSON.stringify(parameters) : null,
+       notes || null, is_active != null ? is_active : null, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Template not found' });
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error updating QC template', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// DELETE /qc/templates/:id — soft-delete template (admin only)
+router.delete('/qc/templates/:id', authenticate, async (req, res) => {
+  if (!isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Management role required' });
+  }
+  try {
+    const { id } = req.params;
+    await pool.query(`UPDATE mes_qc_templates SET is_active = FALSE, updated_at = NOW() WHERE id = $1`, [id]);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('MES: error deleting QC template', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// G-005: CSE DISCUSSION THREAD (COMMENTS)
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /cse/:id/comments — fetch discussion thread
+router.get('/cse/:id/comments', authenticate, async (req, res) => {
+  try {
+    const cseId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(cseId) || cseId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid CSE id' });
+    }
+    const result = await pool.query(
+      `SELECT c.*
+       FROM mes_cse_comments c
+       WHERE c.cse_id = $1
+         AND ($2 OR c.is_internal = FALSE)
+       ORDER BY c.created_at ASC`,
+      [cseId, isAdminOrMgmt(req.user)]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching CSE comments', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /cse/:id/comments — add a comment
+router.post('/cse/:id/comments', authenticate, async (req, res) => {
+  try {
+    const cseId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(cseId) || cseId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid CSE id' });
+    }
+    const { comment, is_internal, parent_comment_id } = req.body;
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({ success: false, error: 'comment is required' });
+    }
+    // Only admins/managers can post internal comments
+    const internal = is_internal === true && isAdminOrMgmt(req.user);
+
+    const result = await pool.query(
+      `INSERT INTO mes_cse_comments (cse_id, user_id, user_name, user_role, comment, is_internal, parent_comment_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [cseId, req.user?.id || null, actorName(req.user), req.user?.role || null,
+       comment.trim(), internal, parent_comment_id || null]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error adding CSE comment', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// DELETE /cse/:id/comments/:commentId — delete own comment (or admin)
+router.delete('/cse/:id/comments/:commentId', authenticate, async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const row = await pool.query(`SELECT * FROM mes_cse_comments WHERE id = $1`, [commentId]);
+    if (row.rows.length === 0) return res.status(404).json({ success: false, error: 'Comment not found' });
+    const c = row.rows[0];
+    if (c.user_id !== req.user?.id && !isAdminOrMgmt(req.user)) {
+      return res.status(403).json({ success: false, error: 'Cannot delete another user\'s comment' });
+    }
+    await pool.query(`DELETE FROM mes_cse_comments WHERE id = $1`, [commentId]);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('MES: error deleting CSE comment', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// G-006: CSE REVISION HISTORY
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /cse/:id/revisions — revision timeline
+router.get('/cse/:id/revisions', authenticate, async (req, res) => {
+  try {
+    const cseId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(cseId) || cseId <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid CSE id' });
+    }
+    const result = await pool.query(
+      `SELECT * FROM mes_cse_revisions WHERE cse_id = $1 ORDER BY created_at ASC`,
+      [cseId]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching CSE revisions', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// G-009: QC ANALYTICS
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /qc/analytics — aggregate stats for QC dashboard
+router.get('/qc/analytics', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user)) {
+    return res.status(403).json({ success: false, error: 'QC access required' });
+  }
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const sinceISO = since.toISOString();
+
+    const [passRateRes, turnaroundRes, overdueRes, byGroupRes, dailyRes] = await Promise.all([
+      // Pass rate within period
+      pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE overall_result = 'pass')        AS pass_count,
+           COUNT(*) FILTER (WHERE overall_result = 'fail')        AS fail_count,
+           COUNT(*) FILTER (WHERE overall_result = 'conditional') AS conditional_count,
+           COUNT(*) AS total
+         FROM mes_qc_analyses
+         WHERE created_at >= $1 AND status = 'completed'`,
+        [sinceISO]
+      ),
+      // Average turnaround: sample registered → analysis completed
+      pool.query(
+        `SELECT ROUND(AVG(EXTRACT(EPOCH FROM (a.updated_at - s.created_at)) / 3600)::numeric, 1) AS avg_hours
+         FROM mes_qc_analyses a
+         JOIN mes_presales_samples s ON s.id = a.sample_id
+         WHERE a.created_at >= $1 AND a.status = 'completed'`,
+        [sinceISO]
+      ),
+      // Overdue: samples in testing/sent_to_qc older than 5 days
+      pool.query(
+        `SELECT COUNT(*) AS overdue_count
+         FROM mes_presales_samples
+         WHERE status IN ('testing', 'sent_to_qc', 'received_by_qc')
+           AND created_at < NOW() - INTERVAL '5 days'`
+      ),
+      // By product group
+      pool.query(
+        `SELECT
+           COALESCE(i.product_group, 'Unknown') AS product_group,
+           COUNT(*) FILTER (WHERE a.overall_result = 'pass')        AS pass,
+           COUNT(*) FILTER (WHERE a.overall_result = 'fail')        AS fail,
+           COUNT(*) FILTER (WHERE a.overall_result = 'conditional') AS conditional
+         FROM mes_qc_analyses a
+         JOIN mes_presales_samples s ON s.id = a.sample_id
+         JOIN mes_presales_inquiries i ON i.id = s.inquiry_id
+         WHERE a.created_at >= $1 AND a.status = 'completed'
+         GROUP BY product_group
+         ORDER BY (COUNT(*) FILTER (WHERE a.overall_result = 'pass') + COUNT(*) FILTER (WHERE a.overall_result = 'fail')) DESC
+         LIMIT 10`,
+        [sinceISO]
+      ),
+      // Daily completions (last 14 days)
+      pool.query(
+        `SELECT DATE(updated_at) AS date, COUNT(*) AS count
+         FROM mes_qc_analyses
+         WHERE updated_at >= NOW() - INTERVAL '14 days' AND status = 'completed'
+         GROUP BY DATE(updated_at)
+         ORDER BY date ASC`
+      ),
+    ]);
+
+    const total = parseInt(passRateRes.rows[0]?.total) || 0;
+    const passCount = parseInt(passRateRes.rows[0]?.pass_count) || 0;
+    const passRate = total > 0 ? Math.round((passCount / total) * 1000) / 10 : null;
+
+    res.json({
+      success: true,
+      data: {
+        period_days:          days,
+        total_completed:      total,
+        pass_count:           passCount,
+        fail_count:           parseInt(passRateRes.rows[0]?.fail_count) || 0,
+        conditional_count:    parseInt(passRateRes.rows[0]?.conditional_count) || 0,
+        pass_rate:            passRate,
+        avg_turnaround_hours: parseFloat(turnaroundRes.rows[0]?.avg_hours) || null,
+        overdue_count:        parseInt(overdueRes.rows[0]?.overdue_count) || 0,
+        by_product_group:     byGroupRes.rows,
+        daily_completions:    dailyRes.rows,
+      },
+    });
+  } catch (err) {
+    logger.error('MES: error fetching QC analytics', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// G-004: NON-CONFORMANCE REPORTS (NCR)
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /ncr — list NCR reports (filtered by status, inquiry, sample)
+router.get('/ncr', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user) && !isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  try {
+    const { status, inquiry_id, sample_id, limit } = req.query;
+    let sql = `SELECT n.*, s.sample_number, i.inquiry_number, i.customer_name
+               FROM mes_ncr_reports n
+               LEFT JOIN mes_presales_samples s ON s.id = n.sample_id
+               LEFT JOIN mes_presales_inquiries i ON i.id = n.inquiry_id
+               WHERE 1=1`;
+    const params = [];
+
+    if (status) {
+      params.push(status);
+      sql += ` AND n.status = $${params.length}`;
+    }
+    if (inquiry_id) {
+      params.push(parseInt(inquiry_id));
+      sql += ` AND n.inquiry_id = $${params.length}`;
+    }
+    if (sample_id) {
+      params.push(parseInt(sample_id));
+      sql += ` AND n.sample_id = $${params.length}`;
+    }
+    sql += ` ORDER BY n.created_at DESC`;
+    if (limit) {
+      params.push(parseInt(limit));
+      sql += ` LIMIT $${params.length}`;
+    }
+
+    const result = await pool.query(sql, params);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    logger.error('MES: error fetching NCR list', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /ncr/stats — aggregate NCR counts for dashboard widgets
+router.get('/ncr/stats', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user) && !isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  try {
+    const result = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE status = 'open')        AS open_count,
+         COUNT(*) FILTER (WHERE status = 'in_progress')  AS in_progress_count,
+         COUNT(*) FILTER (WHERE status = 'resolved')     AS resolved_count,
+         COUNT(*) FILTER (WHERE status = 'verified')     AS verified_count,
+         COUNT(*) FILTER (WHERE status = 'closed')       AS closed_count,
+         COUNT(*) FILTER (WHERE due_date < CURRENT_DATE AND status NOT IN ('closed','verified')) AS overdue_count,
+         COUNT(*) AS total
+       FROM mes_ncr_reports`
+    );
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error fetching NCR stats', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// GET /ncr/:id — single NCR detail
+router.get('/ncr/:id', authenticate, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid NCR id' });
+    }
+    const result = await pool.query(
+      `SELECT n.*, s.sample_number, i.inquiry_number, i.customer_name,
+              a.test_parameters, a.overall_result AS analysis_result
+       FROM mes_ncr_reports n
+       LEFT JOIN mes_presales_samples s ON s.id = n.sample_id
+       LEFT JOIN mes_presales_inquiries i ON i.id = n.inquiry_id
+       LEFT JOIN mes_qc_analyses a ON a.id = n.analysis_id
+       WHERE n.id = $1`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'NCR not found' });
+    }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error fetching NCR detail', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// POST /ncr — create a new NCR
+router.post('/ncr', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user) && !isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  try {
+    const { sample_id, analysis_id, inquiry_id, category, description, root_cause,
+            corrective_action, preventive_action, assigned_to, due_date } = req.body;
+
+    if (!sample_id && !inquiry_id) {
+      return res.status(400).json({ success: false, error: 'sample_id or inquiry_id is required' });
+    }
+    if (!category) {
+      return res.status(400).json({ success: false, error: 'category is required' });
+    }
+
+    // resolve inquiry_id from sample if not given
+    let resolvedInquiryId = inquiry_id ? parseInt(inquiry_id) : null;
+    if (!resolvedInquiryId && sample_id) {
+      const sRow = await pool.query('SELECT inquiry_id FROM mes_presales_samples WHERE id = $1', [parseInt(sample_id)]);
+      resolvedInquiryId = sRow.rows[0]?.inquiry_id || null;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO mes_ncr_reports
+        (sample_id, analysis_id, inquiry_id, category, description, root_cause,
+         corrective_action, preventive_action, assigned_to, due_date, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [
+        sample_id ? parseInt(sample_id) : null,
+        analysis_id ? parseInt(analysis_id) : null,
+        resolvedInquiryId,
+        category,
+        description || null,
+        root_cause || null,
+        corrective_action || null,
+        preventive_action || null,
+        assigned_to ? parseInt(assigned_to) : null,
+        due_date || null,
+        req.user?.id || null,
+      ]
+    );
+
+    // log activity on the inquiry
+    if (resolvedInquiryId) {
+      logActivity(resolvedInquiryId, 'ncr_created', {
+        ncr_id: result.rows[0].id,
+        ncr_number: result.rows[0].ncr_number,
+        category,
+      }, req.user);
+    }
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error creating NCR', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// PATCH /ncr/:id — update NCR (status transitions, corrective actions, etc.)
+router.patch('/ncr/:id', authenticate, async (req, res) => {
+  if (!canAccessQCDashboard(req.user) && !isAdminOrMgmt(req.user)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid NCR id' });
+    }
+
+    const existing = await pool.query('SELECT * FROM mes_ncr_reports WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'NCR not found' });
+    }
+
+    const { category, description, root_cause, corrective_action, preventive_action,
+            status, assigned_to, due_date, resolution_notes } = req.body;
+
+    // If verifying (status → verified), set verified_by/at
+    const isVerifying = status === 'verified' && existing.rows[0].status !== 'verified';
+
+    const result = await pool.query(
+      `UPDATE mes_ncr_reports SET
+        category = COALESCE($1, category),
+        description = COALESCE($2, description),
+        root_cause = COALESCE($3, root_cause),
+        corrective_action = COALESCE($4, corrective_action),
+        preventive_action = COALESCE($5, preventive_action),
+        status = COALESCE($6, status),
+        assigned_to = COALESCE($7, assigned_to),
+        due_date = COALESCE($8, due_date),
+        resolution_notes = COALESCE($9, resolution_notes),
+        verified_by   = CASE WHEN $10 THEN $11 ELSE verified_by END,
+        verified_at   = CASE WHEN $10 THEN NOW() ELSE verified_at END,
+        updated_at = NOW()
+       WHERE id = $12
+       RETURNING *`,
+      [
+        category || null, description || null, root_cause || null,
+        corrective_action || null, preventive_action || null,
+        status || null,
+        assigned_to ? parseInt(assigned_to) : null,
+        due_date || null,
+        resolution_notes || null,
+        isVerifying, req.user?.id || null,
+        id,
+      ]
+    );
+
+    // log activity
+    if (existing.rows[0].inquiry_id) {
+      logActivity(existing.rows[0].inquiry_id, 'ncr_updated', {
+        ncr_id: id,
+        ncr_number: result.rows[0].ncr_number,
+        new_status: result.rows[0].status,
+      }, req.user);
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    logger.error('MES: error updating NCR', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// G-006 HELPER: insert a revision history entry (used in approve/reject/revision endpoints)
+// ═════════════════════════════════════════════════════════════════════════════
+async function insertCSERevision(client, cseId, cse, action, notes, user) {
+  try {
+    const revCount = await client.query(
+      `SELECT COALESCE(MAX(revision_number), 0) + 1 AS next_rev FROM mes_cse_revisions WHERE cse_id = $1`,
+      [cseId]
+    );
+    const nextRev = revCount.rows[0]?.next_rev || 1;
+    await client.query(
+      `INSERT INTO mes_cse_revisions
+         (cse_id, revision_number, action, actor_id, actor_name, notes, test_summary_snapshot)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+      [
+        cseId, nextRev, action,
+        user?.id || null, actorName(user), notes || null,
+        JSON.stringify({ status: cse.status, overall_result: cse.overall_result || null }),
+      ]
+    );
+  } catch (revErr) {
+    // Non-fatal: log but don't abort the parent transaction
+    logger.warn('MES: could not insert CSE revision record', revErr.message);
+  }
+}
+
+module.exports = router;

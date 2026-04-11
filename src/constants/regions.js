@@ -1,0 +1,102 @@
+/**
+ * COUNTRY_REGIONS — maps country names to sales territories/regions.
+ * Used for territory-based grouping and filtering across CRM modules.
+ */
+export const COUNTRY_REGIONS = {
+  // UAE - Local Market
+  'United Arab Emirates': 'UAE',
+  'UAE': 'UAE',
+  // Arabian Peninsula (GCC)
+  'Saudi Arabia': 'Arabian Peninsula',
+  'Kingdom Of Saudi Arabia': 'Arabian Peninsula',
+  'Kuwait': 'Arabian Peninsula',
+  'Qatar': 'Arabian Peninsula',
+  'Bahrain': 'Arabian Peninsula',
+  'Oman': 'Arabian Peninsula',
+  'Yemen': 'Arabian Peninsula',
+  // West Asia
+  'Iraq': 'West Asia',
+  'Iran': 'West Asia',
+  'Turkey': 'West Asia',
+  'Afghanistan': 'West Asia',
+  'Pakistan': 'West Asia',
+  // Levant
+  'Lebanon': 'Levant',
+  'Jordan': 'Levant',
+  'Syria': 'Levant',
+  'Palestine': 'Levant',
+  'Israel': 'Levant',
+  // North Africa
+  'Egypt': 'North Africa',
+  'Libya': 'North Africa',
+  'Tunisia': 'North Africa',
+  'Algeria': 'North Africa',
+  'Morocco': 'North Africa',
+  'Sudan': 'North Africa',
+  // Southern Africa
+  'South Africa': 'Southern Africa',
+  'Kenya': 'Southern Africa',
+  'Nigeria': 'Southern Africa',
+  'Ghana': 'Southern Africa',
+  'Tanzania': 'Southern Africa',
+  // South Asia
+  'India': 'South Asia',
+  'Bangladesh': 'South Asia',
+  'Sri Lanka': 'South Asia',
+  'Nepal': 'South Asia',
+  // Southeast Asia
+  'Vietnam': 'Southeast Asia',
+  'Thailand': 'Southeast Asia',
+  'Malaysia': 'Southeast Asia',
+  'Singapore': 'Southeast Asia',
+  'Indonesia': 'Southeast Asia',
+  'Philippines': 'Southeast Asia',
+  // East Asia
+  'China': 'East Asia',
+  'Japan': 'East Asia',
+  'South Korea': 'East Asia',
+  'Taiwan': 'East Asia',
+  'Hong Kong': 'East Asia',
+  // Europe
+  'Germany': 'Europe',
+  'France': 'Europe',
+  'United Kingdom': 'Europe',
+  'Italy': 'Europe',
+  'Spain': 'Europe',
+  'Netherlands': 'Europe',
+  'Belgium': 'Europe',
+  'Poland': 'Europe',
+  'Greece': 'Europe',
+  'Portugal': 'Europe',
+  'Switzerland': 'Europe',
+  'Austria': 'Europe',
+  'Sweden': 'Europe',
+  'Norway': 'Europe',
+  'Denmark': 'Europe',
+  'Finland': 'Europe',
+  'Ireland': 'Europe',
+  'Czech Republic': 'Europe',
+  'Romania': 'Europe',
+  'Hungary': 'Europe',
+  // CIS
+  'Russia': 'CIS',
+  'Ukraine': 'CIS',
+  'Kazakhstan': 'CIS',
+  'Uzbekistan': 'CIS',
+  'Azerbaijan': 'CIS',
+  'Georgia': 'CIS',
+  'Armenia': 'CIS',
+  // Americas
+  'United States': 'Americas',
+  'USA': 'Americas',
+  'Canada': 'Americas',
+  'Mexico': 'Americas',
+  'Brazil': 'Americas',
+  'Argentina': 'Americas',
+  'Chile': 'Americas',
+  'Colombia': 'Americas',
+  'Peru': 'Americas',
+  // Oceania
+  'Australia': 'Oceania',
+  'New Zealand': 'Oceania',
+};

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="ProPackHub - Enterprise Dashboard"
+    />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>ProPackHub Dashboard</title>
+    <script type="module" crossorigin src="/assets/index-CnqDP__b.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-CWqhWu8X.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-charts-B7xVsNuG.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-ui-WZOrccgD.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-export-Sa2UEZmt.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-PzzgifrM.css">
+  </head>
+  <body>
+    <!-- Apply saved theme immediately to prevent flash -->
+    <script>
+      (function() {
+        var savedTheme = localStorage.getItem('app-theme') || 'light';
+        if (document.body) {
+          document.body.className = 'theme-' + savedTheme;
+        } else {
+          document.documentElement.className = 'theme-' + savedTheme;
+        }
+      })();
+    </script>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+
+    <!--
+      Cache-corruption guard: Chrome's disk cache can become corrupted
+      (ERR_CACHE_READ_FAILURE) causing every module/CSS load to fail.
+      This inline script catches those failures and does ONE hard reload
+      per session to force the browser to bypass the corrupted cache.
+    -->
+    <script>
+      (function () {
+        var KEY = '__pph_cache_reload';
+        // Listen for resource load failures (CSS, JS, images)
+        window.addEventListener('error', function (e) {
+          // Only act on resource load errors, not JS runtime errors
+          if (e && e.target && (e.target.tagName === 'LINK' || e.target.tagName === 'SCRIPT' || e.target.tagName === 'IMG')) {
+            if (!sessionStorage.getItem(KEY)) {
+              sessionStorage.setItem(KEY, '1');
+              // Hard reload bypassing cache
+              window.location.reload(true);
+            }
+          }
+        }, true); // capture phase to catch before bubbling
+
+        // Also catch dynamic import() failures (Vite chunks)
+        window.addEventListener('unhandledrejection', function (e) {
+          var msg = e && e.reason && (e.reason.message || String(e.reason));
+          if (msg && (msg.indexOf('Failed to fetch dynamically imported module') !== -1 ||
+                      msg.indexOf('error loading dynamically imported module') !== -1 ||
+                      msg.indexOf('ERR_CACHE_READ_FAILURE') !== -1)) {
+            if (!sessionStorage.getItem(KEY)) {
+              sessionStorage.setItem(KEY, '1');
+              window.location.reload(true);
+            }
+          }
+        });
+
+        // Clear the reload flag after successful load
+        window.addEventListener('load', function () {
+          sessionStorage.removeItem(KEY);
+        });
+      })();
+    </script>
+
+    <!-- Vite entry point -->
+  </body>
+</html>

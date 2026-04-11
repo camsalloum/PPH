@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interplast Financial Dashboard V2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, 
+                #e6f2ff 0%,     /* Very light blue */
+                #cce6ff 15%,    /* Light blue */
+                #99d6ff 35%,    /* Medium light blue */
+                #66c2ff 55%,    /* Medium blue */
+                #3399ff 75%,    /* Bright blue */
+                #0066cc 100%    /* Logo blue */
+            );
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background particles */
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) { width: 80px; height: 80px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 60px; height: 60px; left: 20%; animation-delay: 1s; }
+        .particle:nth-child(3) { width: 100px; height: 100px; left: 35%; animation-delay: 2s; }
+        .particle:nth-child(4) { width: 40px; height: 40px; left: 50%; animation-delay: 3s; }
+        .particle:nth-child(5) { width: 70px; height: 70px; left: 65%; animation-delay: 4s; }
+        .particle:nth-child(6) { width: 90px; height: 90px; left: 80%; animation-delay: 5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 0.7; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .logo {
+            width: 200px;
+            height: auto;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 10px 20px rgba(0, 102, 204, 0.3));
+            animation: logoGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes logoGlow {
+            from { filter: drop-shadow(0 10px 20px rgba(0, 102, 204, 0.3)); }
+            to { filter: drop-shadow(0 15px 30px rgba(0, 102, 204, 0.5)); }
+        }
+
+        .main-title {
+            font-size: 3.5rem;
+            font-weight: 300;
+            color: white;
+            text-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+            animation: fadeInUp 1s ease-out 0.5s both;
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .dashboard-card:hover::before {
+            left: 100%;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 20px 40px rgba(0, 102, 204, 0.3);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.2));
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-description {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-status {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .status-coming-soon {
+            background: rgba(255, 193, 7, 0.3);
+            border-color: rgba(255, 193, 7, 0.5);
+            color: #fff3cd;
+        }
+
+        .footer {
+            margin-top: 80px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            animation: fadeIn 1s ease-out 1s both;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 2.5rem;
+            }
+            
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .dashboard-card {
+                padding: 30px 20px;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body>
+    <!-- Report Section -->
+    <section class="report-bottom-section">
+        <div class="report-container">
+            <div class="report-header">
+                <img src="./Ip Logo.png" alt="Interplast Logo" class="report-logo">
+                <h1 class="report-title">Interplast - Comprehensive Report</h1>
+                <p class="report-description">
+                    Advanced financial analytics and business intelligence dashboard providing comprehensive insights into business performance.
+                </p>
+            </div>
+            
+            <div class="report-features">
+                <div class="report-feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Financial Analysis</h3>
+                    <p>Comprehensive P&L statements with period comparisons and detailed financial breakdowns.</p>
+                </div>
+                
+                <div class="report-feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Geographic Insights</h3>
+                    <p>Sales performance analysis by country and region with interactive visualizations.</p>
+                </div>
+                
+                <div class="report-feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Product Analytics</h3>
+                    <p>Detailed product group performance analysis with trend identification and forecasting.</p>
+                </div>
+                
+                <div class="report-feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI-Powered Reports</h3>
+                    <p>Intelligent analysis and automated report generation with natural language insights.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Add smooth hover effects and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.dashboard-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-10px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+                
+                card.addEventListener('click', function() {
+                    // Future: Navigate to specific dashboard sections
+                    console.log('Clicked:', this.querySelector('.card-title').textContent);
+                });
+            });
+            
+            // Add parallax effect to particles
+            window.addEventListener('scroll', function() {
+                const particles = document.querySelectorAll('.particle');
+                const scrolled = window.pageYOffset;
+                
+                particles.forEach((particle, index) => {
+                    const speed = 0.5 + (index * 0.1);
+                    particle.style.transform = `translateY(${scrolled * speed}px)`;
+                });
+            });
+        });
+    </script>
+
+    <!-- Report Bottom Section -->
+    <section class="report-bottom-section">
+        <div class="report-container">
+            <div class="report-header">
+                <img src="./Ip Logo.png" alt="Interplast Logo" class="report-logo">
+                <h1 class="report-title">Interplast - Comprehensive Report</h1>
+                <p class="report-description">
+                    Comprehensive business intelligence and analytics platform providing deep insights into financial performance, operational efficiency, and strategic opportunities.
+                </p>
+            </div>
+            
+            <div class="report-features">
+                <div class="report-feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Financial Analysis</h3>
+                    <p>Comprehensive P&L statements, revenue tracking, and financial performance metrics with real-time updates.</p>
+                </div>
+                
+                <div class="report-feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Geographic Insights</h3>
+                    <p>Regional sales performance, market penetration analysis, and geographic distribution of business operations.</p>
+                </div>
+                
+                <div class="report-feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Product Analytics</h3>
+                    <p>Product performance metrics, inventory analysis, and customer preference insights across all product lines.</p>
+                </div>
+                
+                <div class="report-feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI-Powered Reports</h3>
+                    <p>Machine learning-driven insights, predictive analytics, and automated report generation for strategic decision making.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <style>
+        /* Report Bottom Section Styles */
+        .report-bottom-section {
+            background: linear-gradient(135deg, 
+                #0066cc 0%,     /* Logo blue */
+                #3399ff 25%,    /* Bright blue */
+                #66c2ff 50%,    /* Medium blue */
+                #99d6ff 75%,    /* Light blue */
+                #cce6ff 100%    /* Very light blue */
+            );
+            padding: 80px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .report-bottom-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent 0%,
+                rgba(255, 255, 255, 0.5) 50%,
+                transparent 100%
+            );
+        }
+        
+        .report-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .report-header {
+            text-align: center;
+            margin-bottom: 60px;
+            color: white;
+        }
+        
+        .report-logo {
+            width: 200px;
+            height: auto;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 4px 8px rgba(0, 102, 204, 0.4));
+            /* Remove white background by making it transparent */
+            background: transparent;
+            mix-blend-mode: multiply;
+            transition: filter 0.3s ease;
+        }
+        
+        .report-logo:hover {
+            filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6)) drop-shadow(0 6px 12px rgba(0, 102, 204, 0.5));
+        }
+        
+        .report-title {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 15px;
+            text-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            letter-spacing: 2px;
+            color: white;
+        }
+        
+        .report-description {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            color: white;
+        }
+        
+        .report-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .report-feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            color: white;
+        }
+        
+        .report-feature-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 102, 204, 0.3);
+        }
+        
+        .report-feature-card .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .report-feature-card h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: white;
+        }
+        
+        .report-feature-card p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            opacity: 0.8;
+            margin: 0;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .report-title {
+                font-size: 2rem;
+            }
+            
+            .report-description {
+                font-size: 1rem;
+            }
+            
+            .report-features {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .report-bottom-section {
+                padding: 60px 20px;
+            }
+            
+            .report-logo {
+                width: 150px;
+            }
+        }
+    </style>
+</body>
+</html>

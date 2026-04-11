@@ -1,0 +1,182 @@
+# PRODUCT PERFORMANCE KPI - FIXES & DYNAMIC SYNC CONFIRMATION
+
+## Date: January 22, 2026
+
+## ✅ FIXES COMPLETED
+
+### 1. Fixed Data Source (Critical)
+**Problem:** Queries were using non-existent view `vw_unified_sales_complete`
+**Solution:** Changed to query `fp_actualcommon` directly with proper JOINs
+
+### 2. Fixed Division Filtering
+**Problem:** JOIN used `division_code` which excluded BF data (61.7% of sales!)
+**Solution:** Changed JOIN to use `admin_division_code` to include both FP and BF divisions
+
+### 3. Fixed Value Type Aggregation
+**Problem:** Queries only aggregated AMOUNT, missing KGS and MORM
+**Solution:** Added CROSS JOIN LATERAL to unpivot qty_kgs, amount, and morm columns
+
+### 4. Synced Material/Process Mappings
+**Problem:** `fp_product_group_unified` had NULL material/process for several products
+**Solution:** 
+- Synced data from `fp_material_percentages` (source of truth)
+- Fixed 3 products: Labels, Others, POF Films Products
+- Fixed Services Charges normalization
+
+### 5. Excluded "Other" from KPIs
+**Problem:** "Other" process/material showing in KPIs (miscellaneous items)
+**Solution:** Added filter `LOWER(pg.process) != 'other'` and `LOWER(pg.material) != 'other'`
+
+### 6. Implemented Dynamic Sync ⭐
+**Problem:** Changes in Material Percentages page weren't automatically reflected in KPIs
+**Solution:** Added automatic sync from `fp_material_percentages` → `fp_product_group_unified`
+
+---
+
+## ✅ CORRECTED KPI VALUES (2025)
+
+### Process Categories:
+- **Printed: 86.4%** ($87.75M) - YoY ▲ 19.8%
+- **Plain: 13.6%** ($13.81M) - YoY ▼ 16.3%
+- ~~Other: Excluded~~
+
+### Material Categories:
+- **PE: 53.9%** ($54.75M) - YoY ▼ 2.1%
+- **Non PE: 46.1%** ($46.81M) - YoY ▲ 38.4%
+- ~~Other: Excluded~~
+
+### Top Revenue Drivers:
+- **Shrink Film Printed: 30.4%** - YoY ▲ 5.3%
+- **Laminates: 22.3%** - YoY ▲ 115.7%
+- **Shrink Sleeves: 13.6%** - YoY ▼ 11.8%
+
+---
+
+## ✅ DYNAMIC SYNC CONFIRMED
+
+### Test Performed:
+Changed "Plain" to "Unprinted" in Wide Film product
+
+### Results:
+```
+BEFORE:
+  material_percentages: PE / Plain
+  product_group_unified: PE / Plain
+  KPI Categories: Plain (4 products, $13.81M)
+
+AFTER CHANGE:
+  material_percentages: PE / Unprinted
+  product_group_unified: PE / Unprinted ✅
+  KPI Categories: 
+    - Plain (3 products, $12.54M)
+    - Unprinted (1 product, $1.27M) ✅ NEW!
+
+RESTORED:
+  Back to "Plain" ✅
+```
+
+### ✅ CONFIRMATION: System is FULLY DYNAMIC
+- Changes in Material Percentages page automatically update KPIs
+- No manual sync needed
+- Changes reflect immediately in dashboard
+
+---
+
+## 🔄 DATA FLOW
+
+```
+Material Percentages Page (UI)
+    ↓
+fp_material_percentages table (source of truth)
+    ↓ (automatic sync)
+fp_product_group_unified table (KPI queries)
+    ↓
+ProductPerformanceService queries
+    ↓
+KPI Dashboard displays updated categories
+```
+
+---
+
+## 📊 QUERY ARCHITECTURE
+
+### Tables Used:
+1. **fp_actualcommon** - Main actual sales data (50,780 rows)
+   - Contains: qty_kgs, amount, morm, pgcombine
+   - Filter by: `admin_division_code = 'FP'` (includes FP + BF)
+
+2. **fp_product_group_unified** - Master product data
+   - Contains: material, process, normalized_name
+   - Synced from: fp_material_percentages
+
+3. **fp_material_percentages** - SOURCE OF TRUTH
+   - Material composition (PE%, BOPP%, PET%, etc.)
+   - Material category (PE, Non PE, Other)
+   - Process category (Printed, Plain, Other)
+
+### JOIN Logic:
+```sql
+FROM fp_actualcommon d
+LEFT JOIN fp_product_group_unified pg 
+  ON UPPER(TRIM(d.pgcombine)) = pg.normalized_name
+  AND pg.division = d.admin_division_code  -- ✅ Critical!
+```
+
+---
+
+## 🎯 FILES MODIFIED
+
+### Service Layer:
+- `server/database/ProductPerformanceService.js`
+  - Fixed 3 queries (products, process, material)
+  - Changed source from view to fp_actualcommon
+  - Added CROSS JOIN LATERAL for value types
+  - Excluded 'Other' category
+
+- `server/services/ProductGroupMasterService.js`
+  - Added `syncToProductGroupUnified()` method
+  - Automatic sync on save
+
+### Database:
+- `fp_product_group_unified` - Updated material/process for all products
+- Synced from `fp_material_percentages`
+
+---
+
+## ✅ VERIFICATION COMMANDS
+
+```bash
+# Verify Process Categories (excluding Other)
+node server/verify-process-material.js
+
+# Verify Material Categories (excluding Other)
+node server/verify-materials.js
+
+# Test Dynamic Sync
+node server/test-dynamic-sync.js
+
+# Verify Product Performance
+node server/verify-product-performance.js
+```
+
+---
+
+## 🎉 FINAL STATUS
+
+✅ All KPI queries working correctly
+✅ Data from correct source (fp_actualcommon)
+✅ BF division data included (admin_division_code)
+✅ Material/Process mappings complete
+✅ "Other" category excluded from KPIs
+✅ **System is FULLY DYNAMIC** - changes in Material Percentages automatically update KPIs
+✅ No manual sync needed!
+
+### Next Steps:
+1. Refresh KPI dashboard to see corrected values
+2. Test Geographic Distribution endpoint
+3. Test Customer Insights endpoint
+
+---
+
+**Last Updated:** January 22, 2026
+**Status:** ✅ PRODUCTION READY

@@ -1,0 +1,444 @@
+/* ========================================
+   GLOBAL THEME VARIABLES & STYLES
+   ======================================== */
+
+:root {
+  /* Light Theme (Default) */
+  --color-primary: #3b82f6;
+  --color-primaryHover: #2563eb;
+  --color-primaryLight: #dbeafe;
+  --color-secondary: #64748b;
+  --color-accent: #0ea5e9;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surfaceHover: #f1f5f9;
+  --color-text: #1e293b;
+  --color-textSecondary: #64748b;
+  --color-textMuted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-borderLight: #f1f5f9;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-gradient: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+  --color-tabActive: #3b82f6;
+  --color-tabBg: #f1f5f9;
+  --color-overlay: rgba(255, 255, 255, 0.15);
+  --color-cardGradient: linear-gradient(145deg, #ffffff 0%, #f7fafc 100%);
+  
+  /* Animation & Transition */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+  --transition-bounce: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px var(--color-shadow);
+  --shadow-md: 0 4px 6px -1px var(--color-shadow), 0 2px 4px -1px var(--color-shadow);
+  --shadow-lg: 0 10px 15px -3px var(--color-shadow), 0 4px 6px -2px var(--color-shadow);
+  --shadow-xl: 0 20px 25px -5px var(--color-shadow), 0 10px 10px -5px var(--color-shadow);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* ========================================
+   GLOBAL STYLES
+   ======================================== */
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  transition: background var(--transition-normal), color var(--transition-normal);
+}
+
+/* ========================================
+   ELEGANT TAB STYLES
+   ======================================== */
+
+.tabs-container {
+  width: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  margin-bottom: 20px;
+  transition: all var(--transition-normal);
+}
+
+.tabs-container:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.tabs-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 16px 0;
+  position: relative;
+}
+
+.tabs-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 4px;
+  position: relative;
+  padding-bottom: 0;
+}
+
+/* Elegant Tab Buttons */
+.tab-button {
+  position: relative;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-textSecondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tab-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-tabBg);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  border-radius: inherit;
+}
+
+.tab-button:hover::before {
+  opacity: 1;
+}
+
+.tab-button:hover {
+  color: var(--color-text);
+  transform: translateY(-2px);
+}
+
+.tab-button.active {
+  color: #ffffff;
+  font-weight: 600;
+  background: var(--color-tabActive);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.tab-button.active::before {
+  opacity: 0;
+}
+
+/* Glowing Active Indicator */
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  width: 80%;
+  height: 3px;
+  background: #ffffff;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* Tab Content */
+.tabs-content {
+  background: var(--color-surface);
+  padding: 20px;
+  min-height: 200px;
+}
+
+.tab-panel {
+  display: none;
+  animation: tabFadeIn 0.3s ease forwards;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   SECONDARY / NESTED TABS
+   ======================================== */
+
+.tabs-container.secondary {
+  box-shadow: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.tabs-container.secondary .tabs-header {
+  background: var(--color-borderLight);
+  padding: 8px 12px 0;
+}
+
+.tabs-container.secondary .tab-button {
+  padding: 10px 16px;
+  font-size: 13px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.tabs-container.secondary .tab-button.active {
+  background: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.tabs-container.secondary .tabs-content {
+  padding: 16px;
+}
+
+/* ========================================
+   COMPACT TABS (for tight spaces)
+   ======================================== */
+
+.tabs-container.compact {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.tabs-container.compact .tabs-header {
+  padding: 6px 8px 0;
+  background: var(--color-background);
+}
+
+.tabs-container.compact .tab-button {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tabs-container.compact .tabs-content {
+  padding: 12px;
+}
+
+/* ========================================
+   PILL TABS VARIANT
+   ======================================== */
+
+.tabs-container.pills .tabs-header {
+  background: transparent;
+  border: none;
+  padding: 8px;
+}
+
+.tabs-container.pills .tabs-nav {
+  background: var(--color-borderLight);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  gap: 0;
+}
+
+.tabs-container.pills .tab-button {
+  border-radius: var(--radius-full);
+  padding: 10px 20px;
+  margin: 0;
+}
+
+.tabs-container.pills .tab-button::before {
+  border-radius: var(--radius-full);
+}
+
+.tabs-container.pills .tab-button.active {
+  background: var(--color-gradient);
+  box-shadow: var(--shadow-md);
+}
+
+.tabs-container.pills .tab-button.active::after {
+  display: none;
+}
+
+/* ========================================
+   VERTICAL TABS
+   ======================================== */
+
+.tabs-container.vertical {
+  display: flex;
+  flex-direction: row;
+}
+
+.tabs-container.vertical .tabs-header {
+  flex-shrink: 0;
+  width: 200px;
+  border-bottom: none;
+  border-right: 1px solid var(--color-border);
+  padding: 12px;
+}
+
+.tabs-container.vertical .tabs-nav {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tabs-container.vertical .tab-button {
+  border-radius: var(--radius-md);
+  text-align: left;
+  width: 100%;
+}
+
+.tabs-container.vertical .tab-button.active::after {
+  display: none;
+}
+
+.tabs-container.vertical .tabs-content {
+  flex: 1;
+}
+
+/* ========================================
+   THEME-SPECIFIC OVERRIDES
+   ======================================== */
+
+/* Dark Theme */
+.theme-dark .tabs-container {
+  background: var(--color-surface);
+}
+
+.theme-dark .tab-button.active {
+  background: var(--color-tabActive);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+/* Colorful Theme */
+.theme-colorful .tab-button.active {
+  background: var(--color-tabActive);
+  box-shadow: 0 4px 15px rgba(192, 38, 211, 0.4);
+}
+
+.theme-colorful .tabs-container:hover {
+  box-shadow: 0 10px 25px rgba(192, 38, 211, 0.2);
+}
+
+/* Colorful Theme - Enhanced Visual Distinctions */
+.theme-colorful .tabs-container {
+  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, #ffffff 0%, #fdf4ff 100%);
+}
+
+.theme-colorful .tab-button:hover {
+  background: linear-gradient(135deg, #fae8ff 0%, #f5d0fe 100%);
+}
+
+.theme-colorful .ant-btn-primary,
+.theme-colorful button[type="submit"] {
+  background: linear-gradient(135deg, #c026d3 0%, #8b5cf6 100%) !important;
+  border: none !important;
+}
+
+.theme-colorful .ant-btn-primary:hover,
+.theme-colorful button[type="submit"]:hover {
+  background: linear-gradient(135deg, #a21caf 0%, #7c3aed 100%) !important;
+}
+
+.theme-colorful .ant-card {
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 20px rgba(192, 38, 211, 0.1);
+}
+
+.theme-colorful .ant-card:hover {
+  box-shadow: 0 8px 30px rgba(192, 38, 211, 0.2);
+  border-color: #d8b4fe;
+}
+
+.theme-colorful .ant-table-thead > tr > th {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%) !important;
+  border-bottom: 2px solid #d8b4fe !important;
+}
+
+.theme-colorful .ant-menu-item-selected {
+  background: linear-gradient(135deg, #fae8ff 0%, #f5d0fe 100%) !important;
+}
+
+.theme-colorful .ant-input:focus,
+.theme-colorful .ant-select-focused .ant-select-selector {
+  border-color: #c026d3 !important;
+  box-shadow: 0 0 0 2px rgba(192, 38, 211, 0.2) !important;
+}
+
+.theme-colorful h1, 
+.theme-colorful h2, 
+.theme-colorful h3 {
+  background: linear-gradient(135deg, #c026d3 0%, #8b5cf6 50%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Prevent theme-colorful heading gradient from overriding KPI and report section titles
+   which define their own gradients */
+.theme-colorful .kpi-section-title,
+.theme-colorful .section h2,
+.theme-colorful .section h3 {
+  background: linear-gradient(135deg, var(--color-primary, #667eea), var(--color-highlight, #764ba2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.theme-colorful .sidebar,
+.theme-colorful .ant-layout-sider {
+  background: linear-gradient(180deg, #fdf4ff 0%, #fae8ff 100%) !important;
+}
+
+/* Classic Theme */
+.theme-classic .tab-button.active {
+  background: var(--color-tabActive);
+  box-shadow: 0 2px 8px rgba(55, 65, 81, 0.2);
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+  .tabs-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  
+  .tabs-nav::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .tab-button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .tabs-container.vertical {
+    flex-direction: column;
+  }
+  
+  .tabs-container.vertical .tabs-header {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .tabs-container.vertical .tabs-nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+}

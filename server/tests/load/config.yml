@@ -1,0 +1,120 @@
+# Artillery Load Testing Configuration
+# IPDashboard Backend Server
+# 
+# Usage:
+#   npm run test:load          - Run default load test
+#   npm run test:load:smoke    - Quick smoke test (10 users)
+#   npm run test:load:stress   - Stress test (100 users)
+
+config:
+  target: "http://localhost:3001"
+  phases:
+    # Warm up - gradually increase load
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm up"
+    # Sustained load - steady traffic
+    - duration: 60
+      arrivalRate: 20
+      name: "Sustained load"
+    # Peak load - simulate traffic spike
+    - duration: 30
+      arrivalRate: 50
+      name: "Peak load"
+    # Cool down
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool down"
+  
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+  
+  # Performance thresholds
+  ensure:
+    p95: 500      # 95th percentile response time < 500ms
+    p99: 1000     # 99th percentile response time < 1000ms
+    maxErrorRate: 1  # Max 1% error rate
+
+scenarios:
+  # Health check scenario (lightweight)
+  - name: "Health Check Flow"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+            - hasProperty: "status"
+      - think: 1
+      - get:
+          url: "/api/metrics"
+          expect:
+            - statusCode: 200
+
+  # Public endpoints (no auth required)
+  - name: "Public Endpoints"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/health/deep"
+          expect:
+            - statusCode: 200
+      - think: 2
+      - get:
+          url: "/api/ready"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/live"
+          expect:
+            - statusCode: 200
+
+  # Authentication flow
+  - name: "Auth Flow"
+    weight: 25
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "TestPassword123!"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+          expect:
+            - statusCode:
+                - 200
+                - 401  # May fail if user doesn't exist
+      - think: 1
+
+  # AEBF data retrieval (authenticated)
+  - name: "AEBF Data Retrieval"
+    weight: 25
+    flow:
+      # First login to get token
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "TestPassword123!"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+      - think: 1
+      # Then fetch AEBF data with pagination
+      - get:
+          url: "/api/aebf/actual?division=FP&budgetYear=2024&page=1&limit=50"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode:
+                - 200
+                - 401
+                - 403
+      - think: 2
+      - get:
+          url: "/api/aebf/budget?division=FP&budgetYear=2024&page=1&limit=25"
+          headers:
+            Authorization: "Bearer {{ token }}"

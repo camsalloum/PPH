@@ -1,0 +1,1914 @@
+/* ========================================
+   UNIFIED SALES BY SALES REP TABLE STYLES
+   Single source of truth for all Sales by Sales Rep table styling
+   Used by: Live view, HTML exports, PDF exports
+   Based on SalesByCountryTableStyles.css structure
+   ======================================== */
+
+:root {
+  /* Sticky header row height - DO NOT override in media queries */
+  --sbsr-hdr-h: 28px;
+
+  /* z-index layering for sticky elements - higher values to prevent overlaps */
+  --z-corner: 20;    /* First column header - always on top */
+  --z-hdr3: 16;      /* First header row (Year) */
+  --z-hdr2: 15;      /* Second header row (Month) */
+  --z-hdr1: 14;      /* Third header row (Type) */
+  --z-firstcol: 12;  /* Body first column */
+  --z-header: 10;    /* Generic header fallback */
+  --z-separator: 1;  /* Period separators */
+
+  /* Responsive font sizing (defaults use fluid clamp; overridden per breakpoint) */
+  --sbsr-font-base: clamp(9px, 1.8vw, 12px);
+  --sbsr-font-header: clamp(11px, 2.1vw, 14px);
+  --sbsr-font-label: var(--sbsr-font-base);
+  --sbsr-font-accent: calc(var(--sbsr-font-base) + 1px); /* totals, deltas, sales-rep-name */
+  --sbsr-font-corner: calc(var(--sbsr-font-header) + 6px); /* corner header larger than header */
+}
+
+/* ========================================
+   BASE CONTAINER & LAYOUT
+   ======================================== */
+
+.sbsr-table-view {
+  width: 100%;
+  padding: 20px;
+  margin-top: 20px;
+  max-width: 100%;
+  overflow: visible; /* FIXED: Let child container handle all scrolling */
+  box-sizing: border-box;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sbsr-table-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  position: relative !important;
+  overflow-x: auto !important;           /* Horizontal scroll - FORCED */
+  overflow-y: auto !important;           /* Show scrollbar only when needed */
+  -webkit-overflow-scrolling: touch !important;
+  max-height: 80vh !important;           /* Limit height for internal scrolling */
+  min-height: 50vh !important;           /* FIXED: Ensure minimum height to force scrollbar */
+  padding-bottom: 10px !important;
+  background-color: #fff !important;
+  will-change: scroll-position !important; /* FIXED: Optimize for scrolling */
+  contain: layout !important;            /* FIXED: Isolate layout calculations */
+}
+
+.sbsr-table-container.tall-table {
+  overflow-y: auto !important;
+  max-height: 80vh !important;
+}
+
+.sbsr-table-container-for-export {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ========================================
+   HEADER & TITLE STYLING
+   ======================================== */
+
+.sbsr-table-title {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #333;
+  text-align: center;
+  font-weight: 700;
+}
+
+.sbsr-table-title h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+}
+
+.sbsr-table-subtitle {
+  font-style: italic;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 5px;
+  color: #000000;
+  font-size: 1.1rem;
+}
+
+.sbsr-table-empty-state {
+  padding: 30px;
+  text-align: center;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
+  margin: 20px 0;
+  color: #666;
+}
+
+.sbsr-table-options {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.option-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+  user-select: none;
+  justify-content: center;
+}
+
+.option-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.option-checkbox:hover {
+  color: #007bff;
+}
+
+/* Enhanced scrolling for all screen sizes */
+.sbsr-table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.sbsr-table-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.sbsr-table-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.sbsr-table-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* ========================================
+   CORE TABLE STYLING
+   ======================================== */
+
+.sales-by-sales-rep-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate; /* needed for sticky headers */
+  border-spacing: 0;         /* remove default cell gutters that look like borders */
+  font-size: var(--sbsr-font-base);
+  font-family: Arial, sans-serif;
+  table-layout: fixed;
+  max-width: 100%;
+  background: #fff;
+  background-color: #fff;
+  color: #222222;
+  display: table !important;
+}
+
+.sales-by-sales-rep-table thead {
+  display: table-header-group !important;
+}
+
+.sales-by-sales-rep-table tbody {
+  display: table-row-group !important;
+}
+
+.sales-by-sales-rep-table tr {
+  display: table-row !important;
+}
+
+/* Keep headers at responsive 14px */
+.sales-by-sales-rep-table thead th {
+  font-size: var(--sbsr-font-header);
+  height: var(--sbsr-hdr-h) !important;
+  min-height: var(--sbsr-hdr-h) !important;
+  max-height: var(--sbsr-hdr-h) !important;
+  position: sticky !important;
+  top: 0; /* overridden per row below */
+  z-index: var(--z-hdr1);
+  font-weight: 700;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  padding: 4px 6px !important; /* Fixed consistent padding */
+  line-height: 1.2 !important;
+  vertical-align: middle !important;
+  /* IMPORTANT: let inline bg win - removed !important to allow inline styles */
+  background-color: transparent;
+  background-clip: padding-box !important;
+}
+
+/* underlay: blocks rows scrolling behind, but stays under inline color */
+/* White underlay ONLY when there is NO inline background on the cell */
+.sales-by-sales-rep-table thead th:not([style*="background"]):not([style*="background-color"])::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;              /* keep it BEHIND the content and inline bg */
+  pointer-events: none;
+}
+
+/* If the header DOES have inline bg, don't put white on top of it */
+.sales-by-sales-rep-table thead th[style*="background"],
+.sales-by-sales-rep-table thead th[style*="background-color"] {
+  background-color: transparent;     /* let inline be visible - removed !important */
+}
+
+/* Five sticky header tiers - create layered sticky effect */
+.sales-by-sales-rep-table thead tr:nth-child(1) th {
+  top: 0 !important;
+  z-index: var(--z-hdr3) !important;
+}
+.sales-by-sales-rep-table thead tr:nth-child(2) th {
+  top: calc(var(--sbsr-hdr-h) * 1) !important;
+  z-index: var(--z-hdr2) !important;
+}
+.sales-by-sales-rep-table thead tr:nth-child(3) th {
+  top: calc(var(--sbsr-hdr-h) * 2) !important;
+  z-index: var(--z-hdr1) !important;
+}
+.sales-by-sales-rep-table thead tr:nth-child(4) th {
+  top: calc(var(--sbsr-hdr-h) * 3) !important;
+  z-index: var(--z-hdr1) !important;
+}
+.sales-by-sales-rep-table thead tr:nth-child(5) th {
+  top: calc(var(--sbsr-hdr-h) * 4) !important;
+  z-index: var(--z-hdr1) !important;
+}
+
+/* First column header - STICKY TOP + LEFT (corner) */
+/* Sales Rep Names header - same styling as P&L Ledgers header */
+.sales-by-sales-rep-table thead tr:first-child th.empty-header {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: var(--z-corner) !important;
+  background-color: transparent;     /* inline color can show */
+  text-align: center !important;
+  vertical-align: middle !important;
+  font-family: Arial, sans-serif !important;
+  font-size: var(--sbsr-font-corner);
+  font-weight: bold !important;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.1 !important;
+  height: calc(var(--sbsr-hdr-h) * 5); /* 5 rows for Sales Rep (Year, Period, Type, Values/%) */
+  max-height: calc(var(--sbsr-hdr-h) * 5);
+  overflow: hidden;
+  box-sizing: border-box !important;
+  display: table-cell !important;
+  min-width: 200px;
+  max-width: 200px;
+}
+
+.sales-by-sales-rep-table thead tr:first-child th.empty-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* First data column (row labels) is left-aligned */
+.sales-by-sales-rep-table tbody td:first-child { text-align: left; }
+
+/* Keep numbers tight in non-first columns */
+.sales-by-sales-rep-table td:not(:first-child),
+.sales-by-sales-rep-table thead th:not(:first-child) {
+  white-space: nowrap !important;
+}
+
+/* ========================================
+   TABLE CELL STYLING
+   ======================================== */
+
+.sales-by-sales-rep-table th,
+.sales-by-sales-rep-table td {
+  display: table-cell !important;
+  padding: clamp(2px, 0.5vw, 8px) clamp(3px, 0.7vw, 12px);
+  vertical-align: middle;
+  text-align: center;
+  line-height: 1.15; /* Same as P&L table */
+  white-space: normal;   /* allow wrapping by default */
+  word-break: normal;
+  overflow-wrap: anywhere;
+  background-clip: border-box;
+  box-sizing: border-box !important;
+}
+
+/* FIRST COLUMN (ALL SCREENS) - Body cells - STICKY LEFT */
+/* Apply to body first column - EXCLUDE separator rows */
+/* Same styling as P&L first column */
+.sales-by-sales-rep-table tbody tr:not(.sbsr-separator-row) td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  background-color: transparent;   /* allow row-level / inline */
+  text-align: left;
+  padding-left: 12px !important; /* Same as P&L table */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 200px;
+  max-width: 200px;
+  box-sizing: border-box;
+}
+
+/* Pseudo-element background for first column - WHITE to prevent bleeding while maintaining white appearance */
+/* EXCLUDE separator rows */
+/* Extend slightly beyond edges to cover borders and prevent transparency */
+.sales-by-sales-rep-table thead tr:first-child th.empty-header::before,
+.sales-by-sales-rep-table tbody tr:not(.sbsr-separator-row) td:first-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;  /* Don't extend - let border show */
+  bottom: 0;
+  background-color: #fff; /* Default white, overridden by specific row types below */
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Extend sticky underlay slightly to cover bleed from scrolling cells */
+.sales-by-sales-rep-table tbody tr:not(.sbsr-separator-row) td:first-child::before {
+  right: -3px;
+}
+
+/* ========================================
+   RECTANGLE BORDERS - 6 BOXES (First Column + 5 Periods)
+   2px solid black borders, matching P&L table structure
+   Sales Rep: First column + 5 periods (each period = 1 column, not 3 like P&L)
+   Delta columns are NOT part of period rectangles
+   ======================================== */
+
+/* TOP BORDERS - First header row across all boxes */
+.sales-by-sales-rep-table thead tr:first-child th {
+  border-top: 2px solid black !important;
+}
+
+/* BOTTOM BORDERS - Last body row across all boxes */
+.sales-by-sales-rep-table tbody tr:last-child td {
+  border-bottom: 2px solid black !important;
+}
+
+/* SEPARATOR ROW between headers and body - STICKY */
+.sales-by-sales-rep-table .sbsr-separator-row {
+  height: 8px !important;
+  line-height: 8px !important;
+  padding: 0 !important;
+}
+
+.sales-by-sales-rep-table .sbsr-separator-row td {
+  position: sticky !important;
+  top: calc(var(--sbsr-hdr-h) * 4) !important; /* Position below 4 header rows */
+  z-index: var(--z-hdr1) !important;
+  height: 8px !important;
+  padding: 0 !important;
+  background-color: white !important;
+  border-top: 2px solid black !important;
+  border-bottom: 2px solid black !important;
+  border-left: none !important; /* Remove all internal left borders */
+  border-right: none !important; /* Remove all internal right borders */
+  background-clip: padding-box !important;
+}
+
+.sales-by-sales-rep-table .sbsr-separator-row td::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* First cell of separator row - STICKY TOP + LEFT (corner) */
+/* IMPORTANT: Explicitly include top, bottom, and left borders so they stick with the cell */
+/* Left border is the outer edge of the rectangle */
+.sales-by-sales-rep-table .sbsr-separator-row td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  top: calc(var(--sbsr-hdr-h) * 4) !important;
+  z-index: var(--z-corner) !important;
+  background-color: white !important;
+  border-top: 2px solid black !important; /* Explicit top border for sticky */
+  border-bottom: 2px solid black !important; /* Explicit bottom border for sticky */
+  border-left: 2px solid black !important; /* Outer edge of rectangle */
+  border-right: none !important; /* No internal border */
+  height: 8px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  vertical-align: top !important;
+}
+
+.sales-by-sales-rep-table .sbsr-separator-row td:first-child::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  right: -3px; /* Extend slightly to cover bleed from scrolling cells */
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* SEPARATOR ROW: Remove all internal vertical borders - separator row should be one continuous rectangle */
+/* Override any period border rules that might apply to separator rows - ensure no internal borders */
+.sales-by-sales-rep-table .sbsr-separator-row td:nth-child(n+2):not(:last-child) {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Last cell of separator row - right border only (outer edge) */
+.sales-by-sales-rep-table .sbsr-separator-row td:last-child {
+  border-right: 2px solid black !important;
+  border-left: none !important;
+}
+
+/* FIRST COLUMN BORDERS (Sales Rep Names) */
+/* Header: first column spans 3 rows via rowspan */
+.sales-by-sales-rep-table thead tr:first-child th.empty-header {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* BODY FIRST COLUMN (column 1) */
+.sales-by-sales-rep-table tbody tr td:nth-child(1) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* ========================================
+   PERIOD BORDER RECTANGLES
+   Each period is 1 data column (not 3 like P&L)
+   Delta columns appear between periods and are NOT part of period rectangles
+
+   STRUCTURE:
+   - Column 1: Sales Rep Names (rowspan=3)
+   - Column 2: Period 1 data column
+   - Column 3: Delta (if exists, rowspan=3)
+   - Column 4: Period 2 data column
+   - Column 5: Delta (if exists)
+   - etc.
+
+   PERIOD BORDERS:
+   - Period 1: Left border on column 2, Right border on column 2 (unless delta follows, then right on column 3)
+   - Period 2: Left border on column 4 (or 3 if no delta), Right border on column 4 (or 5 if delta follows)
+   - etc.
+
+   Since delta columns are optional and dynamic, we target data columns directly.
+   Data columns are: 2, 4, 6, 8, 10, 12, 14, 16, 18, 20... (every even column after 1)
+   OR: 2, (3+delta), 5, (6+delta), 8... if deltas are counted
+
+   BUT: Delta columns have rowspan=3, so they still count in nth-child.
+   So if deltas exist: Period 1 = nth-child(2), Period 2 = nth-child(4), Period 3 = nth-child(6)...
+   If no deltas: Period 1 = nth-child(2), Period 2 = nth-child(3), Period 3 = nth-child(4)...
+
+   SAFEST APPROACH: Target only data columns (non-delta, non-first) in header rows 1-3
+   In header rows 1-3, data columns are those that are NOT empty-header and NOT delta
+   Since empty-header is nth-child(1), and deltas have rowspan=3,
+   data columns start at nth-child(2) and alternate with deltas
+
+   ACTUAL STRUCTURE IN ROW 1 (most reliable):
+   - nth-child(1): empty-header (rowspan=3)
+   - nth-child(2): Period 1 data OR delta
+   - nth-child(3): Period 1 data OR delta OR Period 2 data
+   - etc.
+
+   Since we can't reliably predict delta positions, we target EVEN columns (2, 4, 6, 8...)
+   as period data columns, assuming deltas are on odd columns OR vice versa.
+
+   BETTER: Target ALL header cells in rows 1-3 that are NOT empty-header and NOT delta,
+   but CSS can't select "not delta" easily.
+
+   SOLUTION: Use the fact that period data columns in rows 1-3 are the cells that contain
+   year/month/type text (not "Sales Rep Names" and not "Δ").
+
+   SIMPLEST: Target nth-child(2), nth-child(4), nth-child(6)... for period rectangles,
+   which will work if deltas are on odd columns or if there are no deltas.
+   ======================================== */
+
+/* HEADER ROWS 1-3: Period rectangles - BOTH left and right borders on each data column */
+/* IMPORTANT: Row 1 includes deltas (rowspan=3), but rows 2-3 filter out deltas
+   Row 1 structure: [empty-header(1), period1(2), delta(3), period2(4), delta(5)...]
+   Row 2-3 structure: [period1(1), period2(2), period3(3), period4(4)...] (deltas filtered)
+
+   Row 1: Periods are at even columns: 2, 4, 6, 8, 10...
+   Row 2-3: Periods are at consecutive columns: 1, 2, 3, 4, 5...
+
+   Each single data column forms a complete rectangle with BOTH left AND right borders
+*/
+
+/* Row 1 (Year row): Periods at even columns (2, 4, 6, 8...) */
+/* Period 1 (column 2): Only right border - left border comes from first column's right */
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(2) {
+  border-right: 2px solid black !important;
+}
+
+/* Periods 2-10: Both left and right borders */
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(4),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(6),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(8),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(10),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(12),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(14),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(16),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(18),
+.sales-by-sales-rep-table thead tr:nth-child(1) th:nth-child(20) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Row 2 (Month row): Periods at consecutive columns (1, 2, 3, 4...) - deltas filtered out */
+/* Period 1 (column 1): Only right border - left border comes from first column's right */
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(1) {
+  border-right: 2px solid black !important;
+}
+
+/* Periods 2-10: Both left and right borders */
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(2),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(3),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(4),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(5),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(6),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(7),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(8),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(9),
+.sales-by-sales-rep-table thead tr:nth-child(2) th:nth-child(10) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Row 3 (Type row): Periods at consecutive columns (1, 2, 3, 4...) - deltas filtered out */
+/* Period 1 (column 1): Only right border - left border comes from first column's right */
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(1) {
+  border-right: 2px solid black !important;
+}
+
+/* Periods 2-10: Both left and right borders */
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(2),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(3),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(4),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(5),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(6),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(7),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(8),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(9),
+.sales-by-sales-rep-table thead tr:nth-child(3) th:nth-child(10) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Row 4 (Values/% subheader row): Each period has 2 cells (Values, %) */
+/* Structure: [Period1-Values(1), Period1-%(2), Period2-Values(3), Period2-%(4)...] */
+/* Right border on every 2nd cell (%) to complete the rectangle */
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(2),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(4),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(6),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(8),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(10),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(12),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(14),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(16),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(18),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(20) {
+  border-right: 2px solid black !important;
+}
+
+/* Left border on Period 2-10 Values cells (every odd cell starting from 3) */
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(3),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(5),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(7),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(9),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(11),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(13),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(15),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(17),
+.sales-by-sales-rep-table thead tr:nth-child(4) th:nth-child(19) {
+  border-left: 2px solid black !important;
+}
+
+/* Ensure last header column (regardless of period count) always has right border */
+.sales-by-sales-rep-table thead tr th:last-child {
+  border-right: 2px solid black !important;
+}
+
+/* BODY ROWS: Period rectangles - BOTH left and right borders on each data column */
+/* Body structure same as Row 1: [firstcol(1), period1(2), delta(3), period2(4), delta(5)...] */
+/* Period 1 (column 2): Only right border - left border comes from first column's right */
+.sales-by-sales-rep-table tbody tr td:nth-child(2) {
+  border-right: 2px solid black !important;
+}
+
+/* Periods 2-10: Both left and right borders */
+.sales-by-sales-rep-table tbody tr td:nth-child(4),
+.sales-by-sales-rep-table tbody tr td:nth-child(6),
+.sales-by-sales-rep-table tbody tr td:nth-child(8),
+.sales-by-sales-rep-table tbody tr td:nth-child(10),
+.sales-by-sales-rep-table tbody tr td:nth-child(12),
+.sales-by-sales-rep-table tbody tr td:nth-child(14),
+.sales-by-sales-rep-table tbody tr td:nth-child(16),
+.sales-by-sales-rep-table tbody tr td:nth-child(18),
+.sales-by-sales-rep-table tbody tr td:nth-child(20) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Ensure last column (regardless of period count) always has right border */
+.sales-by-sales-rep-table tbody tr td:last-child {
+  border-right: 2px solid black !important;
+}
+
+/* ========================================
+   TABLE SUBTITLE STYLING
+   ======================================== */
+
+.sales-rep-subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-top: 40px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+/* Add spacing after each table before next subtitle */
+.financial-table {
+  margin-bottom: 40px;
+}
+
+.financial-table:last-of-type {
+  margin-bottom: 20px;
+}
+
+/* ========================================
+   FINANCIAL TABLE STYLES (for individual sales rep tables)
+   These are the 4 tables shown for each sales rep: KGS, Amount, MoRM, Customer
+   Modern styling with professional appearance
+   ======================================== */
+
+.financial-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #d0d0d0;
+  background: #fff;
+  table-layout: auto;
+}
+
+.financial-table th {
+  padding: 11px 16px;
+  text-align: center;
+  border: 1px solid #d0d0d0 !important;
+  font-weight: 600;
+  background-color: #f5f7fa;
+  color: #2c3e50;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  font-size: 11px;
+  min-width: 80px;
+}
+
+.financial-table td {
+  padding: 9px 16px;
+  text-align: center;
+  border: 1px solid #ddd !important;
+  font-size: 13px;
+  color: #2c3e50;
+  background-color: #ffffff;
+}
+
+.financial-table tbody tr:hover td:not(.spacer-col):not(.star-cell) {
+  background-color: #f9fafb !important;
+}
+
+/* Product group styles */
+.product-header {
+  text-align: left !important;
+  font-weight: 600 !important;
+  background-color: #e8eef5 !important;
+  font-size: 13px;
+  color: #1e3a5f;
+  padding-left: 36px !important;
+  position: relative;
+  min-width: 200px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Checkbox inside product header */
+.product-header input[type="checkbox"] {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.product-header-row td.product-header {
+  font-weight: 600;
+}
+
+/* Metric cell styles */
+.metric-cell {
+  text-align: right;
+  padding: 9px 16px !important;
+  min-width: 100px;
+}
+
+/* Delta column styles - white background with subtle border */
+.financial-table td[class*="delta"] {
+  background-color: #fafafa !important;
+  font-weight: 500;
+  border-left: 1px solid #d0d0d0 !important;
+  border-right: 1px solid #d0d0d0 !important;
+}
+
+/* Total row base styles */
+.total-row td:not(.delta-cell):not(.spacer-col) {
+  font-weight: 700;
+  background-color: #0D47A1 !important;
+  font-size: 13px !important;
+  color: #ffffff !important;
+  border-color: #0a3d8f !important;
+  letter-spacing: 0.3px;
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+}
+
+/* Delta cells in total row */
+.total-row td.delta-cell {
+  font-weight: 700;
+  background-color: #f0f4f8 !important;
+  font-size: 13px !important;
+  color: #0D47A1 !important;
+  border-color: #d0d0d0 !important;
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+}
+
+/* Spacer column - no borders */
+.financial-table .spacer-col {
+  border: none !important;
+  background: transparent !important;
+  width: 10px !important;
+  min-width: 10px !important;
+  max-width: 10px !important;
+  padding: 0 !important;
+}
+
+/* Star Cell Styling - More subtle appearance */
+.star-cell {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 6px !important;
+  text-align: center !important;
+  font-size: 18px;
+  color: #fdb44b;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   BORDERS FOR INDIVIDUAL SALES REP TABLES (with spacer column and star-cell)
+   These tables use simple 1px borders instead of period rectangles
+   Override the complex period rectangle borders with simple grid borders
+   ======================================== */
+
+/* Individual sales rep tables - Override period rectangle borders with simple grid */
+/* Reset the complex 2px black borders from lines 560-623 */
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(2),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(4),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(6),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(8),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(10),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(12),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(14),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(16),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(18),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(20),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(3),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(5),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(7),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(9),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(11),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(13),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(15),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(17),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:nth-child(19),
+.sales-by-sales-rep-table:has(.star-cell) thead tr th:last-child {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Reset body period rectangle borders */
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(2),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(4),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(6),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(8),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(10),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(12),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(14),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(16),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(18),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:nth-child(20),
+.sales-by-sales-rep-table:has(.star-cell) tbody tr td:last-child {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Apply simple 1px borders to all cells (except spacer) */
+.sales-by-sales-rep-table:has(.star-cell) thead th:not(.spacer-col) {
+  border: 1px solid #ddd !important;
+}
+
+.sales-by-sales-rep-table:has(.star-cell) tbody td:not(.spacer-col) {
+  border: 1px solid #e0e0e0 !important;
+}
+
+/* Spacer column styling - no borders, transparent background */
+.sales-by-sales-rep-table:has(.star-cell) .spacer-col {
+  border: none !important;
+  background: transparent !important;
+  width: 10px !important;
+  min-width: 10px !important;
+  max-width: 10px !important;
+  padding: 0 !important;
+}
+
+/* Star cells - no borders, transparent background */
+.sales-by-sales-rep-table:has(.star-cell) .star-cell {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+  text-align: center !important;
+}
+
+/* ========================================
+   ROW LABEL STYLING
+   ======================================== */
+
+.sales-by-sales-rep-table .row-label {
+  text-align: left !important;
+  background-color: #f8f9fa !important; /* Re-added !important for regular rows */
+  font-weight: normal !important; /* Re-added !important for regular rows */
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+  padding-left: 12px !important; /* Same as P&L table first column */
+  font-size: var(--sbsr-font-label); /* Consistent font size for all row labels */
+}
+
+/* ========================================
+   COLOR SCHEMES FOR FIRST COLUMN
+   Product Groups, Total, Material, Process - Different colors for complete row highlight
+   ======================================== */
+
+/* Product Group header rows - Light Blue (full row) */
+.sales-by-sales-rep-table .product-header-row.pg-header-row td {
+  background-color: #bbdefb !important; /* Light blue */
+  color: #0d47a1 !important;
+  font-weight: bold !important;
+}
+
+.sales-by-sales-rep-table .product-header-row.pg-header-row td.row-label.product-header {
+  background-color: #bbdefb !important; /* Light blue */
+  font-weight: bold !important;
+  color: #0d47a1 !important;
+  padding: 10px 12px !important;
+}
+
+/* Product Group metric rows - White background (only headers get color) */
+/* All metric rows that follow product group headers but are not category or total */
+/* Use more specific selector to override inline styles */
+.sales-by-sales-rep-table tbody .metric-row:not(.category-metric-row):not(.total-metric-row) td.row-label.metric-label {
+  background-color: white !important; /* White background for metric rows */
+  font-weight: normal !important;
+  color: #333 !important;
+  padding: 6px 12px !important;
+}
+
+/* Product Group pseudo-element background for sticky positioning - header */
+.sales-by-sales-rep-table .product-header-row.pg-header-row td.row-label.product-header::before {
+  background-color: #bbdefb !important; /* Light blue for product group headers */
+}
+
+/* Product Group pseudo-element background for sticky positioning - metric rows */
+.sales-by-sales-rep-table tbody .metric-row:not(.category-metric-row):not(.total-metric-row) td.row-label.metric-label::before {
+  background-color: white !important; /* White background for sticky metric rows */
+}
+
+/* Total header rows - Blue (full row) */
+.sales-by-sales-rep-table .total-header-row td {
+  background-color: #7499A3 !important; /* Blue */
+  color: #ffffff !important;
+  font-weight: bold !important;
+}
+
+.sales-by-sales-rep-table .total-header-row td.row-label.product-header {
+  background-color: #7499A3 !important; /* Blue */
+  font-weight: bold !important;
+  color: #ffffff !important;
+  padding: 10px 12px !important;
+}
+
+/* Total metric rows - Use default gray background (no special coloring) */
+.sales-by-sales-rep-table .total-metric-row td.row-label.metric-label {
+  /* background-color removed - uses default #f8f9fa from .row-label */
+  font-weight: bold !important;
+  color: #333 !important;
+  padding: 6px 12px !important;
+}
+
+.sales-by-sales-rep-table .total-metric-row td.metric-cell {
+  font-weight: bold !important;
+}
+
+/* Total pseudo-element background */
+.sales-by-sales-rep-table .total-header-row td.row-label.product-header::before {
+  background-color: #7499A3 !important; /* Blue for total header */
+}
+
+.sales-by-sales-rep-table .total-metric-row td.row-label.metric-label::before {
+  background-color: #f8f9fa !important; /* Default gray background for sticky positioning */
+}
+
+/* Material category header rows - Red (full row) */
+.sales-by-sales-rep-table .material-header-row td {
+  background-color: #D93111 !important; /* Red */
+  color: #ffffff !important;
+  font-weight: bold !important;
+}
+
+.sales-by-sales-rep-table .material-header-row td.row-label.product-header {
+  background-color: #D93111 !important; /* Red */
+  font-weight: bold !important;
+  color: #ffffff !important;
+  padding: 10px 12px !important;
+}
+
+/* Material category metric rows - White background like other children */
+.sales-by-sales-rep-table .material-header-row + .metric-row.category-metric-row td.row-label.metric-label {
+  background-color: #ffffff !important; /* White like other children */
+  font-weight: normal !important;
+  color: #333 !important;
+  padding: 6px 12px !important;
+}
+
+/* Material category pseudo-element background */
+.sales-by-sales-rep-table .material-header-row td.row-label.product-header::before {
+  background-color: #D93111 !important; /* Red for header */
+}
+.sales-by-sales-rep-table .material-header-row + .metric-row.category-metric-row td.row-label.metric-label::before {
+  background-color: #ffffff !important; /* White for metric rows */
+}
+
+/* Process category header row - Yellow (already exists, but ensure consistency) */
+.sales-by-sales-rep-table .process-header-row td {
+  background-color: #FBC02D !important; /* solid yellow */
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.sales-by-sales-rep-table .process-header-row td.row-label.product-header {
+  background-color: #FBC02D !important; /* solid yellow */
+  color: #000000 !important;
+  padding: 10px 12px !important;
+}
+
+/* Process category metric rows - White background like other children */
+.sales-by-sales-rep-table .process-header-row + .metric-row.category-metric-row td.row-label.metric-label {
+  background-color: #ffffff !important; /* White like other children */
+  font-weight: normal !important;
+  color: #333 !important;
+  padding: 6px 12px !important;
+}
+
+/* Process category pseudo-element background */
+.sales-by-sales-rep-table .process-header-row td.row-label.product-header::before {
+  background-color: #FBC02D !important; /* Yellow for header */
+}
+.sales-by-sales-rep-table .process-header-row + .metric-row.category-metric-row td.row-label.metric-label::before {
+  background-color: #ffffff !important; /* White for metric rows */
+}
+
+/* Category header rows (generic - for Material) */
+.sales-by-sales-rep-table .category-header-row td.row-label.product-header {
+  font-weight: bold !important;
+}
+
+/* Default metric label styling (fallback for regular rows) */
+.sales-by-sales-rep-table .metric-row td.row-label.metric-label {
+  background-color: #f8f9fa !important;
+  font-weight: normal !important;
+  color: #333 !important;
+  padding: 6px 12px !important;
+}
+
+/* Sales rep name cells - specific styling for sales by sales rep - DESKTOP */
+.sales-by-sales-rep-table .metric-row td.row-label.sales-rep-name-cell {
+  font-weight: bold !important;
+  font-size: var(--sbsr-font-accent);
+  font-family: Arial, sans-serif !important;
+  color: #333 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  background-color: #f8f9fa !important;
+  padding: 6px 12px !important;
+}
+
+/* Total Sales row - first column styling */
+.sales-by-sales-rep-table td.row-label.total-sales-label {
+  background-color: transparent !important; /* Override base .row-label background */
+  color: white !important; /* White text for dark blue background */
+  font-weight: bold !important; /* Bold text like the data in the row */
+  font-size: var(--sbsr-font-base) !important; /* Match data cells font size */
+}
+
+/* Total Sales row - override white pseudo-element background with dark blue */
+.sales-by-sales-rep-table td.row-label.total-sales-label::before {
+  background-color: #0D47A1 !important;
+}
+
+/* Total Sales row - delta cells styling */
+.sales-by-sales-rep-table tr:has(.total-sales-label) .delta-cell {
+  background-color: #0D47A1 !important; /* Override base .delta-cell background */
+  color: white !important; /* White text for dark blue background */
+  font-weight: bold !important; /* Bold text */
+}
+
+/* Total Sales row - data cells styling */
+.sales-by-sales-rep-table tr:has(.total-sales-label) .metric-cell:not(.delta-cell) {
+  background-color: #0D47A1 !important; /* Override base background */
+  color: white !important; /* White text for dark blue background */
+  font-weight: bold !important; /* Bold text */
+}
+
+/* Total row - complete row with brown background and white text */
+.sales-by-sales-rep-table .total-metric-row td.row-label.total-row-label {
+  background-color: #7A6764 !important;
+  color: #fff !important;
+  font-size: var(--sbsr-font-accent);
+}
+
+/* Total row first column - override white pseudo-element background */
+.sales-by-sales-rep-table .total-metric-row td.row-label.total-row-label::before {
+  background-color: #7A6764 !important;
+}
+
+.sales-by-sales-rep-table .total-metric-row td.total-delta-cell {
+  background-color: #7A6764 !important;
+  color: #fff !important;
+  font-size: var(--sbsr-font-base) !important;
+}
+
+.sales-by-sales-rep-table .total-metric-row td.total-data-cell {
+  background-color: #7A6764 !important;
+  color: #fff !important;
+  font-size: var(--sbsr-font-base) !important;
+}
+
+/* Delta cells - DESKTOP - same font size as data cells */
+.sales-by-sales-rep-table .delta-cell {
+  background-color: #f8f9fa !important; /* Re-added !important for regular rows */
+  text-align: center !important;
+  font-weight: bold !important;
+  font-size: var(--sbsr-font-base) !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+  min-width: 70px !important;
+  max-width: 70px !important;
+  padding: 4px 4px !important;
+}
+
+/* Data cells - general overflow protection */
+.sales-by-sales-rep-table .metric-cell {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+  font-size: var(--sbsr-font-base) !important;
+}
+
+.sales-by-sales-rep-table .data-value-cell,
+.sales-by-sales-rep-table .data-percent-cell {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  font-size: var(--sbsr-font-base) !important;
+}
+
+/* Product header cells */
+.sales-by-sales-rep-table .product-header-cell {
+  text-align: center !important;
+  font-weight: bold !important;
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+
+/* Desktop - Default (1200px+) */
+@media (min-width: 1200px) {
+  :root {
+    --sbsr-font-base: 11px;
+    --sbsr-font-header: 13px;
+    --sbsr-font-label: 11px;
+    --sbsr-font-accent: 11px;
+    --sbsr-font-corner: 18px;
+  }
+
+  .sales-by-sales-rep-table {
+    min-width: 100%;
+  }
+
+  .sales-by-sales-rep-table thead th {
+    padding: 4px 4px !important;
+  }
+
+  .sales-by-sales-rep-table td {
+    padding: 4px 6px;
+  }
+
+  /* Desktop data cell widths */
+  .sales-by-sales-rep-table .data-value-cell {
+    min-width: 90px !important;
+    max-width: 90px !important;
+    padding: 4px 4px !important;
+  }
+
+  .sales-by-sales-rep-table .data-percent-cell {
+    min-width: 50px !important;
+    max-width: 50px !important;
+    padding: 4px 4px !important;
+  }
+}
+
+/* Tablet - Medium screens (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  :root {
+    --sbsr-font-base: 9px;
+    --sbsr-font-header: 10px;
+    --sbsr-font-label: 9px;
+    --sbsr-font-accent: 9px;
+    --sbsr-font-corner: 14px;
+  }
+
+  .sales-by-sales-rep-table {
+    min-width: 100%;
+  }
+
+  .sales-by-sales-rep-table th,
+  .sales-by-sales-rep-table td {
+    padding: 3px 4px;
+  }
+
+  /* Tablet data cell widths */
+  .sales-by-sales-rep-table .data-value-cell {
+    min-width: 70px !important;
+    max-width: 70px !important;
+    padding: 3px 3px !important;
+  }
+
+  .sales-by-sales-rep-table .data-percent-cell {
+    min-width: 45px !important;
+    max-width: 45px !important;
+    padding: 3px 3px !important;
+  }
+
+  /* Tablet delta cell widths */
+  .sales-by-sales-rep-table .delta-cell {
+    min-width: 55px !important;
+    max-width: 55px !important;
+    padding: 3px 3px !important;
+  }
+}
+
+/* ========================================
+   MOBILE ADJUSTMENTS
+   ======================================== */
+
+/* Mobile adjustments - Portrait */
+/* Applies to: Portrait mode (width < 768px) */
+@media (max-width: 767px) {
+  :root {
+    --sbsr-font-base: 9px;
+    --sbsr-font-header: 10px;
+    --sbsr-font-label: 9px;
+    --sbsr-font-accent: 9px;
+    --sbsr-font-corner: 12px;
+  }
+
+  /* Table responsive behavior */
+  .sales-by-sales-rep-table {
+    min-width: 100%;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  /* Optimize column widths for mobile */
+  .sales-by-sales-rep-table colgroup col {
+    width: auto !important;
+  }
+
+  /* Container scrolling */
+  .sbsr-table-view {
+    padding: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sbsr-table-container {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: 80vh !important;
+  }
+
+  /* Title sizing */
+  .sbsr-table-title {
+    font-size: 1.2rem;
+  }
+
+  .sbsr-table-title h2 {
+    font-size: 1.2rem;
+  }
+
+  .sbsr-table-subtitle {
+    font-size: 0.9rem;
+  }
+
+  /* Keep headers readable - PRESERVE STICKY POSITIONING */
+  .sales-by-sales-rep-table thead th {
+    padding: 4px 2px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    position: sticky !important;
+    background-clip: padding-box !important;
+    /* background-color removed - allow inline styles from getColumnHeaderStyle */
+  }
+
+  /* Mobile - Five sticky header tiers */
+  .sales-by-sales-rep-table thead tr:nth-child(1) th {
+    top: 0 !important;
+    z-index: var(--z-hdr3) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(2) th {
+    top: calc(var(--sbsr-hdr-h) * 1) !important;
+    z-index: var(--z-hdr2) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(3) th {
+    top: calc(var(--sbsr-hdr-h) * 2) !important;
+    z-index: var(--z-hdr1) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(4) th {
+    top: calc(var(--sbsr-hdr-h) * 3) !important;
+    z-index: var(--z-hdr1) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(5) th {
+    top: calc(var(--sbsr-hdr-h) * 4) !important;
+    z-index: var(--z-hdr1) !important;
+  }
+
+  .sales-by-sales-rep-table th,
+  .sales-by-sales-rep-table td {
+    padding: 3px 2px;
+    white-space: nowrap;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: none;
+  }
+
+  /* Mobile column optimization */
+  .sales-by-sales-rep-table colgroup:first-child col {
+    width: auto !important;
+    min-width: 120px;
+  }
+
+  /* Mobile - Separator row STICKY TOP */
+  .sales-by-sales-rep-table .sbsr-separator-row td {
+    position: sticky !important;
+    top: calc(var(--sbsr-hdr-h) * 4) !important;
+    z-index: var(--z-hdr1) !important;
+    background-color: white !important;
+    height: 8px !important;
+    border-top: 2px solid black !important;
+    border-bottom: 2px solid black !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  /* Mobile - Separator first cell STICKY TOP + LEFT */
+  .sales-by-sales-rep-table .sbsr-separator-row td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    top: calc(var(--sbsr-hdr-h) * 4) !important;
+    z-index: var(--z-corner) !important;
+    background-color: white !important;
+    border-top: 2px solid black !important;
+    border-bottom: 2px solid black !important;
+    border-left: 2px solid black !important;
+    border-right: none !important;
+    height: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    vertical-align: top !important;
+  }
+
+  /* Mobile - First column header STICKY TOP + LEFT */
+  /* Sales Rep Names header - same styling as P&L Ledgers header on mobile */
+  .sales-by-sales-rep-table thead tr:first-child th.empty-header {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: var(--z-corner) !important;
+    min-width: 120px;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+    font-family: Arial, sans-serif !important;
+    font-size: var(--sbsr-font-corner);
+    line-height: 1.05 !important;
+    padding: 4px 2px !important;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Mobile - body first column STICKY LEFT */
+  .sales-by-sales-rep-table tbody tr:not(.sbsr-separator-row) td:first-child,
+  .sales-by-sales-rep-table tbody tr td.row-label {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    min-width: 120px;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+  }
+
+  /* White underlay for first column to prevent content showing through */
+  .sales-by-sales-rep-table thead tr:first-child th.empty-header::before,
+  .sales-by-sales-rep-table tbody tr td:first-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0; /* Don't extend - let border show */
+    bottom: 0;
+    background-color: #fff;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Row label sizing on mobile */
+  .sales-by-sales-rep-table .row-label {
+    min-width: 140px !important;
+    max-width: 140px !important;
+    width: 140px !important;
+    font-size: var(--sbsr-font-label);
+    padding: 3px 4px !important;
+  }
+
+  /* Sales rep name cells on mobile */
+  .sales-by-sales-rep-table .metric-row td.row-label.sales-rep-name-cell {
+    font-weight: bold !important;
+    font-size: var(--sbsr-font-accent);
+    font-family: Arial, sans-serif !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    width: 140px !important;
+    padding: 3px 4px !important;
+  }
+
+  /* Ensure first column body cell respects overflow */
+  .sales-by-sales-rep-table tbody tr:not(.sbsr-separator-row) td:first-child,
+  .sales-by-sales-rep-table tbody tr td.row-label {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Mobile data cell widths */
+  .sales-by-sales-rep-table .data-value-cell {
+    min-width: 70px !important;
+    max-width: 70px !important;
+    padding: 3px 4px !important;
+  }
+
+  .sales-by-sales-rep-table .data-percent-cell {
+    min-width: 40px !important;
+    max-width: 40px !important;
+    padding: 3px 3px !important;
+  }
+
+  /* Mobile delta cell widths */
+  .sales-by-sales-rep-table .delta-cell {
+    min-width: 50px !important;
+    max-width: 50px !important;
+    padding: 3px 2px !important;
+  }
+
+  .sales-by-sales-rep-table .metric-cell {
+    padding: 3px 4px !important;
+  }
+
+  /* Total row font weight adjustment for mobile */
+  .sales-by-sales-rep-table .total-metric-row td {
+    font-weight: 600 !important; /* Slightly lighter than bold for better fit */
+  }
+
+  /* Maintain color schemes on mobile - Product Groups */
+  .sales-by-sales-rep-table .product-header-row.pg-header-row td.row-label.product-header {
+    background-color: #bbdefb !important;
+  }
+
+  .sales-by-sales-rep-table tbody .metric-row:not(.category-metric-row):not(.total-metric-row) td.row-label.metric-label {
+    background-color: white !important;
+  }
+
+  /* Maintain color schemes on mobile - Total */
+  .sales-by-sales-rep-table .total-header-row td.row-label.product-header {
+    background-color: #90caf9 !important;
+  }
+
+  .sales-by-sales-rep-table .total-metric-row td.row-label.metric-label {
+    background-color: #90caf9 !important;
+  }
+
+  /* Maintain color schemes on mobile - Material */
+  .sales-by-sales-rep-table .material-header-row td.row-label.product-header {
+    background-color: #c8e6c9 !important;
+  }
+
+  .sales-by-sales-rep-table .material-header-row + .metric-row.category-metric-row td.row-label.metric-label {
+    background-color: #e8f5e9 !important;
+  }
+
+  /* Maintain color schemes on mobile - Process */
+  .sales-by-sales-rep-table .process-header-row td.row-label.product-header {
+    background-color: #FBC02D !important;
+  }
+
+  .sales-by-sales-rep-table .process-header-row + .metric-row.category-metric-row td.row-label.metric-label {
+    background-color: #fff9c4 !important;
+  }
+
+}
+
+/* Mobile adjustments - Landscape (tablets/phones) */
+/* Applies to: Landscape mode on devices up to 1024px width */
+@media (max-width: 1024px) and (orientation: landscape) {
+  :root {
+    --sbsr-font-base: 9px;
+    --sbsr-font-header: 10px;
+    --sbsr-font-label: 9px;
+    --sbsr-font-accent: 9px;
+    --sbsr-font-corner: 12px;
+  }
+  /* Table responsive behavior */
+  .sales-by-sales-rep-table {
+    min-width: 100%;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  /* Optimize column widths for mobile */
+  .sales-by-sales-rep-table colgroup col {
+    width: auto !important;
+  }
+
+  /* Container scrolling */
+  .sbsr-table-view {
+    padding: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sbsr-table-container {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: 80vh !important;
+  }
+
+  /* Title sizing */
+  .sbsr-table-title {
+    font-size: 1.2rem;
+  }
+
+  .sbsr-table-title h2 {
+    font-size: 1.2rem;
+  }
+
+  .sbsr-table-subtitle {
+    font-size: 0.9rem;
+  }
+
+  /* Keep headers readable - PRESERVE STICKY POSITIONING */
+  .sales-by-sales-rep-table thead th {
+    padding: 4px 2px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    position: sticky !important;
+    background-clip: padding-box !important;
+    /* background-color removed - allow inline styles from getColumnHeaderStyle */
+  }
+
+  /* Mobile - Five sticky header tiers */
+  .sales-by-sales-rep-table thead tr:nth-child(1) th {
+    top: 0 !important;
+    z-index: var(--z-hdr3) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(2) th {
+    top: calc(var(--sbsr-hdr-h) * 1) !important;
+    z-index: var(--z-hdr2) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(3) th {
+    top: calc(var(--sbsr-hdr-h) * 2) !important;
+    z-index: var(--z-hdr1) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(4) th {
+    top: calc(var(--sbsr-hdr-h) * 3) !important;
+    z-index: var(--z-hdr1) !important;
+  }
+  .sales-by-sales-rep-table thead tr:nth-child(5) th {
+    top: calc(var(--sbsr-hdr-h) * 4) !important;
+    z-index: var(--z-hdr1) !important;
+  }
+
+  .sales-by-sales-rep-table th,
+  .sales-by-sales-rep-table td {
+    padding: 3px 2px;
+    white-space: nowrap;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: none;
+  }
+
+  /* Mobile column optimization */
+  .sales-by-sales-rep-table colgroup:first-child col {
+    width: auto !important;
+    min-width: 120px;
+  }
+
+  /* Mobile - Separator row STICKY TOP */
+  .sales-by-sales-rep-table .sbsr-separator-row td {
+    position: sticky !important;
+    top: calc(var(--sbsr-hdr-h) * 4) !important;
+    z-index: var(--z-hdr1) !important;
+    background-color: white !important;
+    height: 8px !important;
+    border-top: 2px solid black !important;
+    border-bottom: 2px solid black !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  /* Mobile - Separator first cell STICKY TOP + LEFT */
+  .sales-by-sales-rep-table .sbsr-separator-row td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    top: calc(var(--sbsr-hdr-h) * 4) !important;
+    z-index: var(--z-corner) !important;
+    background-color: white !important;
+    border-top: 2px solid black !important;
+    border-bottom: 2px solid black !important;
+    border-left: 2px solid black !important;
+    border-right: none !important;
+    height: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    vertical-align: top !important;
+  }
+
+  /* Mobile - First column header STICKY TOP + LEFT */
+  /* Sales Rep Names header - same styling as P&L Ledgers header on mobile landscape */
+  .sales-by-sales-rep-table thead tr:first-child th.empty-header {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: var(--z-corner) !important;
+    min-width: 120px;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+    font-family: Arial, sans-serif !important;
+    font-size: var(--sbsr-font-corner);
+    line-height: 1.05 !important;
+    padding: 4px 2px !important;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Mobile - body first column STICKY LEFT */
+  .sales-by-sales-rep-table tbody tr:not(.sbsr-separator-row) td:first-child,
+  .sales-by-sales-rep-table tbody tr td.row-label {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    min-width: 120px;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+  }
+
+  /* White underlay for first column to prevent content showing through */
+  .sales-by-sales-rep-table thead tr:first-child th.empty-header::before,
+  .sales-by-sales-rep-table tbody tr td:first-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0; /* Don't extend - let border show */
+    bottom: 0;
+    background-color: #fff;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Row label sizing on mobile landscape */
+  .sales-by-sales-rep-table .row-label {
+    min-width: 140px !important;
+    max-width: 140px !important;
+    width: 140px !important;
+    font-size: var(--sbsr-font-label);
+    padding: 3px 4px !important;
+  }
+
+  /* Sales rep name cells on mobile landscape */
+  .sales-by-sales-rep-table .metric-row td.row-label.sales-rep-name-cell {
+    font-weight: bold !important;
+    font-size: var(--sbsr-font-accent);
+    font-family: Arial, sans-serif !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    width: 140px !important;
+    padding: 3px 4px !important;
+  }
+
+  /* Ensure first column body cell respects overflow */
+  .sales-by-sales-rep-table tbody tr:not(.sbsr-separator-row) td:first-child,
+  .sales-by-sales-rep-table tbody tr td.row-label {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Mobile landscape data cell widths */
+  .sales-by-sales-rep-table .data-value-cell {
+    min-width: 70px !important;
+    max-width: 70px !important;
+    padding: 3px 4px !important;
+  }
+
+  .sales-by-sales-rep-table .data-percent-cell {
+    min-width: 40px !important;
+    max-width: 40px !important;
+    padding: 3px 3px !important;
+  }
+
+  /* Mobile landscape delta cell widths */
+  .sales-by-sales-rep-table .delta-cell {
+    min-width: 50px !important;
+    max-width: 50px !important;
+    padding: 3px 2px !important;
+  }
+
+  .sales-by-sales-rep-table .metric-cell {
+    padding: 3px 4px !important;
+  }
+
+  /* Total row font weight adjustment for mobile landscape */
+  .sales-by-sales-rep-table .total-metric-row td {
+    font-weight: 600 !important; /* Slightly lighter than bold for better fit */
+  }
+
+  /* Maintain color schemes on mobile landscape - Product Groups */
+  .sales-by-sales-rep-table .product-header-row.pg-header-row td.row-label.product-header {
+    background-color: #bbdefb !important;
+  }
+
+  .sales-by-sales-rep-table tbody .metric-row:not(.category-metric-row):not(.total-metric-row) td.row-label.metric-label {
+    background-color: white !important;
+  }
+
+  /* Maintain color schemes on mobile landscape - Total */
+  .sales-by-sales-rep-table .total-header-row td.row-label.product-header {
+    background-color: #90caf9 !important;
+  }
+
+  .sales-by-sales-rep-table .total-metric-row td.row-label.metric-label {
+    background-color: #90caf9 !important;
+  }
+
+  /* Maintain color schemes on mobile landscape - Material */
+  .sales-by-sales-rep-table .material-header-row td.row-label.product-header {
+    background-color: #c8e6c9 !important;
+  }
+
+  .sales-by-sales-rep-table .material-header-row + .metric-row.category-metric-row td.row-label.metric-label {
+    background-color: #e8f5e9 !important;
+  }
+
+  /* Maintain color schemes on mobile landscape - Process */
+  .sales-by-sales-rep-table .process-header-row td.row-label.product-header {
+    background-color: #FBC02D !important;
+  }
+
+  .sales-by-sales-rep-table .process-header-row + .metric-row.category-metric-row td.row-label.metric-label {
+    background-color: #fff9c4 !important;
+  }
+
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+  :root {
+    --sbsr-font-base: 10px;
+    --sbsr-font-header: 11px;
+    --sbsr-font-label: 10px;
+    --sbsr-font-accent: 10px;
+    --sbsr-font-corner: 13px;
+  }
+  .sales-by-sales-rep-table {
+    background: #fff;
+  }
+  .sales-by-sales-rep-table th,
+  .sales-by-sales-rep-table td {
+    padding: 4px 6px;
+  }
+}
+
+/* ========================================
+   SUB-TABS COLOR DIFFERENTIATION
+   ======================================== */
+
+/* Main container for sales rep table */
+.sales-rep-table-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container for sales rep content */
+.sales-rep-content {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+/* Sub-tabs container styling */
+.sub-tabs {
+  margin-top: 10px;
+  border-top: 2px solid #e0e0e0;
+  padding-top: 10px;
+}
+
+/* Sub-tab button styling - Tables */
+.sub-tabs .tab-button.sub-tab-tables {
+  background-color: #e3f2fd !important; /* Light blue for Tables */
+  border-bottom: 3px solid #2196F3 !important;
+  color: #1565C0 !important;
+  font-weight: 600 !important;
+}
+
+.sub-tabs .tab-button.sub-tab-tables.active {
+  background-color: #2196F3 !important; /* Blue when active */
+  color: white !important;
+  border-bottom: 3px solid #1565C0 !important;
+}
+
+.sub-tabs .tab-button.sub-tab-tables:hover {
+  background-color: #BBDEFB !important;
+  color: #0D47A1 !important;
+}
+
+/* Sub-tab button styling - Report */
+.sub-tabs .tab-button.sub-tab-report {
+  background-color: #F3E5F5 !important; /* Light purple for Report */
+  border-bottom: 3px solid #9C27B0 !important;
+  color: #6A1B9A !important;
+  font-weight: 600 !important;
+}
+
+.sub-tabs .tab-button.sub-tab-report.active {
+  background-color: #9C27B0 !important; /* Purple when active */
+  color: white !important;
+  border-bottom: 3px solid #6A1B9A !important;
+}
+
+.sub-tabs .tab-button.sub-tab-report:hover {
+  background-color: #E1BEE7 !important;
+  color: #4A148C !important;
+}
+
+/* ========================================
+   MAIN SALES REP NAME TABS - MODERN DESIGN
+   ======================================== */
+.sales-rep-table-container .tabs-container {
+  background: #fff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  margin-bottom: 20px !important;
+}
+
+.sales-rep-table-container .tabs-container .tabs-header {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  padding: 16px 16px 0 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.sales-rep-table-container .tabs-container .tabs-nav {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  row-gap: 8px !important;
+}
+
+.sales-rep-table-container .tabs-container .tab-button {
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  padding: 10px 18px !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-bottom: none !important;
+  border-radius: 10px 10px 0 0 !important;
+  color: #64748b !important;
+  transition: all 0.25s ease !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  text-align: center !important;
+  line-height: 1.3 !important;
+  min-width: 100px !important;
+  max-width: 120px !important;
+  width: 120px !important;
+  height: 60px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.sales-rep-table-container .tabs-container .tab-button:hover {
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #3b82f6 !important;
+  transform: translateY(-2px) !important;
+}
+
+.sales-rep-table-container .tabs-container .tab-button.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Ensure sub-tabs are visually distinct */
+.sub-tabs .tab-button {
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  margin: 0 4px !important;
+  border-radius: 4px 4px 0 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+/* ========================================
+   SALES REP PORTAL VIEW - Direct access for sales reps
+   ======================================== */
+.sales-rep-portal-view {
+  padding: 0;
+  background: transparent;
+}
+
+/* Hide any unnecessary padding when in portal mode */
+.sales-rep-portal-view .sales-rep-report-container {
+  margin-top: 0;
+}
+
+/* End of Sales by Sales Rep Table Styles */

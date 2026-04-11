@@ -1,0 +1,490 @@
+/* ========================================
+   BASE THEME VARIABLES SYSTEM
+   Extended 60+ CSS Variables for Ultimate Customization
+   ======================================== */
+
+:root {
+  /* ===== CORE BRAND COLORS ===== */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-active: #1d4ed8;
+  --color-primary-light: #dbeafe;
+  --color-primary-dark: #1e40af;
+  --color-primary-rgb: 59, 130, 246;
+  
+  --color-secondary: #64748b;
+  --color-secondary-hover: #475569;
+  --color-secondary-light: #f1f5f9;
+  
+  --color-accent: #0ea5e9;
+  --color-accent-hover: #0284c7;
+  --color-accent-light: #e0f2fe;
+  
+  --color-highlight: #8b5cf6;
+  --color-highlight-hover: #7c3aed;
+  --color-highlight-light: #ede9fe;
+  
+  /* ===== SURFACE COLORS ===== */
+  --color-background: #f8fafc;
+  --color-background-alt: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
+  --color-surface-elevated: #ffffff;
+  --color-surface-sunken: #e2e8f0;
+  --color-surface-rgb: 255, 255, 255;
+  --color-overlay: rgba(255, 255, 255, 0.15);
+  --color-overlay-dark: rgba(15, 23, 42, 0.5);
+  --color-overlay-light: rgba(255, 255, 255, 0.8);
+  
+  /* ===== TEXT COLORS ===== */
+  --color-text: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-disabled: #cbd5e1;
+  --color-text-inverse: #ffffff;
+  --color-text-on-primary: #ffffff;
+  
+  /* ===== BORDER COLORS ===== */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-border-dark: #cbd5e1;
+  --color-border-focus: var(--color-primary);
+  
+  /* ===== SEMANTIC COLORS ===== */
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-success-light: #d1fae5;
+  --color-success-dark: #047857;
+  
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-light: #fef3c7;
+  --color-warning-dark: #b45309;
+  
+  --color-error: #ef4444;
+  --color-error-hover: #dc2626;
+  --color-error-light: #fee2e2;
+  --color-error-dark: #b91c1c;
+  
+  --color-info: #06b6d4;
+  --color-info-hover: #0891b2;
+  --color-info-light: #cffafe;
+  --color-info-dark: #0e7490;
+  
+  /* ===== TAB & NAVIGATION ===== */
+  --color-tab-active: var(--color-primary);
+  --color-tab-bg: var(--color-surface-sunken);
+  --color-tab-hover: var(--color-primary-light);
+  --color-nav-active: var(--color-primary);
+  --color-nav-hover: var(--color-primary-light);
+  
+  /* ===== GRADIENTS ===== */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  --gradient-primary-hover: linear-gradient(135deg, var(--color-primary-hover) 0%, var(--color-accent-hover) 100%);
+  --gradient-surface: linear-gradient(180deg, var(--color-surface) 0%, var(--color-background) 100%);
+  --gradient-card: linear-gradient(145deg, var(--color-surface) 0%, var(--color-surface-hover) 100%);
+  --gradient-header: linear-gradient(90deg, var(--color-primary-dark) 0%, var(--color-primary) 50%, var(--color-accent) 100%);
+  --gradient-glow: radial-gradient(circle, var(--color-primary-light) 0%, transparent 70%);
+  --gradient-shimmer: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  --gradient-sidebar: linear-gradient(180deg, var(--color-surface) 0%, var(--color-background-alt) 100%);
+  
+  /* ===== SHADOWS ===== */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.20);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 20px rgba(var(--color-primary-rgb), 0.25);
+  --shadow-glow-lg: 0 0 40px rgba(var(--color-primary-rgb), 0.35);
+  --shadow-colored: 0 8px 24px rgba(var(--color-primary-rgb), 0.25);
+  
+  /* ===== NEUMORPHIC SHADOWS ===== */
+  --shadow-neu-raised: 6px 6px 12px rgba(0, 0, 0, 0.08), -6px -6px 12px rgba(255, 255, 255, 0.9);
+  --shadow-neu-sunken: inset 4px 4px 8px rgba(0, 0, 0, 0.08), inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+  --shadow-neu-flat: 0 0 0 transparent;
+  
+  /* ===== GLASSMORPHISM ===== */
+  --glass-background: rgba(255, 255, 255, 0.7);
+  --glass-background-dark: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --blur-xs: blur(4px);
+  --blur-sm: blur(8px);
+  --blur-md: blur(12px);
+  --blur-lg: blur(20px);
+  --blur-xl: blur(40px);
+  
+  /* ===== EFFECTS ===== */
+  --hover-lift: translateY(-4px);
+  --hover-lift-sm: translateY(-2px);
+  --hover-scale: scale(1.02);
+  --hover-scale-sm: scale(1.01);
+  --active-scale: scale(0.98);
+  --focus-ring: 0 0 0 3px rgba(var(--color-primary-rgb), 0.3);
+  --focus-ring-error: 0 0 0 3px rgba(239, 68, 68, 0.3);
+  
+  /* ===== TRANSITIONS ===== */
+  --transition-instant: 0.1s ease;
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+  --transition-slower: 0.6s ease;
+  --transition-bounce: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --transition-spring: 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* ===== BORDER RADIUS ===== */
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  
+  /* ===== SPACING (for consistency) ===== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  
+  /* ===== TYPOGRAPHY ===== */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Responsive font sizes */
+  --font-size-xs: clamp(10px, 0.7rem, 12px);
+  --font-size-sm: clamp(11px, 0.8rem, 13px);
+  --font-size-base: clamp(13px, 0.875rem, 14px);
+  --font-size-md: clamp(14px, 1rem, 16px);
+  --font-size-lg: clamp(16px, 1.125rem, 18px);
+  --font-size-xl: clamp(18px, 1.25rem, 20px);
+  --font-size-2xl: clamp(20px, 1.5rem, 24px);
+  --font-size-3xl: clamp(24px, 2rem, 32px);
+  --font-size-hero: clamp(32px, 3rem, 48px);
+  
+  /* ===== Z-INDEX LAYERS ===== */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
+  
+  /* ===== THEME MODE INDICATORS ===== */
+  --is-dark-theme: 0;
+  --is-glass-mode: 0;
+  --is-neu-mode: 0;
+  
+  /* ===== ANIMATION INTENSITY ===== */
+  --animation-intensity: 1;
+  --hover-intensity: 1;
+  --shadow-intensity: 1;
+  --radius-multiplier: 1;
+  
+  /* ===== COMPUTED EFFECT VALUES ===== */
+  /* These are the actual values used by components, modified by effect settings */
+  --effect-shadow-sm: 0 2px 4px rgba(0, 0, 0, calc(0.06 * var(--shadow-intensity)));
+  --effect-shadow-md: 0 4px 12px rgba(0, 0, 0, calc(0.08 * var(--shadow-intensity)));
+  --effect-shadow-lg: 0 8px 24px rgba(0, 0, 0, calc(0.12 * var(--shadow-intensity)));
+  --effect-shadow-xl: 0 16px 48px rgba(0, 0, 0, calc(0.16 * var(--shadow-intensity)));
+  
+  --effect-radius-sm: calc(4px * var(--radius-multiplier));
+  --effect-radius-md: calc(8px * var(--radius-multiplier));
+  --effect-radius-lg: calc(12px * var(--radius-multiplier));
+  --effect-radius-xl: calc(16px * var(--radius-multiplier));
+  
+  --effect-transition: calc(0.25s * var(--animation-intensity));
+  --effect-hover-lift: translateY(calc(-4px * var(--hover-intensity)));
+  --effect-hover-scale: scale(calc(1 + (0.02 * var(--hover-intensity))));
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-instant: 0s;
+    --transition-fast: 0s;
+    --transition-normal: 0s;
+    --transition-slow: 0s;
+    --transition-bounce: 0s;
+    --transition-spring: 0s;
+    --hover-lift: none;
+    --hover-scale: none;
+    --animation-intensity: 0;
+  }
+}
+
+/* ===== GLOBAL THEME APPLICATION ===== */
+body {
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-text);
+  transition: background var(--transition-normal), color var(--transition-normal);
+}
+
+/* Selection color */
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-alt);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-dark);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary);
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ========================================
+   DYNAMIC EFFECT APPLICATION
+   These rules apply the effect settings to UI elements
+   ======================================== */
+
+/* Cards and surfaces with dynamic shadows and radius */
+.card,
+.surface,
+.panel,
+.dropdown-menu,
+.modal-content,
+.popup,
+.tooltip,
+.data-table,
+.dashboard-card,
+.stat-card,
+.chart-container,
+.form-container,
+.settings-card {
+  box-shadow: var(--effect-shadow-md);
+  border-radius: var(--effect-radius-lg);
+  transition: box-shadow var(--effect-transition), 
+              transform var(--effect-transition),
+              border-radius var(--effect-transition);
+}
+
+/* Interactive elements with hover effects */
+.card:hover,
+.dashboard-card:hover,
+.stat-card:hover,
+.clickable:hover,
+.interactive:hover {
+  box-shadow: var(--effect-shadow-lg);
+  transform: var(--effect-hover-lift);
+}
+
+/* Buttons with dynamic radius */
+button,
+.btn,
+.button,
+input[type="submit"],
+input[type="button"] {
+  border-radius: var(--effect-radius-md);
+  transition: all var(--effect-transition);
+}
+
+button:hover:not(:disabled),
+.btn:hover:not(:disabled),
+.button:hover:not(:disabled) {
+  transform: var(--effect-hover-scale);
+}
+
+/* Input fields with dynamic radius */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea,
+.input,
+.select {
+  border-radius: var(--effect-radius-md);
+  transition: border-color var(--effect-transition), 
+              box-shadow var(--effect-transition);
+}
+
+/* Page content animation on load */
+.page-content,
+.main-content,
+.dashboard-content {
+  animation: pageContentFadeIn calc(0.4s * var(--animation-intensity)) ease-out;
+}
+
+@keyframes pageContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modals with dynamic animation */
+.modal,
+.modal-overlay {
+  animation: modalFadeIn calc(0.25s * var(--animation-intensity)) ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Table rows with subtle hover */
+.data-table tbody tr,
+table tbody tr {
+  transition: background-color var(--effect-transition);
+}
+
+/* Sidebar items with hover transition */
+.sidebar-item,
+.nav-item,
+.menu-item {
+  transition: background-color var(--effect-transition),
+              color var(--effect-transition),
+              transform var(--effect-transition);
+}
+
+.sidebar-item:hover,
+.nav-item:hover,
+.menu-item:hover {
+  transform: translateX(calc(4px * var(--hover-intensity)));
+}
+
+/* Animation mode: None - disable all animations */
+.animation-mode-none * {
+  animation: none !important;
+  transition: none !important;
+}
+
+.animation-mode-none .card:hover,
+.animation-mode-none .dashboard-card:hover,
+.animation-mode-none button:hover {
+  transform: none !important;
+}
+
+/* Animation mode: Subtle - reduced animations */
+.animation-mode-subtle {
+  --animation-intensity: 0.5;
+  --hover-intensity: 0.6;
+}
+
+/* Animation mode: Smooth - default animations */
+.animation-mode-smooth {
+  --animation-intensity: 1;
+  --hover-intensity: 1;
+}
+
+/* Animation mode: Playful - enhanced animations */
+.animation-mode-playful {
+  --animation-intensity: 1.3;
+  --hover-intensity: 1.4;
+}
+
+.animation-mode-playful button:hover,
+.animation-mode-playful .btn:hover {
+  animation: buttonBounce 0.4s ease;
+}
+
+@keyframes buttonBounce {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  60% { transform: scale(0.98); }
+}
+
+.animation-mode-playful .card:hover,
+.animation-mode-playful .dashboard-card:hover {
+  animation: cardBounce 0.5s ease;
+}
+
+@keyframes cardBounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
+  60% { transform: translateY(-2px); }
+}
+
+/* ========================================
+   RESPONSIVE OVERRIDES
+   ======================================== */
+
+@media (max-width: 768px) {
+  :root {
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 32px;
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+  }
+
+  /* Reduce shadow complexity on mobile for performance */
+  .card:hover,
+  .dashboard-card:hover,
+  .stat-card:hover {
+    transform: none;
+    box-shadow: var(--effect-shadow-md);
+  }
+
+  /* Disable hover lift on touch devices */
+  button:hover:not(:disabled),
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Disable hover transforms on touch-only devices */
+@media (hover: none) {
+  .card:hover,
+  .dashboard-card:hover,
+  .stat-card:hover,
+  .clickable:hover,
+  .interactive:hover {
+    transform: none;
+  }
+
+  button:hover:not(:disabled),
+  .btn:hover:not(:disabled),
+  .button:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .sidebar-item:hover,
+  .nav-item:hover,
+  .menu-item:hover {
+    transform: none;
+  }
+}

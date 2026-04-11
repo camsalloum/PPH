@@ -1,0 +1,205 @@
+D:\PPH 26.4\PPH\scripts\check-film-data.js:3:// Films use category='Films'
+D:\PPH 26.4\PPH\scripts\check-film-data.js:8:WHERE category = 'Films'
+D:\PPH 26.4\PPH\scripts\check-film-data.js:39:WHERE category = 'Films' AND (catlinedesc ILIKE '%BOPP%' OR maindescription ILIKE '%BOPP%')
+D:\PPH 26.4\PPH\scripts\simple-rm-sync.js:239:// Films and other categories already store in g/cm³ (values < 10)
+D:\PPH 26.4\PPH\server\migrations\mes-master-011-item-category.js:5:* (Oracle ERP category values: Resins, Films, Adhesives, Chemicals,
+D:\PPH 26.4\PPH\server\migrations\mes-master-012-seed-item-categories.js:6:*   Resins          — base polymer films (PET, BOPP, PE, PA, PP, ALU)
+D:\PPH 26.4\PPH\server\migrations\mes-master-012-seed-item-categories.js:26:// Resins — polymer base films
+D:\PPH 26.4\PPH\server\migrations\mes-master-012-seed-item-categories.js:32:{ code: 'ALU-7',     category: 'Films'  },   // aluminium foil = Films
+D:\PPH 26.4\PPH\server\migrations\mes-master-016-seed-tds-resins.js:68:{ oracle_item_code:'BXXOTLLDPE218W',      brand_grade:'LLDPE 218 W SABIC',             cat_desc:'LLDPE',      material_code:'LLDPE-2',  grade_type:'LLDPE – Butene Comonomer (C4)',    sup:'SABIC',           resin_type:'LLDPE', catalyst_type:'Ziegler-Natta',        comonomer_type:'Butene (C4)', production_process:'Cast Film', polymer_type:'LLDPE',   mfi:2.0,   mfi_test_method:'ASTM D1238', hlmi:null, density:918, density_test_method:'ASTM D1505', melting_point:122, vicat_softening:100, additive_package:'Slip: 1500 ppm, Antiblock: 3500 ppm', tnpp_free:'Yes', applications:'Cling film, stretch films (manual & pallet wrap), melt embossed films', tensile_yield_md:12, tensile_yield_td:10, tensile_break_md:35, tensile_break_td:29, elongation_md:700, elongation_td:750, tear_md:130, tear_td:320, dart_drop:85, haze:null, gloss:null, source_name:'SABIC LLDPE 218 Series official TDS', source_url:'https://www.sabic.com', source_date:'2023' },
+D:\PPH 26.4\PPH\server\migrations\mes-master-022-non-resin-material-specs.js:48:CHECK (material_class IN ('films','adhesives','chemicals','additives','coating','packing_materials','mounting_tapes')),
+D:\PPH 26.4\PPH\server\migrations\mes-master-023-resin-catdesc-alignment.js:122:SET category = 'Films', updated_at = NOW()
+D:\PPH 26.4\PPH\server\migrations\mes-master-023-resin-catdesc-alignment.js:124:AND COALESCE(category, '') <> 'Films'
+D:\PPH 26.4\PPH\server\migrations\mes-master-023-resin-catdesc-alignment.js:129:console.log(`  ✅ Reclassified to Films: ${reclassify.rowCount}`);
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:27:{ key: 'films_bopp',    re: /\bbopp\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:28:{ key: 'films_cpp',     re: /\bcpp\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:29:{ key: 'films_pet',     re: /\bpet\b(?!\s*[cg]\b)/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:30:{ key: 'films_pa',      re: /\b(?:pa|nylon|bopa|polyamide|ny)\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:31:{ key: 'films_pe',      re: /\bpe\s+(film|lam)/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:32:{ key: 'films_pvc',     re: /\bpvc\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:33:{ key: 'films_petc',    re: /\bpet[\s-]?c\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:34:{ key: 'films_petg',    re: /\bpetg\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:35:{ key: 'films_alu_pap', re: /\b(butter\s*foil|alu.*pap|pap.*alu|paper\s*\/\s*foil|foil\s*lam)\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:36:{ key: 'films_pap',     re: /\b(paper|kraft|greaseproof|glassine)\b/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:37:{ key: 'films_alu_foil',re: /(aluminium|aluminum|alu\s*foil|foil\s*alu|\balu\b)(?!\s*\/?…*pap)/i },
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:54:films_bopp: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:74:films_cpp: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:95:films_pet: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:112:films_pa: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:128:films_pe: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:142:films_pvc: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:165:films_petc: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:188:films_petg: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:211:films_pap: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:226:films_alu_pap: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:235:films_alu_foil: {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:290:const { rows: films } = await pool.query(`
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:293:WHERE category = 'Films'
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:297:console.log(`Found ${films.length} film items`);
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:302:for (const film of films) {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:326:if (parsed.grammage_gsm && profile === 'films_pap') {
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:338:WHERE material_class = 'films' AND material_key = $1`,
+D:\PPH 26.4\PPH\server\migrations\mes-master-024-seed-standard-film-specs.js:354:VALUES ('films', $1, $2, $3, $4, $5, $6::jsonb, $7, 'standard', 1, 1)
+D:\PPH 26.4\PPH\server\migrations\mes-master-026-substrate-profile-configs.js:61:CHECK (material_class IN ('films','adhesives','chemicals','additives','coating','packing_materials','mounting_tapes')),
+D:\PPH 26.4\PPH\server\migrations\mes-master-028-taxonomy-fk-linkage.js:202:WHERE s.material_class = 'films'
+D:\PPH 26.4\PPH\server\migrations\mes-master-028-taxonomy-fk-linkage.js:216:console.log('  ✔ Backfilled non-resin taxonomy category/subcategory IDs for films');
+D:\PPH 26.4\PPH\server\migrations\mes-master-029-category-mapping.js:28:// Films / Substrates
+D:\PPH 26.4\PPH\server\migrations\mes-master-029-category-mapping.js:29:{ oracle_category: 'FILMS',           material_class: 'films',            display_label: 'Films',            has_parameters: true,  sort_order: 2 },
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:6:* Migrates existing 'films' JSONB data into mes_spec_films.
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:47:// ── 1. mes_spec_films (Substrates / Films) ───────────────────────────────
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:56:await client.query(`CREATE INDEX IF NOT EXISTS idx_spec_films_profile ON mes_spec_films(substrate_profile)`);
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:57:await client.query(`CREATE INDEX IF NOT EXISTS idx_spec_films_catline ON mes_spec_films(catlinedesc)`);
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:58:await client.query(`CREATE INDEX IF NOT EXISTS idx_spec_films_params  ON mes_spec_films USING GIN(parameters_json)`);
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:151:// ── Migrate existing films data from mes_non_resin_material_specs ────────
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:157:WHERE material_class = 'films'
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:180:console.log(`  + Migrated ${migrated} films records → mes_spec_films`);
+D:\PPH 26.4\PPH\server\migrations\mes-master-030-category-param-tables.js:184:['films',            'mes_spec_films'],
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:17:films: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:24:films_alu_foil: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:28:films_bopp: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:74:films_cpp: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:81:films_pet: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:87:films_pa: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:93:films_pe: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:99:films_pvc: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:105:films_pap: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:111:films_alu_pap: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:152:const isProfile = classKey.startsWith('films_') && classKey !== 'films';
+D:\PPH 26.4\PPH\server\migrations\mes-master-031-parameter-definitions.js:153:const matClass = isProfile ? 'films' : classKey;
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:17:films: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:24:films_alu_foil: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:52:films_bopp: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:75:films_cpp: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:99:films_pet: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:121:films_pa: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:140:films_pe: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:154:films_pvc: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:172:films_petc: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:190:films_petg: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:208:films_pap: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:224:films_alu_pap: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:291:const isProfile = classKey.startsWith('films_') && classKey !== 'films';
+D:\PPH 26.4\PPH\server\migrations\mes-master-032-complete-param-seed.js:292:const matClass = isProfile ? 'films' : classKey;
+D:\PPH 26.4\PPH\server\migrations\mes-master-033-param-admin-columns.js:21:// Films - Physical
+D:\PPH 26.4\PPH\server\migrations\mes-master-033-param-admin-columns.js:23:// Films - Mechanical
+D:\PPH 26.4\PPH\server\migrations\mes-master-033-param-admin-columns.js:25:// Films - Optical
+D:\PPH 26.4\PPH\server\migrations\mes-master-033-param-admin-columns.js:27:// Films - Barrier
+D:\PPH 26.4\PPH\server\migrations\mes-master-033-param-admin-columns.js:29:// Films - Surface & Sealing
+D:\PPH 26.4\PPH\server\migrations\mes-master-033-param-admin-columns.js:31:// Films - Shrinkage
+D:\PPH 26.4\PPH\server\migrations\mes-master-033-param-admin-columns.js:33:// Films - Other
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:94:films_bopp: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:98:films_alu_foil: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:102:films_alu_pap: [
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:190:"SELECT COALESCE(MAX(sort_order), 0) as m FROM mes_parameter_definitions WHERE material_class = 'films' AND profile = $1",
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:196:"SELECT id FROM mes_parameter_definitions WHERE material_class = 'films' AND profile = $1 AND field_key = $2",
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:204:VALUES ('films', $1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10, 4, $11, $12, $13, $14)
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:213:"SELECT DISTINCT profile FROM mes_parameter_definitions WHERE field_key = 'corona_dyne' AND material_class = 'films' AND profile IS NOT NULL"
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:217:"SELECT id FROM mes_parameter_definitions WHERE material_class = 'films' AND profile = $1 AND field_key = $2",
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:223:"UPDATE mes_parameter_definitions SET label = 'Corona (Treated Side)' WHERE material_class = 'films' AND profile = $1 AND field_key = 'corona_dyne'",
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:226:const maxO = await client.query("SELECT COALESCE(MAX(sort_order),0) as m FROM mes_parameter_definitions WHERE material_class='films' AND profile=$1", [row.profile]);
+D:\PPH 26.4\PPH\server\migrations\mes-master-034-param-overhaul.js:231:VALUES ('films', $1, $2, $3, $4, 'number', $5, $6, $7, false, $8, 4, $9, true, 'input', NULL)
+D:\PPH 26.4\PPH\server\migrations\mes-master-035-rm-column-labels.js:20:films:            { standards: 'Thickness (µm)', sizes: 'Width (mm)',   weights: 'Density (g/cm³)', is_aggregated: false },
+D:\PPH 26.4\PPH\server\migrations\mes-qc-005-equipment.js:95:('Surface Resistivity Meter',      'EQ-SR-001',  'electrical','For antistatic films'),
+D:\PPH 26.4\PPH\server\routes\aebf\shared.js:21:'BF': 'Blow Films Division',
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:16:'films',
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:26:{ key: 'films_alu_foil', re: /(aluminium|aluminum|alu\s*\/\s*pap|alu\s*foil|foil\s*alu|butter\s*foil|\balu\b)/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:27:{ key: 'films_bopp', re: /\bbopp\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:28:{ key: 'films_cpp', re: /\bcpp\b|\bcast\s*pp\b|\brcpp\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:29:{ key: 'films_petg', re: /\bpet\s*g\b|\bpetg\b|\bg-pet\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:30:{ key: 'films_petc', re: /\bpet\s*c\b|\bpetc\b|\bc-pet\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:31:{ key: 'films_pet', re: /\bbopet\b|\bpet\b(?!\s*[cg])/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:32:{ key: 'films_pa', re: /\bbopa\b|\bnylon\b|\bpa\s*6\b|\bpa\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:33:{ key: 'films_pvc', re: /\bpvc\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:34:{ key: 'films_alu_pap', re: /\balu\s*\/?\s*pap\b|\bbutter\s*foil\b|\bwalki\b|paper\s*\/\s*foil|foil\s*lam/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:35:{ key: 'films_pap', re: /\bpaper\b|\bpap\b|\bkraft\b|\bglassine\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:36:{ key: 'films_pe', re: /\b(?:ld|lld|hd|m)pe\b|\bpe\s*lam/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:118:return 'films';
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:419:if (materialClassKey === 'films') {
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:905:const materialClass = String(req.query.material_class || 'films').trim().toLowerCase();
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:920:const baseProfile = materialClass === 'films'
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:1066:const profile = materialClass === 'films'
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:1174:const materialClass = normalizeMaterialKey(req.query.material_class || 'films');
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:1250:const materialClass = normalizeMaterialKey(req.query.material_class || 'films');
+D:\PPH 26.4\PPH\server\routes\mes\master-data\items.js:1323:const materialClass = normalizeMaterialKey(b.material_class || 'films');
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:63:'films',
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:74:const ALU_FOIL_PROFILE_KEY = 'films_alu_foil';
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:79:films_bopp:    { key: 'films_bopp',    re: /\bbopp\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:80:films_cpp:     { key: 'films_cpp',     re: /\bcpp\b|\bcast\s*pp\b|\brcpp\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:81:films_pet:     { key: 'films_pet',     re: /\bbopet\b|\bpet\b(?!\s*[cg])/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:82:films_pa:      { key: 'films_pa',      re: /\bbopa\b|\bnylon\b|\bpa\s*6\b|\bpa\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:83:films_pe:      { key: 'films_pe',      re: /\b(?:ld|lld|hd|m)pe\b|\bpe\s*lam/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:84:films_pvc:     { key: 'films_pvc',     re: /\bpvc\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:85:films_petc:    { key: 'films_petc',    re: /\bpet\s*c\b|\bpetc\b|\bc-pet\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:86:films_petg:    { key: 'films_petg',    re: /\bpet\s*g\b|\bpetg\b|\bg-pet\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:87:films_alu_pap: { key: 'films_alu_pap', re: /\balu\s*\/?\s*pap\b|\bbutter\s*foil\b|\bwalki\b|paper\s*\/\s*foil|foil\s*lam/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:88:films_pap:     { key: 'films_pap',     re: /\bpaper\b|\bpap\b|\bkraft\b|\bglassine\b/i },
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:281:if (String(materialClass || '').toLowerCase() !== 'films') {
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:420:if (materialClass !== 'films') return materialClass;
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:464:[isProfile ? 'films' : materialClass, isProfile ? profile : null]
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:1524:[isProfile ? 'films' : materialClass, isProfile ? parameterProfile : null]
+D:\PPH 26.4\PPH\server\routes\mes\master-data\tds.js:1881:FROM mes_parameter_definitions WHERE material_class = 'resins' OR (material_class = 'films' AND profile IS NULL)
+D:\PPH 26.4\PPH\src\components\CRM\PackagingProfile.jsx:17:{ name: 'current_suppliers', label: 'Current Packaging Suppliers', placeholder: 'e.g. ABC Packaging, XYZ Films' },
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:36:'Films': { PE: 60, BOPP: 30, PET: 10, Alu: 0, Paper: 0, 'PVC/PET': 0 },
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:41:'Stretch Films': { PE: 90, BOPP: 5, PET: 0, Alu: 0, Paper: 0, 'PVC/PET': 5 },
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:42:'Shrink Films': { PE: 85, BOPP: 10, PET: 5, Alu: 0, Paper: 0, 'PVC/PET': 0 },
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:43:'Agricultural Films': { PE: 95, BOPP: 0, PET: 0, Alu: 0, Paper: 0, 'PVC/PET': 5 }
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:46:'Technical Films': { PE: 30, BOPP: 20, PET: 40, Alu: 5, Paper: 0, 'PVC/PET': 5 },
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:47:'Barrier Films': { PE: 35, BOPP: 15, PET: 25, Alu: 20, Paper: 0, 'PVC/PET': 5 },
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:48:'Specialty Films': { PE: 25, BOPP: 25, PET: 30, Alu: 15, Paper: 0, 'PVC/PET': 5 }
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:51:'Hygiene Films': { PE: 80, BOPP: 10, PET: 5, Alu: 0, Paper: 5, 'PVC/PET': 0 },
+D:\PPH 26.4\PPH\src\components\dashboard\MasterData.jsx:52:'Medical Films': { PE: 40, BOPP: 20, PET: 30, Alu: 5, Paper: 0, 'PVC/PET': 5 },
+D:\PPH 26.4\PPH\src\components\dashboard\MultiChartHTMLExport.jsx:1054:tableText.includes('PE Films') ||
+D:\PPH 26.4\PPH\src\components\dashboard\RawMaterials.jsx:46:films: 'Substrates', substrates: 'Substrates',
+D:\PPH 26.4\PPH\src\components\dashboard\RawMaterials.jsx:136:if (c === 'films' || c === 'substrates') return 'film';
+D:\PPH 26.4\PPH\src\components\dashboard\SalesBySaleRepTable.jsx:241:'SB': ['Stretch Films', 'Shrink Films', 'Agricultural Films', 'Barrier Films'],
+D:\PPH 26.4\PPH\src\components\dashboard\SalesBySaleRepTable.jsx:242:'TF': ['Technical Films', 'Barrier Films', 'Specialty Films', 'Industrial Films'],
+D:\PPH 26.4\PPH\src\components\dashboard\SalesBySaleRepTable.jsx:243:'HCM': ['Hygiene Films', 'Medical Films', 'Pharmaceutical', 'Safety Films']
+D:\PPH 26.4\PPH\src\components\dashboard\SalesBySaleRepTable.jsx:494:'TF': ['Technical Films Inc', 'Advanced Materials Co', 'Specialty Products Ltd', 'Industrial Tech Corp', 'Barrier Tech Solutions'],
+D:\PPH 26.4\PPH\src\components\dashboard\SalesBySaleRepTable.jsx:495:'HCM': ['MedTech Industries', 'Healthcare Solutions', 'Pharma Packaging Co', 'Medical Films Ltd', 'Safety Products Inc']
+D:\PPH 26.4\PPH\src\components\MES\MasterData\CustomCategories.jsx:82:'films',
+D:\PPH 26.4\PPH\src\components\MES\MasterData\CustomCategories.jsx:447:const isSubstrateProfile = normalizeKey(profile?.category?.material_class) === 'films';
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ItemMaster.jsx:506:`${API_BASE}/api/mes/master-data/items/substrate-configs?material_class=films`,
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ItemMaster.jsx:584:.filter((row) => normalizeToken(row.category) === 'films')
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ItemMaster.jsx:596:category: row.category || 'Films',
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ItemMaster.jsx:669:material_class: 'films',
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ItemMaster.jsx:875:params.append('material_class', 'films');
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ParameterSchemaAdmin.jsx:113:if (selectedClass === 'films') return !d.profile; // base films
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ParameterSchemaAdmin.jsx:232:const profileLabel = d.profile ? d.profile.replace(/^films_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : null;
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ParameterSchemaAdmin.jsx:397:<span>Form Designer: {selectedCategoryLabel}{selectedProfile ? ' — ' + selectedProfile.replace(/^films_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : ''} ({filteredDefs.length} fields)</span>
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ParameterSchemaAdmin.jsx:560:.replace(/^films_/, '')
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ParameterSchemaAdmin.jsx:586:{selectedProfile && <Tag color="blue" style={{ marginLeft: 6 }}>{selectedProfile.replace(/^films_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</Tag>}
+D:\PPH 26.4\PPH\src\components\MES\MasterData\ParameterSchemaAdmin.jsx:630:placeholder="New profile key (e.g. films_new_substrate)"
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:159:films: { standards: 'Thickness (μ)', sizes: 'Width (mm)' },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:186:const ALU_FOIL_PROFILE_KEY = 'films_alu_foil';
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:191:{ key: 'films_bopp',    re: /\bbopp\b/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:192:{ key: 'films_cpp',     re: /\bcpp\b|\bcast\s*pp\b|\brcpp\b/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:193:{ key: 'films_pet',     re: /\bbopet\b|\bpet\b(?!\s*[cg])/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:194:{ key: 'films_pa',      re: /\bbopa\b|\bnylon\b|\bpa\s*6\b|\bpa\b/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:195:{ key: 'films_pe',      re: /\b(?:ld|lld|hd|m)pe\b|\bpe\s*lam/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:196:{ key: 'films_pvc',     re: /\bpvc\b/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:197:{ key: 'films_petc',    re: /\bpet\s*c\b|\bpetc\b|\bc-pet\b/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:198:{ key: 'films_petg',    re: /\bpet\s*g\b|\bpetg\b|\bg-pet\b/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:199:{ key: 'films_alu_pap', re: /\balu\s*\/?\s*pap\b|\bbutter\s*foil\b|\bwalki\b|paper\s*\/\s*foil|foil\s*lam/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:200:{ key: 'films_pap',     re: /\bpaper\b|\bpap\b|\bkraft\b|\bglassine\b/i },
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:204:films: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:211:films_alu_foil: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:240:films_bopp: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:264:films_cpp: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:289:films_pet: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:312:films_pa: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:332:films_pe: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:347:films_pvc: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:366:films_petc: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:385:films_petg: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:404:films_pap: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:421:films_alu_pap: [
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:537:if (materialClass !== 'films') return materialClass;
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:564:if (c === 'films') return 'film';
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:732:if (key.startsWith('film')) return 'films';
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:1061:const NON_RESIN_CLASSES = ['films','adhesives','chemicals','additives','coating','packing_materials','mounting_tapes'];
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:1166:fetchParamDefinitions(matClass === 'films' || profile?.startsWith('films_') ? 'films' : matClass, profile !== matClass ? profile : null);
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:2620:const isFilmsMaterialTab = activeSpecMaterialClass === 'films';
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:2700:const profileKey = getNonResinParamProfile(activeSpecMaterialClass || 'films', row);
+D:\PPH 26.4\PPH\src\components\MES\MasterData\TDSManager.jsx:3306:<Tag color="purple">{activeNonResinParamProfile.replace('films_', '').replace(/_/g, '/').toUpperCase()}</Tag>
+D:\PPH 26.4\PPH\src\data\workflowData.js:298:keyActions: "Check inventory for required films, adhesives, inks. Verify sufficient stock for order quantity. Check FIFO compliance.",
+D:\PPH 26.4\PPH\src\utils\substrateExcelMapping.js:238:export const isFilmsCategory = (category) => normalizeMappingText(category) === 'films';

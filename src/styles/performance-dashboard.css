@@ -1,0 +1,200 @@
+/* ============================================================================
+   PERFORMANCE DASHBOARD SHARED STYLES
+   Used by both live component and HTML export for consistent styling
+   ============================================================================ */
+
+/* Budget Achievement Chart Container */
+.budget-chart-container {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0 0 16px 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+/* Legend Container */
+.budget-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.budget-legend-items {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.budget-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.budget-legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.budget-legend-label {
+  color: #6b7280;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Ensure rows don't overflow */
+.budget-product-row {
+  padding: 10px 0;
+  border-bottom: 1px dashed #e5e7eb;
+  margin-bottom: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent overflow */
+}
+
+.budget-product-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 10px 2px;
+}
+
+/* Bars Container */
+.budget-bars-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.budget-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Bar Track - Dynamic width */
+.budget-bar-track {
+  flex: 1 1 auto; /* Take available space dynamically */
+  min-width: 0; /* Allow shrinking */
+  max-width: calc(100% - 320px); /* Reserve 320px for value + comparison */
+  height: 24px;
+  background: transparent;
+  position: relative;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.budget-bar-no-data {
+  width: 100%;
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 24px;
+}
+
+/* Bar Value - Fixed width */
+.budget-bar-value {
+  flex: 0 0 70px;
+  width: 70px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  text-align: right;
+}
+
+/* Bar Comparison - Fixed width */
+.budget-bar-comparison {
+  flex: 0 0 240px;
+  width: 240px;
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.3;
+  padding-left: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.budget-comparison-label {
+  color: #6b7280;
+}
+
+.budget-comparison-percentage {
+  font-weight: 800;
+}
+
+.budget-comparison-delta {
+  font-size: 11px; /* Readable delta text */
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .budget-bar-track {
+    max-width: calc(100% - 300px);
+  }
+  
+  .budget-bar-comparison {
+    flex: 0 0 220px;
+    width: 220px;
+    font-size: 11px;
+  }
+  
+  .budget-bar-value {
+    flex: 0 0 60px;
+    width: 60px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .budget-bar-track {
+    max-width: calc(100% - 270px);
+  }
+  
+  .budget-bar-comparison {
+    flex: 0 0 200px;
+    width: 200px;
+    font-size: 10px;
+  }
+  
+  .budget-comparison-delta {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 768px) {
+  .budget-bar-track {
+    max-width: calc(100% - 220px);
+  }
+  
+  .budget-bar-comparison {
+    flex: 0 0 150px;
+    width: 150px;
+    font-size: 9px;
+  }
+  
+  .budget-bar-value {
+    flex: 0 0 50px;
+    width: 50px;
+    font-size: 11px;
+  }
+  
+  .budget-legend-items {
+    gap: 12px;
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "chartVisibleColumns": [
+    "2025-HY1-Actual",
+    "2025-HY1-Budget",
+    "2025-HY1-Estimate",
+    "2025-Year-Budget"
+  ],
+  "standardColumnSelection": [
+    {
+      "year": "2025",
+      "month": "HY1",
+      "type": "Actual",
+      "months": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June"
+      ],
+      "id": "2025-HY1-Actual",
+      "customColor": "blue"
+    },
+    {
+      "year": "2025",
+      "month": "HY1",
+      "type": "Budget",
+      "months": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June"
+      ],
+      "id": "2025-HY1-Budget",
+      "customColor": "green"
+    },
+    {
+      "year": "2025",
+      "month": "HY1",
+      "type": "Estimate",
+      "months": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June"
+      ],
+      "id": "2025-HY1-Estimate",
+      "customColor": "orange"
+    },
+    {
+      "year": "2025",
+      "month": "Year",
+      "type": "Budget",
+      "months": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "id": "2025-Year-Budget",
+      "customColor": "yellow"
+    }
+  ]
+}

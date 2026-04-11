@@ -1,0 +1,197 @@
+.platform-dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #0d1117 100%);
+}
+
+.platform-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.platform-logo {
+  height: 56px;
+  width: auto;
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  object-fit: contain;
+}
+
+.header-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-menu-trigger {
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.user-menu-trigger:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.3;
+}
+
+.platform-content {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Stat cards - white background */
+.platform-content .stats-row .ant-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+}
+
+.platform-content .stats-row .ant-statistic-title {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.platform-content .stats-row .ant-statistic-content {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Main cards - dark theme */
+.platform-content .ant-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.platform-content .ant-card-head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.platform-content .ant-card-head-title {
+  color: #fff;
+}
+
+.platform-content .ant-statistic-title {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.platform-content .ant-statistic-content {
+  color: #fff;
+}
+
+.platform-content .ant-table {
+  background: transparent;
+}
+
+.platform-content .ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.platform-content .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.platform-content .ant-table-tbody > tr:hover > td {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.platform-content .ant-table-pagination {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.platform-content .ant-pagination-item a {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.platform-content .ant-pagination-item-active {
+  background: #1890ff;
+  border-color: #1890ff;
+}
+
+.platform-content .ant-pagination-item-active a {
+  color: #fff;
+}
+
+.platform-content .ant-empty-description {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 1200px) {
+  .platform-content {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .platform-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .header-left {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .platform-content {
+    padding: 16px 12px;
+  }
+
+  .platform-logo {
+    height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .platform-header {
+    padding: 10px 12px;
+  }
+
+  .platform-content {
+    padding: 12px 8px;
+  }
+
+  .platform-logo {
+    height: 36px;
+  }
+
+  .user-menu-trigger {
+    padding: 6px 8px;
+  }
+}

@@ -1,0 +1,305 @@
+/* TARGETED WHITE BACKGROUND FIX FOR PRODUCT GROUPS AMOUNT TABLE ONLY */
+.product-groups-amount-table {
+  margin: 20px 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-groups-amount-table h3 {
+  margin: 0 0 20px 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  padding: 20px;
+  background: white;
+}
+
+.amount-comparison-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 16px;
+  background: white;
+  border: 1px solid #ddd;
+}
+
+/* TARGETED OVERRIDE: Only override .product-header within this specific component */
+.product-groups-amount-table .product-header {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  font-weight: bold !important;
+  text-align: center;
+  vertical-align: middle;
+  width: 10%;
+  min-width: 80px;
+  font-size: 16px;
+}
+
+/* TARGETED OVERRIDE: Override row-label gray background for Product Groups column */
+.product-groups-amount-table .row-label {
+  background: white !important;
+  background-color: white !important;
+}
+
+/* TARGETED OVERRIDE: Only override .total-row within this specific component */
+.product-groups-amount-table .amount-comparison-table .total-row {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  border-top: 2px solid #047857;
+}
+
+.product-groups-amount-table .amount-comparison-table .total-row td {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  font-weight: bold !important;
+  font-size: 14px !important;
+  padding: 4px 6px !important;
+  line-height: 1.1 !important;
+}
+
+/* Additional override for any total-related classes */
+.product-groups-amount-table .total-label,
+.product-groups-amount-table .total-value,
+.product-groups-amount-table tr.total-row,
+.product-groups-amount-table .amount-comparison-table tr.total-row td {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  font-weight: bold !important;
+}
+
+/* Row hover effects */
+.amount-comparison-table tbody tr:hover {
+  background-color: #f5f5f5 !important;
+  cursor: pointer;
+}
+
+.amount-comparison-table tbody tr:hover td {
+  background-color: #f5f5f5 !important;
+}
+
+/* Exclude total row from hover effects */
+.product-groups-amount-table .amount-comparison-table .total-row:hover,
+.product-groups-amount-table .amount-comparison-table .total-row:hover td {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+}
+
+.amount-comparison-table thead th {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  text-align: center;
+  padding: 5px 4px !important;
+  border: 1px solid #047857;
+  font-size: 14px !important;
+  vertical-align: middle;
+  line-height: 1.1 !important;
+}
+
+.amount-comparison-table .star-cell {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 3px 5px !important;
+  text-align: center;
+  vertical-align: middle;
+  color: #333;
+  font-weight: 500;
+  line-height: 1.1 !important;
+}
+
+.amount-comparison-table .period-header {
+  background: white;
+  font-size: 14px !important;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+  width: 6%;
+  min-width: 50px;
+  padding: 4px 3px !important;
+  line-height: 1.1 !important;
+  color: #333;
+}
+
+.amount-comparison-table .delta-header {
+  background: linear-gradient(135deg, #047857, #065f46) !important;
+  color: #fbbf24 !important;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  width: 4%;
+  min-width: 35px;
+  font-size: 14px !important;
+}
+
+/* Body Styles - COMPACT ROWS */
+.product-groups-amount-table .amount-comparison-table tbody tr {
+  height: auto !important;
+  line-height: 1.1 !important;
+}
+
+.product-groups-amount-table .amount-comparison-table tbody td,
+.amount-comparison-table tbody td {
+  border: 1px solid #ddd;
+  padding: 3px 5px !important;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px !important;
+  background: white;
+  color: #333;
+  line-height: 1.1 !important;
+  height: auto !important;
+}
+
+.amount-comparison-table .product-row:nth-child(even) {
+  background-color: white;
+}
+
+.amount-comparison-table .product-row:hover {
+  background-color: white;
+}
+
+.amount-comparison-table .product-row:hover td {
+  background-color: white;
+}
+
+.amount-comparison-table .product-name {
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  background: white;
+  width: 10%;
+  min-width: 80px;
+  padding: 3px 5px 3px 8px !important;
+  font-size: 14px !important;
+  line-height: 1.1 !important;
+}
+
+.amount-comparison-table .metric-cell {
+  text-align: center;
+  font-weight: 500;
+  color: #333;
+  background: white;
+  width: 6%;
+  min-width: 50px;
+  padding: 3px 5px !important;
+  font-size: 14px !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1 !important;
+}
+
+.amount-comparison-table .delta-cell {
+  background: white;
+  font-weight: 600;
+  text-align: center;
+  width: 4%;
+  min-width: 35px;
+  padding: 3px 4px !important;
+  font-size: 14px !important;
+  line-height: 1.1 !important;
+}
+
+.amount-comparison-table .delta-arrow {
+  margin-right: 3px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.amount-comparison-table .delta-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.amount-comparison-table .delta-up {
+  color: #28a745;
+}
+
+.amount-comparison-table .delta-down {
+  color: #dc3545;
+}
+
+.amount-comparison-table .total-label {
+  text-align: left;
+  padding-left: 8px;
+  font-weight: 700;
+  color: #333;
+  width: 10%;
+  background: white;
+}
+
+.amount-comparison-table .total-value {
+  font-weight: 700;
+  color: #333;
+  font-size: 14px;
+  background: white;
+}
+
+/* No Data Styles */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+  font-style: italic;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin: 16px;
+  font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .amount-comparison-table {
+    font-size: 12px;
+  }
+  
+  .amount-comparison-table .period-header {
+    font-size: 11px;
+    padding: 10px 6px;
+  }
+  
+  .amount-comparison-table .delta-header {
+    font-size: 11px;
+  }
+  
+  .amount-comparison-table tbody td {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+  
+  .amount-comparison-table .metric-cell {
+    font-size: 12px;
+  }
+  
+  .amount-comparison-table .delta-arrow,
+  .amount-comparison-table .delta-value {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-groups-amount-table {
+    margin: 10px 0;
+  }
+  
+  .amount-comparison-table {
+    font-size: 11px;
+  }
+  
+  .amount-comparison-table thead th,
+  .amount-comparison-table tbody td {
+    padding: 8px 4px;
+  }
+  
+  .amount-comparison-table .period-header {
+    font-size: 10px;
+    padding: 8px 4px;
+  }
+}

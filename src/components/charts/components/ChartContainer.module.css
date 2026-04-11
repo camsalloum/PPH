@@ -1,0 +1,107 @@
+.chart-container {
+  width: 100%;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box; /* FIX: Include padding within width */
+}
+
+.chart-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.chart-controls button {
+  padding: 8px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.chart-controls button:hover {
+  background-color: #f5f5f5;
+  border-color: #1890ff;
+}
+
+.chart-controls button.active {
+  background-color: #1890ff;
+  color: #fff;
+  border-color: #1890ff;
+}
+
+.chart-display {
+  min-height: 400px;
+  padding: 20px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+}
+
+.chart-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: #666;
+  font-size: 16px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  border: 1px dashed #d9d9d9;
+}
+
+.base-period-info {
+  padding: 8px 16px;
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 4px;
+  color: #52c41a;
+  font-weight: 500;
+} 
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+@media (max-width: 768px) {
+  .chart-container {
+    padding: 12px;
+  }
+
+  .chart-controls {
+    gap: 6px;
+  }
+
+  .chart-controls button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .chart-display {
+    min-height: 300px;
+    padding: 12px;
+  }
+
+  .chart-placeholder {
+    height: 300px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-container {
+    padding: 8px;
+  }
+
+  .chart-display {
+    min-height: 250px;
+    padding: 8px;
+  }
+
+  .chart-placeholder {
+    height: 250px;
+  }
+}

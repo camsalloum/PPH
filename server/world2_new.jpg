@@ -1,0 +1,971 @@
+<!doctype html>
+  <html lang = "en">
+    <head>
+      <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-NPXDYY3RPL"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-NPXDYY3RPL');
+      </script>
+
+      <!-- Google Tag Manager -->
+      <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+      new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer','GTM-M8WDL5G');</script>
+      <!-- End Google Tag Manager -->
+
+      <!-- Required meta tags -->
+      <meta charset = "utf-8">
+      <meta name = "viewport" content = "width=device-width, initial-scale=1, shrink-to-fit=no">
+      <meta name = "csrf-token" content = "IVcJYK3hqMcEPbNGsPthE47HE6UoQ6eBNFdtenRG">
+      <!-- NASA required metadata -->
+      <meta name="orgcode" content="610">
+      <meta name="rno" content="Robert.C.Levy.1">
+      <meta name="content-owner" content="Paul.D.Przyborski.1">
+      <meta name="webmaster" content="Paul.D.Przyborski.1">
+      <meta name="description" content="">
+      <!-- Dublin Core Metadata Initiative (DCMI) metadata - http://dublincore.org/ -->
+      <meta name="DC.Title" content="The Blue Marble: Land Surface, Ocean Color and Sea Ice">
+      <meta name="DC.Description" content="">
+      <meta name="DC.Identifier" content="http://visibleearth.nasa.gov/images/57730/the-blue-marble-land-surface-ocean-color-and-sea-ice">
+      <meta name="DC.Date" scheme="ISO8601" content="2002-02-08">
+      <meta name="DC.Date.X-MetadataLastModified" scheme="ISO8601" content="2017-04-26">
+      <meta name="DC.Publisher" content="NASA Visible Earth">
+      <meta name="DC.Publisher.Address" content="https://visibleearth.nasa.gov/contact/">
+      <meta name="DC.Language" scheme="ISO639-1" content="en">
+      <meta name="DC.Type" content="Text.Article">
+      <meta name="DC.Format" scheme="IMT" content="text/html">
+      <meta name="DC.subject" content="NASA&#039;s Visible Earth catalog of NASA images and animations of our home planet">
+
+    <!-- facebook thumbnail -->
+    <link rel="image_src" href="https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350x294x196.jpg" />
+
+    <!-- google thumbnail -->
+    <meta name="thumbnail" content="https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350x294x196.jpg" />
+
+      <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+
+      <!-- Application CSS -->
+      <link rel = "stylesheet" href = "/css/app.css">
+      <link rel = "stylesheet" href = "//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+      <link rel = "stylesheet" href = "/css/main.css">
+          <link rel = "stylesheet" href = "/css/detail.css">
+
+      <title>The Blue Marble: Land Surface, Ocean Color and Sea Ice</title>
+    </head>
+  <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M8WDL5G"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+        <div class = "container-fluid header">
+      <div class = "row">
+        <div class = "col">
+          <nav class = "navbar navbar-expand-lg navbar-light">
+            <nav class = "navbar-brand">
+              <a href = "https://www.nasa.gov"><img class = "img-responsive nasa-logo" src = "/img/nasa_logo.png" alt = "NASA Logo" /></a><a href = "/"><img class = "img-responsive ve-logo" src = "/img/ve-logo.png" alt = "NASA Visible Earth" /></a>
+              <span class = "navbar navbar-expand-lg navbar-text">
+                A catalog of NASA images and animations of our home planet
+              </span>
+            </nav>
+
+            <button class = "navbar-toggler" type = "button" data-toggle = "collapse" data-target = "#navbarSupportedContent" aria-controls = "navbarSupportedContent" aria-expanded = "false" aria-label = "Toggle navigation">
+              <span class = "navbar-toggler-icon"></span>
+            </button>
+
+            <div class = "collapse navbar-collapse" id = "navbarSupportedContent">
+              <form class = "my-2 my-lg-0 col-md-6 col-sm-3" action = "/search">
+                <div class = "input-group searchbtn">
+                  <input class = "form-control form-rounded" type = "search" placeholder = "Keyword Search" aria-label = "Search" name = "q">
+                  <button class = "btn btn-outline-secondary my-2 my-sm-0" type = "submit" id = "searchbtn">Go</button>
+                </div>
+              </form>
+              <ul class = "navbar-nav ml-auto">
+                <li class = "nav-link">Browse by:</li>
+
+                <li class = "nav-item dropdown">
+                  <a class = "nav-link dropdown-toggle" href = "#" id = "sensorDropdown" role = "button" data-toggle = "dropdown" aria-haspopup = "true" aria-expanded = "false">
+                    Source
+                  </a>
+                  <ul class = "dropdown-menu dropdown-menu-right multi-column columns-4" aria-labelledby = "navbarDropdown">
+                    <div class = "row">
+                                                                        <div class = "col-3">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/source/28/adeos">ADEOS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1538/aim">AIM</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1496/aircraft-sensors">Aircraft Sensors</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1605/alos">ALOS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1670/alos-2">ALOS-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1503/apollo">Apollo</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1486/aqua">Aqua</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1525/aquarius">Aquarius</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1497/aura">Aura</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1504/calipso">CALIPSO</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1539/cassini">Cassini</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1487/cloudsat">CloudSat</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1609/coms">COMS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1606/coriolis">Coriolis</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1700/cryosat-2">CryoSat-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1562/curiosity-mars-rover">Curiosity Mars Rover</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1696/cygnss">CYGNSS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1731/dawn">Dawn</a></li>
+
+                                                                                              
+                            <li><a href = "/source/76/dem">DEM</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1505/digitalglobe">DigitalGlobe</a></li>
+
+                                                                                              
+                            <li><a href = "/source/33/dmsp">DMSP</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1589/dscovr">DSCOVR</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1517/dtam">DTAM</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1498/envisat">Envisat</a></li>
+
+                                                                                              
+                            <li><a href = "/source/37/eo-1">EO-1</a></li>
+
+                                                                                              
+                            <li><a href = "/source/38/ers">ERS</a></li>
+
+                                                                                              
+                            <li><a href = "/source//eumetsat">EUMETSAT</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1622/fermi">Fermi</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1499/formosat-2">FORMOSAT-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1542/gcom-w1">GCOM-W1</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1668/gedi">GEDI</a></li>
+
+                                                                            </ul>
+                          </div>
+                                                                                                                          <div class = "col-3">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/source/1580/gemini">Gemini</a></li>
+
+                                                                                              
+                            <li><a href = "/source/101/geoeye">GeoEye</a></li>
+
+                                                                                              
+                            <li><a href = "/source/39/goes">GOES</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1564/gpm">GPM</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1603/gps">GPS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1510/grace">GRACE</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1680/grace-fo">GRACE-FO</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1608/grail">GRAIL</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1591/himawari-8">Himawari-8</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1500/icesat">ICESat</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1656/icesat-2">ICESat-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1678/icon">ICON</a></li>
+
+                                                                                              
+                            <li><a href = "/source/77/ikonos">IKONOS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1728/illustration">Illustration</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1459/image-spacecraft">IMAGE Spacecraft</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1473/in-situ-measurement">In situ Measurement</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1506/iss">ISS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1457/jason-1">JASON-1</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1458/jason-2">JASON-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1616/jason-3">JASON-3</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1639/jpss-1">JPSS-1</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1511/juno">Juno</a></li>
+
+                                                                                              
+                            <li><a href = "/source/43/landsat-1">Landsat 1</a></li>
+
+                                                                                              
+                            <li><a href = "/source/98/landsat-2">Landsat 2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/99/landsat-3">Landsat 3</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1488/landsat-4">Landsat 4</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1501/landsat-5">Landsat 5</a></li>
+
+                                                                                              
+                            <li><a href = "/source/47/landsat-7">Landsat 7</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1533/landsat-8">Landsat 8</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1693/landsat-9">Landsat 9</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1489/lro">LRO</a></li>
+
+                                                                            </ul>
+                          </div>
+                                                                                                                          <div class = "col-3">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/source/1712/lucy">Lucy</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1624/map">Map</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1649/marco">MarCO</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1617/mars-reconnaissance-orbiter">Mars Reconnaissance Orbiter</a></li>
+
+                                                                                              
+                            <li><a href = "/source/103/messenger">MESSENGER</a></li>
+
+                                                                                              
+                            <li><a href = "/source/94/meteosat">Meteosat</a></li>
+
+                                                                                              
+                            <li><a href = "/source/104/model">Model</a></li>
+
+                                                                                              
+                            <li><a href = "/source/102/mtsat">MTSAT</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1683/new-horizons">New Horizons</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1613/nimbus-7">Nimbus 7</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1569/noaa-12">NOAA-12</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1491/noaa-15-poes">NOAA-15 POES</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1490/noaa-17-poes">NOAA-17 POES</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1476/noaa-18-poes">NOAA-18 POES</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1543/noaa-19-poes">NOAA-19 POES</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1663/noaa-20">NOAA-20</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1725/noaa-21">NOAA-21</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1531/oceansat-2">OceanSat-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1575/oco-2">OCO-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1507/orbview-2">OrbView-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1655/osiris-rex">OSIRIS-REx</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1724/pace">PACE</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1701/perseverance-mars-rover">Perseverance Mars Rover</a></li>
+
+                                                                                              
+                            <li><a href = "/source/105/photograph">Photograph</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1673/planet-labs">Planet Labs</a></li>
+
+                                                                                              
+                            <li><a href = "/source/88/quickbird">QuickBird</a></li>
+
+                                                                                              
+                            <li><a href = "/source/51/quikscat">QuikSCAT</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1493/radarsat">RADARSAT</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1571/radarsat-1">RADARSAT 1</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1572/radarsat-2">RADARSAT 2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1520/reconnaissance-satellite">Reconnaissance Satellite</a></li>
+
+                                                                            </ul>
+                          </div>
+                                                                                                                          <div class = "col-3">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/source/1502/sdo">SDO</a></li>
+
+                                                                                              
+                            <li><a href = "/source//seahawk">SeaHawk</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1508/seasat">SeaSat</a></li>
+
+                                                                                              
+                            <li><a href = "/source/87/seismograph">Seismograph</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1568/sentinel-1a">Sentinel-1A</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1627/sentinel-1b">Sentinel-1B</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1594/sentinel-2">Sentinel-2</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1682/sentinel-3">Sentinel-3</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1679/sentinel-5p">Sentinel-5P</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1688/sentinel-6-michael-freilich">Sentinel-6 Michael Freilich</a></li>
+
+                                                                                              
+                            <li><a href = "/source//ses-14">SES-14</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1593/smap">SMAP</a></li>
+
+                                                                                              
+                            <li><a href = "/source/86/soho">SOHO</a></li>
+
+                                                                                              
+                            <li><a href = "/source/57/space-shuttle">Space Shuttle</a></li>
+
+                                                                                              
+                            <li><a href = "/source/93/spot">SPOT</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1464/stereo">STEREO</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1530/suomi-npp">Suomi NPP</a></li>
+
+                                                                                              
+                            <li><a href = "/source//swot">SWOT</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1573/tandem-x">TANDEM-X</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1729/tempo">TEMPO</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1495/terra">Terra</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1529/terrasar-x">TerraSAR-X</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1621/terrestrial-laser-scanner">Terrestrial Laser Scanner</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1642/tiros">TIROS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/58/toms">TOMS</a></li>
+
+                                                                                              
+                            <li><a href = "/source/59/topexposeidon">TOPEX/Poseidon</a></li>
+
+                                                                                              
+                            <li><a href = "/source/63/trmm">TRMM</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1718/tropics">TROPICS</a></li>
+
+                                                                                              
+                            <li><a href = "/source//van-allen-probes">Van Allen Probes</a></li>
+
+                                                                                              
+                            <li><a href = "/source/1526/voyager">Voyager</a></li>
+
+                                                                                          </div>
+                  </ul>
+                </li>
+
+                <li class = "nav-item dropdown">
+                  <a class = "nav-link dropdown-toggle" href = "#" id = "collectionDropdown" role = "button" data-toggle = "dropdown" aria-haspopup = "true" aria-expanded = "false">
+                    Collection
+                  </a>
+                  <ul class = "dropdown-menu dropdown-menu-right multi-column columns-3" aria-labelledby = "navbarDropdown">
+                    <div class = "row">
+                                                                                              <div class = "col-sm-4">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/collection/1619/abcs-from-space">ABCs from Space</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1722/air-quality">Air Quality</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1676/amazon-deforestation">Amazon Deforestation</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1461/astronaut-photography">Astronaut Photography</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1717/backgrounders">Backgrounders</a></li>
+
+                                                                            </ul>
+                          </div>
+                                                                                                                          <div class = "col-sm-4">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/collection/1484/blue-marble">Blue Marble</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1595/earth-at-night">Earth at Night</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1658/earth-from-afar">Earth from Afar</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1692/fall-colors">Fall Colors</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1714/food-and-agriculture">Food and Agriculture</a></li>
+
+                                                                            </ul>
+                          </div>
+                                                                                                                          <div class = "col-sm-4">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/collection/1699/impact-craters">Impact Craters</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1687/international-parks-and-unesco-sites">International Parks and UNESCO Sites</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1514/modis-image-of-the-day">MODIS Image of the Day</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1513/modis-rapid-response">MODIS Rapid Response</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1653/rapid-response-gallery">Rapid Response Gallery</a></li>
+
+                                                                            </ul>
+                          </div>
+                                                                                                                          <div class = "col-sm-4">
+                            <ul class = "multi-column-dropdown">
+                        
+                            <li><a href = "/collection/1702/renewable-and-alternative-energy">Renewable and Alternative Energy</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1654/science-in-action">Science in Action</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1684/sea-level-rise">Sea Level Rise</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1596/us-national-parks">U.S. National Parks</a></li>
+
+                                                                                              
+                            <li><a href = "/collection/1711/winter-from-the-international-space-station">Winter from the International Space Station</a></li>
+
+                                                                                          </div>
+                  </ul>
+                </li>
+
+              
+                
+                  <li class = "nav-item">
+                    <a class = "nav-link" href = "/">Show All</a>
+                  </li>
+
+                              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+
+      <div class = "nav-tools collapse" id = "nav-tools">
+        <nav class = "navbar navbar-expand-lg navbar-light bg-light">
+          
+            <div class = "col-sm-4 col-md-2">
+              <div class = "dropdown">
+                <button class = "btn btn-primary dropdown-toggle" type = "button" id = "dropdownMenuButton" data-toggle = "dropdown" aria-haspopup = "true" aria-expanded = "false">
+                  Image Size
+                </button>
+                <div class = "dropdown-menu" aria-labelledby = "dropdownMenuButton">
+                                    <a class = "dropdown-item" href = "?size=large">Large</a>
+                  <a class = "dropdown-item" href = "?size=medium">Medium</a>
+                  <a class = "dropdown-item" href = "?size=small">Small</a>
+                  <a class = "dropdown-item disabled" href = "?size=all">View All Sizes</a>
+                </div>
+              </div>
+            </div>
+
+            <div class = "col-sm" id = "date-filter">
+              <div class = "row">
+                <div class = "col">
+                  <form action = "https://visibleearth.nasa.gov/images/57730/the-blue-marble-land-surface-ocean-color-and-sea-ice" method = "get">
+                    <p class = "text-right">Start Date: <input id = "start_date" name = "start_date"  /><br />
+                    End Date: <input id = "end_date" name = "end_date" /><br />
+                    <label class = "radio"><input type = "radio" name = "date_type" value = "created_at">&nbsp;Published&nbsp;Date</label><br />
+                    <label class = "radio"><input type = "radio" name = "date_type" value = "start_date">&nbsp;Data&nbsp;Date</p></label>
+                    <input type = "hidden" name = "size" value = "">
+                </div>
+                <div class = "col">
+                    <button type = "submit" class = "btn btn-primary">Filter</button><br />
+                  </form>
+                  <a href = "https://visibleearth.nasa.gov/images/57730/the-blue-marble-land-surface-ocean-color-and-sea-ice" role = "button" class = "btn btn-link">Clear</a>
+                </div>
+                <div class = "col-md-5"></div>
+            </div>
+
+        </nav>
+      </div>
+    </div>
+
+    
+    <!-- Content -->
+    <div class = "container-fluid">
+    <section class = "text-area">
+        <div class = "row">
+            <div class = "col img-col col-12 col-sm-12 col-md-6">
+                <div class = "row">
+                    <div class = "col main-image border rounded">
+                        <div class = "d-flex justify-content-center">
+                            <a href = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350x294x196.jpg" id = "main-link" target = "_blank"><img class = "img-fluid main" id = "main-image" src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350x294x196.jpg"  alt = "The Blue Marble: Land Surface, Ocean Color and Sea Ice - selected image"></a>
+                        </div>
+                        <div class = "row info">
+                            <div class = "col" id = "main-info"></div>
+                            <div class = "col" id = "download-info">
+                                <a href = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350x294x196.jpg" id = "download-link" target = "_blank"><button type = "button" class = "btn btn-primary float-right">Download</button></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class = "row child-images">
+                    <div class = "col-sm-3 col-xs-6 child-image selected" id = "child-57730">
+                        <a id = "child-link-57730" href = "javascript:;"  data-toggle = "tooltip" data-placement = "top" title = "land_ocean_ice_350x294x196.jpg">
+                            <img class = "img-fluid child" id = "child-image-57730" src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350x294x196.jpg" data-src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350x294x196.jpg"  alt = "The Blue Marble: Land Surface, Ocean Color and Sea Ice - selected child image">
+                        </a>
+                        <div id = "child-info-57730"></div>
+                    </div>
+                                                                        <div class = "col-sm-3 col-xs-6 child-image" id = "child-57731l">
+                                <a id = "child-link-57731l" href = "javascript:;" data-toggle = "tooltip" data-placement = "top" title = "land_ocean_ice_350.jpg">
+                                                                            <img class = "img-fluid child " id = "child-image-57731l" data-src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350.jpg" src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_350.jpg" alt = "The Blue Marble: Land Surface, Ocean Color and Sea Ice - related image preview">
+                                                                    </a>
+                                <div id = "child-info-57731l">
+                                    <p>
+                                        <span class = "acquired" style = "display:none">Data acquired February 8, 2002<br /></span>
+                                        350 x 175<br />
+                                        17 KB - JPEG
+                                    </p>
+                                </div>
+                            </div>
+                                                    <div class = "col-sm-3 col-xs-6 child-image" id = "child-57732l">
+                                <a id = "child-link-57732l" href = "javascript:;" data-toggle = "tooltip" data-placement = "top" title = "land_ocean_ice_2048.jpg">
+                                                                            <img class = "img-fluid child " id = "child-image-57732l" data-src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_2048.jpg" src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_2048.jpg" alt = "The Blue Marble: Land Surface, Ocean Color and Sea Ice - related image preview">
+                                                                    </a>
+                                <div id = "child-info-57732l">
+                                    <p>
+                                        <span class = "acquired" style = "display:none">Data acquired February 8, 2002<br /></span>
+                                        2048 x 1024<br />
+                                        260 KB - JPEG
+                                    </p>
+                                </div>
+                            </div>
+                                                    <div class = "col-sm-3 col-xs-6 child-image" id = "child-82680l">
+                                <a id = "child-link-82680l" href = "javascript:;" data-toggle = "tooltip" data-placement = "top" title = "land_ocean_ice_2048.png">
+                                                                            <img class = "img-fluid child " id = "child-image-82680l" data-src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_2048.png" src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_2048.png" alt = "The Blue Marble: Land Surface, Ocean Color and Sea Ice - related image preview">
+                                                                    </a>
+                                <div id = "child-info-82680l">
+                                    <p>
+                                        <span class = "acquired" style = "display:none">Data acquired February 8, 2002<br /></span>
+                                        2048 x 1024<br />
+                                        2 MB - PNG
+                                    </p>
+                                </div>
+                            </div>
+                                                    <div class = "col-sm-3 col-xs-6 child-image" id = "child-82679l">
+                                <a id = "child-link-82679l" href = "javascript:;" data-toggle = "tooltip" data-placement = "top" title = "land_ocean_ice_8192.png">
+                                                                            <img class = "img-fluid child  click-display" id = "child-image-82679l" data-src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_8192.png" src = "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_8192.png" alt = "The Blue Marble: Land Surface, Ocean Color and Sea Ice - related image preview">
+                                                                    </a>
+                                <div id = "child-info-82679l">
+                                    <p>
+                                        <span class = "acquired" style = "display:none">Data acquired February 8, 2002<br /></span>
+                                        8192 x 4096<br />
+                                        23 MB - PNG
+                                    </p>
+                                </div>
+                            </div>
+                                                            </div>
+            </div>
+            <div class = "col record-info col-12 col-sm-12 col-md-6">
+                <div class = "jumbotron">
+                    <h1 class = "display-5">The Blue Marble: Land Surface, Ocean Color and Sea Ice</h1>
+                                        <p class = "lead"><p>This spectacular &#8220;blue marble&#8221; image is the most detailed true-color image of the entire Earth to date. Using a collection of satellite-based observations, scientists and visualizers stitched together months of observations of the land surface, oceans, sea ice, and clouds into a seamless, true-color mosaic of every square kilometer (.386 square mile) of our planet. These images are freely available to educators, scientists, museums, and the public. </p><p>Much of the information contained in this image came from a single remote-sensing device-NASA&#8217;s <a href="http://modis.gsfc.nasa.gov/" target="outlink">Moderate Resolution Imaging Spectroradiometer,</a> or MODIS. Flying over 700 km above the Earth onboard the <a href="http://terra.nasa.gov/" target="outlink">Terra</a> satellite, MODIS provides an integrated tool for observing a variety of terrestrial, oceanic, and atmospheric features of the Earth. The land and coastal ocean portions of these images are based on surface observations collected from June through September 2001 and combined, or composited, every eight days to compensate for clouds that might block the sensor&#8217;s view of the surface on any single day. Two different types of ocean data were used in these images: shallow water true color data, and global ocean color (or chlorophyll) data. Topographic shading is based on the GTOPO 30 elevation dataset compiled by the U.S. Geological Survey&#8217;s EROS Data Center. MODIS observations of polar sea ice were combined with observations of Antarctica made by the National Oceanic and Atmospheric Administration&#8217;s AVHRR sensor&#8212;the Advanced Very High Resolution Radiometer. The cloud image is a composite of two days of imagery collected in visible light wavelengths and a third day of thermal infra-red imagery over the poles.</p></p>
+                                        <hr class = "my-4">
+                    <p>
+                        <em>NASA Goddard Space Flight Center Image by Reto St&#246;ckli (land surface, shallow water, clouds). Enhancements by Robert Simmon (ocean color, compositing, 3D globes, animation). Data and technical support: MODIS Land Group; MODIS Science Data Support Team; MODIS Atmosphere Group; MODIS Ocean Group Additional data: USGS EROS Data Center (topography); USGS Terrestrial Remote Sensing Flagstaff Field Center (Antarctica); Defense Meteorological Satellite Program (city lights).</em>
+                                            </p>
+                    <p>Published February 8, 2002<br />
+                                            Data acquired February 8, 2002</p>
+                                                                <dl>
+                            <dt>Source:</dt>
+                                                            <dd><a href = "/source/67/terra-modis">Terra &gt; MODIS</a></dd>
+                                                    </dl>
+                    
+                    
+                                            <dl>
+                            <dt>Collection:</dt>
+                                                            <dd><a href = "/collection/1484/blue-marble">Blue Marble</a></dd>
+                                                    </dl>
+                                    </div>
+
+            </div>
+        </div>
+    </section>
+</div>
+
+    <footer>
+      <div class = "container-fluid footer">
+        <div class = "row">
+          <div class = "col-sm-12 col-md-4 order-md-12 footer-links">
+            <div class = "col footer-logo d-block d-md-none">
+              <a href = "/" title = "Visible Earth"><img class = "logo-mark img-fluid" src = "/img/ve-logo.png" alt = "Visible Earth logo"/></a>
+            </div>
+            <div class = "row">
+              <div class = "col-sm-12 col-md-6">
+                <ul class = "nav flex-column">
+                  <li class = "nav-item footer-nav-header">Connect</li>
+                  <li class = "nav-item"><a class = "nav-link" href = "/feeds/all.rss">RSS Feed (All) <i class = "fas fa-rss-square"></i></a></li>
+                  <li class = "nav-item"><a class = "nav-link" href = "/contact/">Contact</a></li>
+                </ul>
+              </div>
+              <div class = "col-sm-12 col-md-6">
+                <ul class = "nav flex-column">
+                  <li class = "nav-item footer-nav-header">Learn</li>
+                  <li class = "nav-item"><a class = "nav-link" href = "/image-use-policy">Image Use Policy</a></li>
+                  <li class = "nav-item"><a class = "nav-link" href = "https://www.nasa.gov/about/highlights/HP_Privacy.html">Privacy Policy</a></li>
+                  <li class = "nav-item"><a class = "nav-link" href = "https://www.nasa.gov/accessibility/">Accessibility</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class = "col-sm-12 col-md-8 order-md-1"> 
+            <div class = "col footer-logo d-none d-md-block">
+              <a href = "/" title = "Visible Earth"><img class = "logo-mark img-fluid" src = "/img/ve-logo.png" alt = "Visible Earth logo"/></a>
+            </div>
+
+            <div class = "col">
+              <ul class = "nav justify-content-start">
+                <li class = "nav-item">Visible Earth is part of the <a href = "http://eospso.nasa.gov/">EOS Project Science Office</a> at <a href = "https://www.nasa.gov/goddard/">NASA Goddard Space Flight Center</a></li>
+              </ul>
+
+              <ul class = "nav justify-content-start">
+                <li class = "nav-item">Webmaster: <a href = "/contact/">Paul Przyborski</a>&nbsp;</li>
+              </ul>
+
+              <ul class = "nav justify-content-start">
+                <li class = "nav-item">NASA Official: <a href = "/contact/">Robert Levy</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+  </footer>
+
+    <!-- jQuery first, then Popper.js, then App JS -->
+    <script src = "https://code.jquery.com/jquery-3.6.0.min.js" integrity = "sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin = "anonymous"></script>
+        <script src = "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // show placeholder for larger images
+            $('.click-display').each(function() {
+                var imgsrc = $(this).attr('data-src');
+                $(this).attr('org-src', imgsrc);
+                $(this).attr('src', '/img/temp.png');
+            });
+
+            // set up the info for the landing thumbnail
+            var mainImage = document.getElementById('main-image');
+            var mainWidth = mainImage.naturalWidth;
+            var mainHeight = mainImage.naturalHeight;
+
+            var mainType = getExt("land_ocean_ice_350x294x196.jpg");
+            $("#child-info-57730").html("<p>"+mainWidth+" x "+mainHeight+"<br />"+mainType+"</p>");
+            $("#main-info").html("<p>land_ocean_ice_350x294x196.jpg<br />"+mainWidth+" x "+mainHeight+"<br />"+mainType+"</p>");
+
+        
+        
+            if ($('#child-image-').length) {
+                            }
+
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip({ boundary: 'window' })
+            });
+        });
+
+        $('.child-image').click(function() {
+            var child = $(this).attr('id');
+            var childID = child.replace('child-', '');
+            imgSwap(childID);
+        });
+
+        function imgSwap(id, direct=false) {
+            var mainImage = document.getElementById('main-image');
+            var reqImage = document.getElementById('child-image-'+id);
+
+            var orgImage = $(reqImage).attr('org-src');
+            if (typeof(orgImage) != 'undefined' && orgImage !== null) {
+                var downloadLink = orgImage;
+                reqImage.src = orgImage;
+            } else {
+                var downloadLink = $(reqImage).attr('data-src');
+            }
+
+            // clear the selected indicator
+            $('.selected').removeClass('selected');
+
+            // reset the selected inidcator
+            $('#child-'+id).addClass('selected');
+
+            // swap the images
+            $('.main-image').fadeOut(400,function() {
+                var attr = $(reqImage).attr('org-src');
+                if (typeof attr !== typeof undefined && attr !== false) {
+                    mainImage.src = $(reqImage).attr('org-src');
+                } else {
+                    mainImage.src = reqImage.src;
+                }
+                $('.main-image').fadeIn(400)[0].src = reqImage.src;
+
+                if (direct === true) {
+                    $('#'+reqImage.id).attr('data-src', $(reqImage).attr('org-src'));
+                    $('#'+reqImage.id).attr('src', $(reqImage).attr('org-src'));
+                    var reqText = $(reqImage).attr('data-src').filename()+'<br />'+$('#child-info-'+id).html();
+                    $("#main-info").html(reqText);
+                }
+
+            });
+
+            // update the text
+            var reqText = $(reqImage).attr('data-src').filename()+'<br />'+$('#child-info-'+id).html();
+            $("#main-info").html(reqText);
+
+            // show the acquired date
+            $('#main-info .acquired').toggle();
+
+            // update the links
+            $('#main-link').attr('href', downloadLink);
+            $('#download-link').attr('href', downloadLink);
+
+            window.scrollTo(0,0);
+        }
+
+        function getExt(file) {
+            var extension = file.substr((file.lastIndexOf('.') +1));
+            switch(extension) {
+                case 'jpg':
+                    return 'JPEG';
+                break;
+                case 'png':
+                    return 'PNG'
+                break;
+                case 'gif':
+                    return 'GIF'
+                break;
+                case 'tif':
+                    return 'TIFF'
+                break;
+                case 'tiff':
+                    return 'TIFF'
+                break;
+                case 'geotiff':
+                    return 'GeoTIFF'
+                break;
+                case 'mov':
+                    return 'MOV'
+                break;
+                case 'pdf':
+                    return 'PDF'
+                break;
+                default:
+                    return 'JPEG';
+            }
+        };
+
+        String.prototype.filename=function(extension){
+            var s= this.replace(/\\/g, '/');
+            s= s.substring(s.lastIndexOf('/')+ 1);
+            return s;
+        }
+    </script>
+    <script src = "/js/app.js"></script>
+    <script src = "https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script>
+      $( function() {
+        var dateFormat = "mm/dd/yyyy",
+          from = $( "#start_date" )
+            .datepicker({
+              defaultDate: "+1w",
+              changeMonth: true,
+              changeYear: true,
+              numberOfMonths: 3,
+              minDate: '01/01/0800',
+              maxDate: '0',
+              yearRange: '0800:+0'
+            })
+            .on( "change", function() {
+              to.datepicker( "option", "minDate", getDate( this ) );
+            }),
+          to = $( "#end_date" ).datepicker({
+            defaultDate: "+1w",
+            changeMonth: true,
+            changeYear: true,
+            showButtonPanel: true,
+            numberOfMonths: 3,
+            minDate: '01/01/0800',
+            maxDate: '0',
+            yearRange: '0800:+0'
+          })
+          .on( "change", function() {
+            from.datepicker( "option", "maxDate", getDate( this ) );
+          });
+     
+        function getDate( element ) {
+          var date;
+          try {
+            date = $.datepicker.parseDate( dateFormat, element.value );
+          } catch( error ) {
+            date = null;
+          }
+     
+          return date;
+        }
+      });
+
+      $(document).ready(function() {
+        
+        
+      });
+    </script>
+    <script src = "https://cdn.jsdelivr.net/npm/vanilla-lazyload@11.0.2/dist/lazyload.min.js"></script>
+    <script>
+      $(document).ready(function() {
+        var lazyLoadInstance = new LazyLoad({
+            elements_selector: ".lazy"
+            // ... more custom settings?
+        });
+      });
+    </script>
+
+    <script type="text/javascript">
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-24009030-1']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    <script language="javascript" id="_fed_an_ua_tag" src="https://dap.digitalgov.gov/Universal-Federated-Analytics-Min.js?agency=NASA&subagency=GSFC&yt=true&dclink=true"></script>
+    <script id="parsely-cfg" src="//cdn.parsely.com/keys/visibleearth.nasa.gov/p.js" async="" defer=""></script>
+  </body>
+</html>

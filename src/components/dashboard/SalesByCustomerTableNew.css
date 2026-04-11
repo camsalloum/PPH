@@ -1,0 +1,1534 @@
+/* ========================================
+   UNIFIED SALES BY CUSTOMER TABLE STYLES
+   Single source of truth for all Sales by Customer table styling
+   Used by: Live view, HTML exports, PDF exports
+   Adapted from SalesByCountryTableStyles.css with 2 left columns
+   ======================================== */
+
+:root {
+  /* Sticky header row height - DO NOT override in media queries */
+  --sbc-hdr-h: 28px;
+
+  /* z-index layering for sticky elements - higher values to prevent overlaps */
+  --z-corner: 20;    /* First column header - always on top */
+  --z-hdr3: 16;      /* First header row (Year) */
+  --z-hdr2: 15;      /* Second header row (Month) */
+  --z-hdr1: 14;      /* Third header row (Type) */
+  --z-firstcol: 12;  /* Body first column */
+  --z-header: 10;    /* Generic header fallback */
+  --z-separator: 1;  /* Period separators */
+
+  /* Responsive font sizing (defaults use fluid clamp; overridden per breakpoint) */
+  --sbc-font-base: clamp(9px, 1.8vw, 12px);
+  --sbc-font-header: clamp(11px, 2.1vw, 14px);
+  --sbc-font-label: var(--sbc-font-base);
+  --sbc-font-accent: calc(var(--sbc-font-base) + 1px); /* totals, deltas, customer-name */
+  --sbc-font-corner: calc(var(--sbc-font-header) + 6px); /* corner header larger than header */
+}
+
+/* ========================================
+   BASE CONTAINER & LAYOUT
+   ======================================== */
+
+.table-view {
+  width: 100%;
+  padding: 20px;
+  margin-top: 20px;
+  max-width: 100%;
+  overflow: visible; /* Let child container handle all scrolling */
+  box-sizing: border-box;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  position: relative !important;
+  overflow-x: auto !important;           /* Horizontal scroll */
+  overflow-y: auto !important;           /* Show scrollbar only when needed */
+  -webkit-overflow-scrolling: touch !important;
+  max-height: 80vh !important;           /* Limit height for internal scrolling */
+  min-height: 50vh !important;           /* Ensure minimum height to force scrollbar */
+  padding-bottom: 10px !important;
+  background-color: #fff !important;
+  will-change: scroll-position !important;
+  contain: layout !important;
+}
+
+.table-container.tall-table {
+  overflow-y: auto !important;
+  max-height: 80vh !important;
+}
+
+.table-container-for-export {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ========================================
+   HEADER & TITLE STYLING
+   ======================================== */
+
+.table-title {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #333;
+  text-align: center;
+  font-weight: 700;
+}
+
+.table-title h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+}
+
+.table-subtitle {
+  font-style: italic;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 5px;
+  color: #000000;
+  font-size: 1.1rem;
+}
+
+.table-empty-state {
+  padding: 30px;
+  text-align: center;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
+  margin: 20px 0;
+  color: #666;
+}
+
+.table-options {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.option-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+  user-select: none;
+  justify-content: center;
+}
+
+.option-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.option-checkbox:hover {
+  color: #007bff;
+}
+
+/* Enhanced scrolling for all screen sizes */
+.table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* ========================================
+   CORE TABLE STYLING
+   ======================================== */
+
+.sales-by-customer-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate; /* needed for sticky headers */
+  border-spacing: 0;         /* remove default cell gutters that look like borders */
+  font-size: var(--sbc-font-base);
+  font-family: Arial, sans-serif;
+  table-layout: fixed;
+  max-width: 100%;
+  background: #fff;
+  background-color: #fff;
+  color: #222222;
+  display: table !important;
+}
+
+.sales-by-customer-table thead {
+  display: table-header-group !important;
+}
+
+.sales-by-customer-table tbody {
+  display: table-row-group !important;
+}
+
+.sales-by-customer-table tr {
+  display: table-row !important;
+}
+
+/* Keep headers at responsive 14px */
+.sales-by-customer-table thead th {
+  font-size: var(--sbc-font-header);
+  height: var(--sbc-hdr-h) !important;
+  min-height: var(--sbc-hdr-h) !important;
+  max-height: var(--sbc-hdr-h) !important;
+  position: sticky !important;
+  top: 0; /* overridden per row below */
+  z-index: var(--z-hdr1);
+  font-weight: 700;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  padding: 4px 6px !important; /* Fixed consistent padding */
+  line-height: 1.2 !important;
+  vertical-align: middle !important;
+  background-color: transparent;
+  background-clip: padding-box !important;
+}
+
+/* White underlay ONLY when there is NO inline background on the cell */
+.sales-by-customer-table thead th:not([style*="background"]):not([style*="background-color"])::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* If the header DOES have inline bg, don't put white on top of it */
+.sales-by-customer-table thead th[style*="background"],
+.sales-by-customer-table thead th[style*="background-color"] {
+  background-color: transparent;
+}
+
+/* Four sticky header tiers - create layered sticky effect */
+.sales-by-customer-table thead tr:nth-child(1) th {
+  top: 0 !important;
+  z-index: var(--z-hdr3) !important;
+}
+.sales-by-customer-table thead tr:nth-child(2) th {
+  top: calc(var(--sbc-hdr-h) * 1) !important;
+  z-index: var(--z-hdr2) !important;
+}
+.sales-by-customer-table thead tr:nth-child(3) th {
+  top: calc(var(--sbc-hdr-h) * 2) !important;
+  z-index: var(--z-hdr1) !important;
+}
+.sales-by-customer-table thead tr:nth-child(4) th {
+  top: calc(var(--sbc-hdr-h) * 3) !important;
+  z-index: var(--z-hdr1) !important;
+}
+
+/* First column header - STICKY TOP + LEFT (corner) - Customer Names */
+.sales-by-customer-table thead tr:first-child th.empty-header {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: var(--z-corner) !important;
+  background-color: transparent;
+  text-align: center !important;
+  vertical-align: middle !important;
+  font-family: Arial, sans-serif !important;
+  font-size: var(--sbc-font-corner);
+  font-weight: bold !important;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.1 !important;
+  height: calc(var(--sbc-hdr-h) * 4); /* 4 rows */
+  max-height: calc(var(--sbc-hdr-h) * 4);
+  overflow: hidden;
+  box-sizing: border-box !important;
+  display: table-cell !important;
+  min-width: 200px;
+  max-width: 200px;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.sales-by-customer-table thead tr:first-child th.empty-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Second column header - NOT STICKY - Sales Rep Names */
+.sales-by-customer-table thead tr:first-child th.sales-rep-header {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  font-family: Arial, sans-serif !important;
+  font-size: var(--sbc-font-corner);
+  font-weight: bold !important;
+  white-space: nowrap;
+  line-height: 1.1 !important;
+  height: calc(var(--sbc-hdr-h) * 4);
+  max-height: calc(var(--sbc-hdr-h) * 4);
+  overflow: hidden;
+  box-sizing: border-box !important;
+  display: table-cell !important;
+  min-width: 160px;
+  width: 160px;
+  max-width: 200px;
+}
+
+/* First data column (row labels) is left-aligned */
+.sales-by-customer-table tbody td:first-child {
+  text-align: left;
+}
+
+/* Keep numbers tight in non-first columns */
+.sales-by-customer-table td:not(:first-child),
+.sales-by-customer-table thead th:not(:first-child) {
+  white-space: nowrap !important;
+}
+
+/* ========================================
+   TABLE CELL STYLING
+   ======================================== */
+
+.sales-by-customer-table th,
+.sales-by-customer-table td {
+  display: table-cell !important;
+  padding: clamp(2px, 0.5vw, 8px) clamp(3px, 0.7vw, 12px);
+  vertical-align: middle;
+  text-align: center;
+  line-height: 1.15;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  background-clip: border-box;
+  box-sizing: border-box !important;
+}
+
+/* FIRST COLUMN (Customer Names) - Body cells - STICKY LEFT */
+/* Exclude summary row labels which have colored backgrounds AND separator rows */
+.sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child:not(.total-top20-label):not(.total-other-label):not(.total-sales-label):not(.number-all-label) {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  background-color: #ffffff !important;
+  text-align: left;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  font-weight: 600 !important;
+}
+
+/* Pseudo-element background for first column - WHITE */
+/* IMPORTANT: Exclude summary row labels - they have colored backgrounds from inline styles */
+/* IMPORTANT: Exclude separator rows - they have their own styling */
+.sales-by-customer-table thead tr:first-child th.empty-header::before,
+.sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child:not(.total-top20-label):not(.total-other-label):not(.total-sales-label):not(.number-all-label)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Extend sticky underlay slightly to cover bleed from scrolling cells */
+.sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child:not(.total-top20-label):not(.total-other-label):not(.total-sales-label):not(.number-all-label)::before {
+  right: -3px;
+}
+
+/* ========================================
+   SEPARATOR ROW - STICKY BETWEEN HEADERS AND BODY
+   ======================================== */
+
+/* SEPARATOR ROW between headers and body - FULLY STICKY (vertical scrolling) */
+.sales-by-customer-table .sbc-separator-row {
+  height: 8px !important;
+  line-height: 8px !important;
+  padding: 0 !important;
+}
+
+.sales-by-customer-table .sbc-separator-row td {
+  position: sticky !important;
+  top: calc(var(--sbc-hdr-h) * 4) !important; /* Position below 4 header rows */
+  z-index: var(--z-hdr1) !important;
+  height: 8px !important;
+  padding: 0 !important;
+  background-color: white !important;
+  background-clip: padding-box !important;
+}
+
+.sales-by-customer-table .sbc-separator-row td::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* First cell of separator row - STICKY TOP + LEFT (corner) - Customer Names column */
+/* Separator row first cell - STICKY TOP + LEFT */
+/* IMPORTANT: Explicitly include top, bottom, and left borders so they stick with the cell */
+/* Left border is the outer edge of the rectangle */
+.sales-by-customer-table .sbc-separator-row td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  top: calc(var(--sbc-hdr-h) * 4) !important; /* Position below 4 header rows */
+  z-index: var(--z-corner) !important;
+  background-color: white !important;
+  border-top: 2px solid black !important; /* Explicit top border for sticky */
+  border-bottom: 2px solid black !important; /* Explicit bottom border for sticky */
+  border-left: 2px solid black !important; /* Outer edge of rectangle */
+  border-right: none !important; /* No internal border */
+  height: 8px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  vertical-align: top !important;
+}
+
+.sales-by-customer-table .sbc-separator-row td:first-child::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  right: -3px;
+  background: #fff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Second cell of separator row - NOT STICKY horizontally, but STICKY vertically */
+.sales-by-customer-table .sbc-separator-row td:nth-child(2) {
+  /* Inherits position: sticky and top from parent .sbc-separator-row td rule */
+  background-color: white !important;
+  height: 8px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  vertical-align: top !important;
+}
+
+/* ========================================
+   RECTANGLE BORDERS - Matching Sales by Country table structure
+   2px solid black borders creating rectangle boxes
+   Customer table: First column + Second column + N periods (each period = 2 columns: Values, %)
+   Delta columns are NOT part of period rectangles
+   ======================================== */
+
+/* TOP BORDERS - First header row across all boxes */
+.sales-by-customer-table thead tr:first-child th {
+  border-top: 2px solid black !important;
+}
+
+/* BOTTOM BORDERS - Last body row across all boxes */
+.sales-by-customer-table tbody tr:last-child td {
+  border-bottom: 2px solid black !important;
+}
+
+/* SEPARATOR ROW borders - top and bottom black borders */
+/* Remove all internal vertical borders - separator row should be one continuous rectangle */
+.sales-by-customer-table .sbc-separator-row td {
+  border-top: 2px solid black !important;
+  border-bottom: 2px solid black !important;
+  border-left: none !important; /* Remove all internal left borders */
+  border-right: none !important; /* Remove all internal right borders */
+}
+
+/* Override any period border rules that might apply to separator rows - ensure no internal borders */
+.sales-by-customer-table .sbc-separator-row td:nth-child(n+2):not(:last-child) {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* ========================================
+   FIRST COLUMN BORDERS (Customer Names)
+   ======================================== */
+
+/* Header: first column spans 4 rows via rowspan */
+.sales-by-customer-table thead tr:first-child th.empty-header {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Body first column (Customer Names) - Exclude separator rows */
+.sales-by-customer-table tbody tr:not(.sbc-separator-row) td:nth-child(1) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Separator row first cell - Left border only (outer edge of rectangle) */
+/* This must override all other rules including the column-specific overrides */
+.sales-by-customer-table tbody tr.sbc-separator-row td:first-child {
+  border-left: 2px solid black !important;
+  border-right: none !important;
+  border-top: 2px solid black !important;
+  border-bottom: 2px solid black !important;
+}
+
+/* ========================================
+   SECOND COLUMN BORDERS (Sales Rep Names) - WHEN VISIBLE
+   Only right border - left border comes from first column's right border
+   ======================================== */
+
+/* Header: second column spans 4 rows via rowspan */
+.sales-by-customer-table thead tr:first-child th.sales-rep-header {
+  border-right: 2px solid black !important;
+}
+
+/* Body second column (Sales Rep Names) - Exclude separator rows */
+.sales-by-customer-table tbody tr:not(.sbc-separator-row) td:nth-child(2):not(.metric-cell) {
+  border-right: 2px solid black !important;
+}
+
+
+/* ========================================
+   PERIOD BORDER RECTANGLES
+
+   STRUCTURE WITH Sales Rep visible:
+   - Column 1: Customer Names (rowspan=4)
+   - Column 2: Sales Rep Names (rowspan=4)
+   - Columns 3+: Periods and deltas
+
+   Row 1 (Year row): [Customer(1), SalesRep(2), Period1-Year(3), Delta(4), Period2-Year(5), Delta(6)...]
+     - Period columns at: 3, 5, 7, 9, 11, 13... (odd starting from 3)
+     - Delta columns at: 4, 6, 8, 10, 12, 14... (even starting from 4)
+
+   Row 2-3 (Month/Type rows): [Period1-Month(1), Period2-Month(2)...] (Customer/SalesRep filtered out)
+     - Periods at: 1, 2, 3, 4, 5... (consecutive)
+
+   Row 4 (Values/% row): [Period1-Values(1), Period1-%(2), Period2-Values(3), Period2-%(4)...]
+     - Values cells at: 1, 3, 5, 7, 9... (odd)
+     - % cells at: 2, 4, 6, 8, 10... (even)
+
+   Body/Separator: Same as Row 1 structure
+   ======================================== */
+
+/* ----------------------------------------
+   ROW 1 (YEAR ROW) - Period rectangles
+   ---------------------------------------- */
+
+/* When Sales Rep is visible: Periods at columns 3, 5, 7, 9... */
+/* Period 1 (column 3): Only right border - left comes from Sales Rep column's right border */
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(3) {
+  border-right: 2px solid black !important;
+}
+
+/* Periods 2-10 (columns 5, 7, 9, 11, 13, 15, 17, 19, 21): Both borders */
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(5),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(7),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(9),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(11),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(13),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(15),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(17),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(19),
+.sales-by-customer-table thead tr:nth-child(1) th:nth-child(21) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* ----------------------------------------
+   ROW 2 (MONTH ROW) - Period rectangles
+   Customer and Sales Rep filtered out, so periods start at column 1
+   ---------------------------------------- */
+
+/* Period columns in row 2: Right border on all, left border only on periods 2+ */
+/* Period 1 (column 1) excluded from left border - left comes from Sales Rep column's right border */
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(1) {
+  border-right: 2px solid black !important;
+}
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(2),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(3),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(4),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(5),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(6),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(7),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(8),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(9),
+.sales-by-customer-table thead tr:nth-child(2) th:nth-child(10) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* ----------------------------------------
+   ROW 3 (TYPE ROW) - Period rectangles
+   Customer and Sales Rep filtered out, so periods start at column 1
+   ---------------------------------------- */
+
+/* Period columns in row 3: Right border on all, left border only on periods 2+ */
+/* Period 1 (column 1) excluded from left border - left comes from Sales Rep column's right border */
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(1) {
+  border-right: 2px solid black !important;
+}
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(2),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(3),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(4),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(5),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(6),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(7),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(8),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(9),
+.sales-by-customer-table thead tr:nth-child(3) th:nth-child(10) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* ----------------------------------------
+   ROW 4 (VALUES/% ROW) - Period rectangles
+   Each period has 2 cells (Values, %)
+   Structure: [Period1-Values(1), Period1-%(2), Period2-Values(3), Period2-%(4)...]
+   ---------------------------------------- */
+
+/* Left border on Values cells (odd columns: 3, 5, 7...) */
+/* Period 1 Values (column 1) excluded - left border comes from Sales Rep column's right border */
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(3),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(5),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(7),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(9),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(11),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(13),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(15),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(17),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(19) {
+  border-left: 2px solid black !important;
+}
+
+/* Right border on all % cells (even columns: 2, 4, 6, 8...) */
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(2),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(4),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(6),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(8),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(10),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(12),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(14),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(16),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(18),
+.sales-by-customer-table thead tr:nth-child(4) th:nth-child(20) {
+  border-right: 2px solid black !important;
+}
+
+/* Ensure last header column (regardless of period count) always has right border */
+.sales-by-customer-table thead tr th:last-child {
+  border-right: 2px solid black !important;
+}
+
+/* ----------------------------------------
+   SEPARATOR ROW - Continuous Rectangle
+   Separator row is one continuous horizontal rectangle with:
+   - Top border (all cells)
+   - Bottom border (all cells)
+   - Left border (first cell only - outer edge)
+   - Right border (last cell only - outer edge)
+   - NO internal vertical borders between columns
+   
+   IMPORTANT: These rules must come AFTER all period border rules to override them
+   ---------------------------------------- */
+
+/* Force remove all internal vertical borders from separator row (all cells except first and last) */
+/* This must override ALL period border rules - use high specificity */
+.sales-by-customer-table tbody tr.sbc-separator-row td:not(:first-child):not(:last-child) {
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 2px solid black !important;
+  border-bottom: 2px solid black !important;
+}
+
+/* Additional override for all separator row cells to ensure no vertical borders */
+/* Target specific column positions that might have period borders - use high specificity */
+/* EXCLUDE last child - it needs right border (outer edge) */
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(3):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(4):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(5):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(6):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(7):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(8):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(9):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(10):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(11):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(12):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(13):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(14):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(15):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(16):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(17):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(18):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(19):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(20):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(21):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(22):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(23):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(24):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(25):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(26):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(27):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(28):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(29):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(30):not(:last-child),
+.sales-by-customer-table tbody tr.sbc-separator-row td:nth-child(31):not(:last-child) {
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 2px solid black !important;
+  border-bottom: 2px solid black !important;
+}
+
+/* Separator row last cell - MUST have right border (outer edge) - place AFTER all overrides */
+.sales-by-customer-table tbody tr.sbc-separator-row td:last-child {
+  border-right: 2px solid black !important;
+  border-left: none !important;
+  border-top: 2px solid black !important;
+  border-bottom: 2px solid black !important;
+}
+
+/* ----------------------------------------
+   BODY ROWS - Period rectangles
+   Same structure as Row 1 and Separator
+   ---------------------------------------- */
+
+/* When Sales Rep is visible: Period data columns start at 3 */
+/* Each period = 2 cells (Values col + % col) */
+/* Structure: [Customer(1), SalesRep(2), P1-Values(3), P1-%(4), Delta(5), P2-Values(6), P2-%(7), Delta(8)...] */
+
+/* Period 1 (columns 3-4): Only right on col 4 - left comes from Sales Rep column's right border */
+/* Exclude summary rows AND separator rows - they have their own border rules */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(4):not(.thick-border-bottom) {
+  border-right: 2px solid black !important;
+}
+
+/* For last row with thick-border-bottom, also apply period borders */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td.thick-border-bottom:nth-child(4) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 2 (columns 6-7): Left on col 6, right on col 7 */
+/* Exclude summary rows AND separator rows - they have their own border rules */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(6) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(7) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 3 (columns 9-10): Left on col 9, right on col 10 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(9) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(10) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 4 (columns 12-13): Left on col 12, right on col 13 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(12) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(13) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 5 (columns 15-16): Left on col 15, right on col 16 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(15) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(16) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 6 (columns 18-19): Left on col 18, right on col 19 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(18) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(19) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 7 (columns 21-22): Left on col 21, right on col 22 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(21) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(22) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 8 (columns 24-25): Left on col 24, right on col 25 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(24) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(25) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 9 (columns 27-28): Left on col 27, right on col 28 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(27) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(28) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 10 (columns 30-31): Left on col 30, right on col 31 */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(30) {
+  border-left: 2px solid black !important;
+}
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:nth-child(31) {
+  border-right: 2px solid black !important;
+}
+
+/* Ensure last column (regardless of period count) always has right border */
+.sales-by-customer-table tbody tr:not(:has(.total-sales-label)):not(:has(.number-all-label)):not(.sbc-separator-row) td:last-child {
+  border-right: 2px solid black !important;
+}
+
+/* SECOND COLUMN (Sales Rep Names) - Body cells - NOT STICKY, single line */
+/* REMOVED: position: sticky, left, z-index properties - second column should NOT be sticky */
+.sales-by-customer-table tbody tr td:nth-child(2):not(.summary-label) {
+  background-color: #ffffff !important;
+  text-align: left;
+  white-space: nowrap;
+  overflow: visible;
+  box-sizing: border-box;
+  font-weight: 600 !important;
+  text-transform: capitalize !important;
+  font-size: var(--sbc-font-label) !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  vertical-align: middle;
+  min-width: 160px;
+  width: 160px;
+  max-width: 220px;
+}
+
+/* ========================================
+   SUMMARY ROWS STYLING
+   ======================================== */
+
+/* Summary row labels - sticky left columns */
+.sales-by-customer-table .summary-label {
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  text-align: left !important;
+}
+
+.sales-by-customer-table .summary-cell {
+  font-weight: 700 !important;
+  font-size: 12px !important;
+}
+
+/* ========================================
+   SUMMARY ROW COLORS - IMPORTANT: Inline styles should win
+   Remove conflicting !important flags that override inline styles
+   Remove ::before pseudo-elements that cover colored backgrounds
+   ======================================== */
+
+/* Total Top 20 Customers */
+.sales-by-customer-table .total-top20-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  /* NO background-color here - let inline styles work */
+  /* NO ::before pseudo-element - it would cover the blue background */
+}
+
+/* Total Other Customers */
+.sales-by-customer-table .total-other-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  /* NO background-color here - let inline styles work */
+}
+
+/* Total Sales */
+.sales-by-customer-table .total-sales-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  /* NO background-color here - let inline styles work */
+}
+
+/* Number of All Customers */
+.sales-by-customer-table .number-all-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  /* NO background-color here - let inline styles work */
+  /* NO ::before pseudo-element - it covers colored backgrounds */
+}
+
+/* Remove the white pseudo-element from colored summary rows */
+.sales-by-customer-table .total-top20-label::before,
+.sales-by-customer-table .total-other-label::before,
+.sales-by-customer-table .total-sales-label::before,
+.sales-by-customer-table .number-all-label::before {
+  content: none !important;
+}
+
+/* Sales Rep column in summary rows - white background, NOT STICKY */
+.sales-by-customer-table td.summary-label:nth-child(2) {
+  background-color: #ffffff !important;
+}
+
+/* Thick border for visual separator before summary rows (last customer row) */
+.sales-by-customer-table .thick-border-bottom {
+  border-bottom: 4px solid #333 !important;
+}
+
+/* ========================================
+   SUMMARY ROWS - PERIOD BORDERS (Total Sales & Number of All Customers)
+   These rows use colSpan={2}, so each period cell spans both Values and % columns
+   Structure: [Customer(1), SalesRep(2), P1(colSpan=2 at 3), Delta(4), P2(colSpan=2 at 5), Delta(6), P3(colSpan=2 at 7)...]
+   Match the period border style of upper rows (period rectangles), NOT internal Values/% borders
+   ======================================== */
+
+/* Target only rows containing Total Sales or Number of All Customers labels */
+/* Period 1 (column 3, colSpan=2): Only right border - left comes from Sales Rep column's right border */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(3),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(3) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 2 (column 5, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(5),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(5) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 3 (column 7, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(7),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(7) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 4 (column 9, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(9),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(9) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 5 (column 11, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(11),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(11) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 6 (column 13, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(13),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(13) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 7 (column 15, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(15),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(15) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 8 (column 17, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(17),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(17) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 9 (column 19, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(19),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(19) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 10 (column 21, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label) td.summary-cell:nth-child(21),
+.sales-by-customer-table tbody tr:has(.number-all-label) td.summary-cell:nth-child(21) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* ========================================
+   SUMMARY ROWS - PERIOD BORDERS (When Sales Rep is HIDDEN)
+   Total Sales & Number of All Customers rows only
+   Structure: [Customer(1), P1(colSpan=2 at 2), Delta(3), P2(colSpan=2 at 4), Delta(5), P3(colSpan=2 at 6)...]
+   ======================================== */
+
+/* Period 1 (column 2, colSpan=2): Only right border - left comes from Customer column's right border */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(2),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(2) {
+  border-right: 2px solid black !important;
+}
+
+/* Period 2 (column 4, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(4),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(4) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 3 (column 6, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(6),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(6) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 4 (column 8, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(8),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(8) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 5 (column 10, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(10),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(10) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 6 (column 12, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(12),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(12) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 7 (column 14, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(14),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(14) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 8 (column 16, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(16),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(16) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 9 (column 18, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(18),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(18) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* Period 10 (column 20, colSpan=2): Both left and right borders */
+.sales-by-customer-table tbody tr:has(.total-sales-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(20),
+.sales-by-customer-table tbody tr:has(.number-all-label):has(td.summary-cell:nth-child(2)) td.summary-cell:nth-child(20) {
+  border-left: 2px solid black !important;
+  border-right: 2px solid black !important;
+}
+
+/* ========================================
+   METRIC CELLS
+   ======================================== */
+
+.sales-by-customer-table .metric-cell {
+  background-color: #ffffff;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+  font-size: var(--sbc-font-base) !important;
+}
+
+/* Delta metric cells */
+.sales-by-customer-table .delta-cell {
+  background-color: #f8f9fa !important;
+  text-align: center !important;
+  font-weight: bold !important;
+  font-size: var(--sbc-font-base) !important;
+  min-width: 80px !important;
+  max-width: none !important;
+  padding: 4px 6px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+
+/* Desktop - Default (1200px+) */
+@media (min-width: 1200px) {
+  :root {
+    --sbc-font-base: 11px;
+    --sbc-font-header: 13px;
+    --sbc-font-label: 11px;
+    --sbc-font-accent: 11px;
+    --sbc-font-corner: 18px;
+  }
+
+  .sales-by-customer-table {
+    min-width: 100%;
+  }
+
+  .sales-by-customer-table thead th {
+    padding: 4px 4px !important;
+  }
+
+  .sales-by-customer-table td {
+    padding: 4px 6px;
+  }
+}
+
+/* Tablet - Medium screens (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  :root {
+    --sbc-font-base: 9px;
+    --sbc-font-header: 10px;
+    --sbc-font-label: 9px;
+    --sbc-font-accent: 9px;
+    --sbc-font-corner: 14px;
+  }
+
+  .sales-by-customer-table {
+    min-width: 100%;
+  }
+
+  /* Tablet - Optimized column widths to match Sales by Country behavior */
+  .sales-by-customer-table thead tr:first-child th.empty-header {
+    min-width: 130px !important;
+    max-width: 130px !important;
+    width: 130px !important;
+  }
+
+  .sales-by-customer-table thead tr:first-child th.sales-rep-header {
+    min-width: 100px !important;
+    max-width: 100px !important;
+    width: 100px !important;
+  }
+
+  .sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child {
+    min-width: 130px !important;
+    max-width: 130px !important;
+    width: 130px !important;
+  }
+
+  .sales-by-customer-table tbody tr td:nth-child(2):not(.summary-label) {
+    min-width: 150px !important;
+    max-width: 200px !important;
+    width: 150px !important;
+    font-size: var(--sbc-font-label) !important;
+  }
+
+  .sales-by-customer-table .metric-cell {
+    min-width: 70px !important;
+    max-width: none !important;
+  }
+
+  .sales-by-customer-table th,
+  .sales-by-customer-table td {
+    padding: 3px 4px;
+  }
+}
+
+/* Mobile adjustments - Portrait (< 768px) */
+@media (max-width: 767px) {
+  :root {
+    --sbc-font-base: 9px;
+    --sbc-font-header: 10px;
+    --sbc-font-label: 9px;
+    --sbc-font-accent: 9px;
+    --sbc-font-corner: 12px;
+  }
+
+  /* MOBILE COLUMN WIDTH OVERRIDES - Match Sales by Country behavior */
+
+  /* Mobile first column header - STICKY TOP + LEFT */
+  .sales-by-customer-table thead tr:first-child th.empty-header {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: var(--z-corner) !important;
+    min-width: 120px;
+    max-width: 60vw;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+    font-family: Arial, sans-serif !important;
+    font-size: var(--sbc-font-corner);
+    line-height: 1.05 !important;
+    padding: 4px 6px !important;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Mobile Sales Rep header - allow natural width */
+  .sales-by-customer-table thead tr:first-child th.sales-rep-header {
+    min-width: 150px !important;
+    max-width: 220px !important;
+    width: 160px !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    padding: 4px 6px !important;
+  }
+
+  .sales-by-customer-table {
+    table-layout: auto;
+  }
+
+  /* Mobile body first column - STICKY LEFT */
+  /* Exclude separator rows - they have their own sticky positioning */
+  .sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child:not(.total-top20-label):not(.total-other-label):not(.total-sales-label):not(.number-all-label) {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    min-width: 120px !important;
+    max-width: 60vw !important;
+    width: auto !important;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* White underlay for first column to prevent content showing through */
+  .sales-by-customer-table thead tr:first-child th.empty-header::before,
+  .sales-by-customer-table tbody tr td:first-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #fff;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Ensure first column body cell keeps single line without clipping */
+  .sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Customer name cells - allow full width */
+  .sales-by-customer-table tbody tr td:first-child:not(.total-top20-label):not(.total-other-label):not(.total-sales-label):not(.number-all-label) {
+    min-width: 120px !important;
+    max-width: 60vw !important;
+    width: auto !important;
+    font-size: var(--sbc-font-label);
+    padding: 4px 6px !important;
+  }
+
+  /* Mobile Sales Rep body cells - allow full width */
+  .sales-by-customer-table tbody tr td:nth-child(2):not(.summary-label) {
+    min-width: 150px !important;
+    max-width: 220px !important;
+    width: 160px !important;
+    font-size: var(--sbc-font-label) !important;
+    font-weight: 600 !important;
+    padding: 4px 6px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  /* Mobile separator row first cell - STICKY TOP + LEFT */
+  .sales-by-customer-table .sbc-separator-row td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    top: calc(var(--sbc-hdr-h) * 4) !important;
+    z-index: var(--z-corner) !important;
+    background-color: white !important;
+    border-top: 2px solid black !important;
+    border-bottom: 2px solid black !important;
+    border-left: 2px solid black !important;
+    border-right: none !important;
+    height: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    vertical-align: top !important;
+  }
+
+  /* Mobile summary row labels - STICKY LEFT */
+  .sales-by-customer-table .total-top20-label,
+  .sales-by-customer-table .total-other-label,
+  .sales-by-customer-table .total-sales-label,
+  .sales-by-customer-table .number-all-label {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    min-width: 120px !important;
+    max-width: 60vw !important;
+    width: auto !important;
+    font-size: var(--sbc-font-label);
+    padding: 4px 6px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Mobile data cells */
+  .sales-by-customer-table .metric-cell {
+    min-width: 60px !important;
+    max-width: none !important;
+    font-size: 9px !important;
+    padding: 4px 4px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  .sales-by-customer-table .delta-cell {
+    min-width: 70px !important;
+    max-width: none !important;
+    padding: 3px 4px !important;
+  }
+
+  /* Mobile header cells - tighter padding */
+  .sales-by-customer-table thead th {
+    padding: 4px 4px !important;
+    font-size: 10px !important;
+  }
+
+  /* Mobile body cells - tighter padding */
+  .sales-by-customer-table tbody td {
+    padding: 4px 4px !important;
+  }
+}
+
+/* Mobile Landscape (max-width: 1024px and landscape) */
+@media (max-width: 1024px) and (orientation: landscape) {
+  /* MOBILE LANDSCAPE COLUMN WIDTH OVERRIDES - Match Sales by Country behavior */
+
+  /* Mobile landscape first column header - STICKY TOP + LEFT */
+  .sales-by-customer-table thead tr:first-child th.empty-header {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: var(--z-corner) !important;
+    min-width: 120px;
+    max-width: 60vw;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+    font-family: Arial, sans-serif !important;
+    font-size: var(--sbc-font-corner);
+    line-height: 1.05 !important;
+    padding: 4px 6px !important;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Mobile landscape Sales Rep header - allow natural width */
+  .sales-by-customer-table thead tr:first-child th.sales-rep-header {
+    min-width: 150px !important;
+    max-width: 220px !important;
+    width: 160px !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    padding: 4px 6px !important;
+  }
+
+  .sales-by-customer-table {
+    table-layout: auto;
+  }
+
+  /* Mobile landscape body first column - STICKY LEFT */
+  /* Exclude separator rows - they have their own sticky positioning */
+  .sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child:not(.total-top20-label):not(.total-other-label):not(.total-sales-label):not(.number-all-label) {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    min-width: 120px !important;
+    max-width: 60vw !important;
+    width: auto !important;
+    background-color: transparent !important;
+    background-clip: padding-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* White underlay for first column to prevent content showing through */
+  .sales-by-customer-table thead tr:first-child th.empty-header::before,
+  .sales-by-customer-table tbody tr td:first-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #fff;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Ensure first column body cell keeps single line without clipping */
+  .sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Customer name cells - allow full width */
+  .sales-by-customer-table tbody tr td:first-child:not(.total-top20-label):not(.total-other-label):not(.total-sales-label):not(.number-all-label) {
+    min-width: 120px !important;
+    max-width: 60vw !important;
+    width: auto !important;
+    font-size: var(--sbc-font-label);
+    padding: 4px 6px !important;
+  }
+
+  /* Mobile landscape Sales Rep body cells - allow full width */
+  .sales-by-customer-table tbody tr td:nth-child(2):not(.summary-label) {
+    min-width: 150px !important;
+    max-width: 220px !important;
+    width: 160px !important;
+    font-size: var(--sbc-font-label) !important;
+    font-weight: 600 !important;
+    padding: 4px 6px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  /* Mobile landscape separator row first cell - STICKY TOP + LEFT */
+  .sales-by-customer-table .sbc-separator-row td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    top: calc(var(--sbc-hdr-h) * 4) !important;
+    z-index: var(--z-corner) !important;
+    background-color: white !important;
+    border-top: 2px solid black !important;
+    border-bottom: 2px solid black !important;
+    border-left: 2px solid black !important;
+    border-right: none !important;
+    height: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    vertical-align: top !important;
+  }
+
+  /* Mobile landscape summary row labels - STICKY LEFT */
+  .sales-by-customer-table .total-top20-label,
+  .sales-by-customer-table .total-other-label,
+  .sales-by-customer-table .total-sales-label,
+  .sales-by-customer-table .number-all-label {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: var(--z-firstcol) !important;
+    min-width: 120px !important;
+    max-width: 60vw !important;
+    width: auto !important;
+    font-size: var(--sbc-font-label);
+    padding: 4px 6px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Mobile landscape data cells */
+  .sales-by-customer-table .metric-cell {
+    min-width: 60px !important;
+    max-width: none !important;
+    font-size: 9px !important;
+    padding: 4px 4px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  .sales-by-customer-table .delta-cell {
+    min-width: 70px !important;
+    max-width: none !important;
+    padding: 3px 4px !important;
+  }
+
+  /* Mobile landscape header cells - tighter padding */
+  .sales-by-customer-table thead th {
+    padding: 4px 4px !important;
+    font-size: 10px !important;
+  }
+
+  /* Mobile landscape body cells - tighter padding */
+  .sales-by-customer-table tbody td {
+    padding: 4px 4px !important;
+  }
+}
+
+/* -------------------------------------------------
+   VIEWPORT FIXES BEFORE PRINT BLOCK
+   ------------------------------------------------- */
+
+/* 1. Sticky first column on all breakpoints */
+.sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child,
+.sales-by-customer-table .total-top20-label,
+.sales-by-customer-table .total-other-label,
+.sales-by-customer-table .total-sales-label,
+.sales-by-customer-table .number-all-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: var(--z-firstcol) !important;
+  background-clip: padding-box !important;
+}
+
+.sales-by-customer-table tbody tr:not(.sbc-separator-row) td:first-child::before,
+.sales-by-customer-table .total-top20-label::before,
+.sales-by-customer-table .total-other-label::before,
+.sales-by-customer-table .total-sales-label::before,
+.sales-by-customer-table .number-all-label::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* 2. Always show horizontal scrollbar on larger screens */
+.sales-by-customer-table {
+  min-width: 1200px !important;
+  table-layout: auto !important;
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+  :root {
+    --sbc-font-base: 10px;
+    --sbc-font-header: 11px;
+    --sbc-font-label: 10px;
+    --sbc-font-accent: 10px;
+    --sbc-font-corner: 13px;
+  }
+
+  .sales-by-customer-table {
+    background: #fff;
+  }
+
+  .sales-by-customer-table th,
+  .sales-by-customer-table td {
+    padding: 4px 6px;
+  }
+}

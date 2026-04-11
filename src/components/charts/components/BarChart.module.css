@@ -1,0 +1,21 @@
+.bar-chart-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+}
+
+.bar-chart {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+}
+
+/* Media queries to ensure responsiveness */
+@media screen and (max-width: 768px) {
+  .bar-chart-container {
+    min-height: 300px;
+  }
+} 

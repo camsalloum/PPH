@@ -1,0 +1,310 @@
+[
+  {
+    "id": "V2-001",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Design",
+    "topic": "Flexographic Design Considerations — Technical Print Parameters",
+    "subtopic": "Information the printer must supply to the designer before design begins",
+    "tags": ["design", "print parameters", "press characterization", "substrate", "design brief", "color count", "registration tolerance", "flexo design rules", "packaging design"],
+    "app_modules": ["job_entry", "estimation", "crm_quotation", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "customer submits artwork for a new job",
+      "user creates a new job from an estimation",
+      "AI reviews incoming artwork against job specification",
+      "user asks what information is needed before design",
+      "CRM contact requests new design"
+    ],
+    "ai_use": "Retrieved when AI reviews whether a design brief is complete. The AI checks that the printer has supplied all required technical parameters to the designer before design begins. Missing information at this stage causes expensive rework.",
+    "text": "The printer or separator must supply the designer with specific information about print parameters before design begins. This is usually part of the press characterization information and is best furnished very early in the design process. The designer's understanding of the flexo criteria should be used creatively to maximize the many benefits of the flexographic print process. Advantages of flexo that should be built into the design include: the use of many colors including metallic and fluorescent inks; a wide variety of substrates with unique characteristics; and many special finishing effects like embossing, foil stamping, holograms, varnishing and UV coating. A design brief meeting should cover: project description; background; product development context; product positioning; project timing; target consumer; competition; copy requirements (package messages, legal copy); communication priorities; and print specifications and film contacts. Technical print parameters the designer MUST receive: (1) Press type and configuration (CI, stack, inline); (2) Web width and usable print width; (3) Available cylinder repeats for the machine; (4) Maximum number of colors; (5) Registration tolerance of the press; (6) Minimum highlight dot and maximum shadow dot for the substrate/press combination; (7) Screening requirements (line screen ruling, stochastic availability); (8) Substrate type and surface treatment; (9) Ink system (solvent, water, UV) and any restrictions; (10) Trapping requirements (amount of trap required); (11) Minimum type size and minimum rule weight. Without this information, the designer cannot make informed decisions about what the design can achieve in print.",
+    "cross_references": ["V2-002", "V2-007", "V2-008", "V1-009"]
+  },
+
+  {
+    "id": "V2-002",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Design",
+    "topic": "Trapping in Flexographic Design",
+    "subtopic": "Why flexo requires larger traps than offset — trapping rules and design implications",
+    "tags": ["trapping", "trap", "overprint", "knockout", "misregister", "registration tolerance", "spread", "choke", "vignette trapping", "drop shadow", "flexo trap"],
+    "app_modules": ["job_entry", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "prepress checklist step — trapping verified",
+      "user logs changes reason related to register",
+      "AI reviews artwork for flexo readiness",
+      "user asks about trapping values",
+      "job includes vignette or gradient elements"
+    ],
+    "ai_use": "Retrieved during artwork preflight validation. AI uses this to flag inadequate trapping as a risk factor for register-related print defects. Trapping values in flexo are larger than offset due to wider registration tolerances.",
+    "text": "Trapping is a major concern in the flexographic industry because of the unique registration tolerances on a flexographic press. Trapping is used to compensate for any possible registration problems. The trapping requirements used for flexography are often larger than those used for an offset press. Trapping is simply enlarging a print element so that the edges that come into contact with other elements overlap (overprint) by a specified amount. The amount of trapping required varies from job to job and is determined by the registration tolerance of the particular press and job type. Most designers are not required to build traps into an artwork file — it is usually the job of the separator. However, the designer must be aware of how much trap will be applied so that good design decisions are made. Key trapping rules for flexo design: (1) Tint builds should have no more than three colors — reproduction is better controlled with two colors. (2) Trapping can change the appearance of artwork — dark trap lines at color boundaries can become visible design elements. (3) Vignettes and gradient fills are difficult to trap — if a vignette abuts a 100% solid color the trap is easier to hide; if two vignettes abut each other, trapping becomes visually unappealing or even impossible. (4) Drop shadows are difficult to trap and tend to create unusual looking results on the final printed piece. (5) When deciding on the number of colors, the designer should consider what the item would look like out of register — each color on its own layer moved by the trap amount simulates worst-case misregistration. (6) Broad color areas abutting bold strokes are more forgiving with press misregistration than small color areas abutting thinner strokes. (7) For opaque colors (metallic gold, white): the ink rotation determines whether to overprint or knockout — an opaque ink printed after a dark ink will hide it; if the opaque prints first, a knockout must be applied. Typical flexo trap values: 0.2mm–0.5mm depending on press type (CI press tighter than stack).",
+    "cross_references": ["V2-001", "V2-007", "V2-008", "V1-009"]
+  },
+
+  {
+    "id": "V2-003",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Design",
+    "topic": "Barcodes and UPC Codes in Flexographic Packaging",
+    "subtopic": "UPC/EAN barcode specifications, X-dimension, orientation, color rules, and FIRST standards",
+    "tags": ["barcode", "UPC", "EAN", "X-dimension", "picket fence", "FIRST", "ANSI", "bar width reduction", "barcode verification", "FPO", "barcode color"],
+    "app_modules": ["job_entry", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "prepress checklist barcode check",
+      "AI reviews artwork that includes UPC/EAN",
+      "user asks about barcode specifications",
+      "job includes barcode and customer expects scanner compliance"
+    ],
+    "ai_use": "Retrieved when AI validates artwork for barcode compliance. AI checks UPC orientation, color combination, minimum X-dimension, and whether the barcode is positioned in the machine direction (picket fence position).",
+    "text": "Almost all packages require either a barcode or UPC symbol for pricing, identification and inventory information. FIRST (Flexographic Image Reproduction Standards and Tolerances) and ANSI (American National Standards Institute) have specifications that must be followed. The difficulty for a designer using UPC codes in package design is that the specifications for creating these symbols are very strict. Key barcode requirements for flexo packaging: (1) Orientation — UPC codes should be placed in the picket fence position, in which the bars run in the machine direction (parallel to the direction of press travel). This orientation allows for the slight elongation that may occur in printing without affecting scan readability. (2) X-dimension — the width of the narrowest bar. FIRST specifications define the minimum X-dimension for flexographic printing. Flexo typically requires a larger X-dimension than offset because of dot gain and plate swell. (3) Bar Width Reduction (BWR) — because flexo plates swell and dot gain causes bar width growth in printing, a bar width reduction must be applied to the barcode artwork. The amount of BWR is determined by press characterization data — the amount of bar growth at 100% solid for the particular press/anilox/ink/substrate combination. (4) Color — barcodes should be created with one color to define the bars. Dark bar colors (black, dark blue, dark green, dark brown) on light backgrounds (white, yellow, orange, pink) scan successfully. Light bar colors or dark backgrounds should be avoided. Red bars do not scan — red reflects the laser scanner beam used in retail scanners. (5) FPO placeholder — if a designer does not want to accept legal responsibility for the barcode, they can provide a For Position Only (FPO) indicator. The separator then creates the correct final barcode from the FPO specifications. (6) Barcode verification — final printed barcodes should be verified with a barcode verifier device to confirm grade and readability before release.",
+    "cross_references": ["V2-001", "V2-007"]
+  },
+
+  {
+    "id": "V2-004",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Design",
+    "topic": "Substrate Considerations for Package Design",
+    "subtopic": "Printing challenges by substrate type — film, foil, board, heat-seal areas, ink compatibility",
+    "tags": ["substrate", "design substrate", "heat seal", "thermoplastic", "plastic film", "foil", "food packaging", "ink adhesion", "non-absorbent", "packaging substrate"],
+    "app_modules": ["estimation", "job_entry", "prepress_checklist", "knowledge_chat", "crm_quotation"],
+    "trigger_actions": [
+      "user selects substrate in estimation",
+      "estimation includes duplex or triplex structure",
+      "AI checks estimate for substrate-specific cost items",
+      "user asks about printing on foil or film",
+      "customer requests food-safe packaging"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI validates estimate completeness for specific substrates. Different substrates require different ink systems, corona treatment, primers, and cost items. AI flags missing line items based on substrate selection.",
+    "text": "Substrate selection drives fundamental print parameters and must be communicated to the designer before design begins. Key substrate considerations for flexographic package design: (1) Images printed on thermoplastics (BOPP, PET, PE, PP) should usually be kept away from heat-seal areas. Heat-sealing pressure and temperature can cause ink cracking, delamination, or blocking at seal areas — a critical food packaging failure mode. Design must position all critical graphic elements away from the seal zone. (2) Packages for certain food items frequently require special inks — migration-resistant inks, low-odor inks, or inks complying with FDA indirect food-contact regulations. This must be considered in the estimation stage as specialty inks carry cost premiums. (3) Most plastics have a non-absorbent surface and may not readily accept and retain printing ink without surface treatment. Corona treatment (online or offline) is required to raise the surface energy of polyolefin films (PE, PP, BOPP) above 38-42 dynes/cm for adequate ink adhesion. Estimation must include corona treatment cost. (4) Foil substrates present ink adhesion problems similar to plastics — adhesion primer may be required as a first-down coating before the decoration colors. (5) Fine details should overprint solids (usually white) rather than printing on bare plastic surface. This leads to cleaner, crisper print results and minimizes ink fill-in and webbing. (6) For reverse-printed transparent films (BOPP, PET): the image is printed on the back of the film and viewed through the front. The ink is sandwiched between the film and the laminate — this protects the ink from scratching and means the white flood coat must be the last color printed (first in reverse rotation sequence). (7) Laminates and duplex/triplex structures: The print ply substrate is the determining factor for ink system selection. The heat-seal ply (PE, CPP) determines seal conditions. Lamination adhesive cost and type (polyurethane two-component, water-based) must be included in the estimate.",
+    "cross_references": ["V1-008", "V2-001", "V5-004", "V5-005"]
+  },
+
+  {
+    "id": "V2-005",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Design",
+    "topic": "Color Specification — Spot Colors vs Process Colors in Flexo",
+    "subtopic": "When to use Pantone spot colors vs process CMYK builds — code colors, corporate colors, tint builds",
+    "tags": ["spot color", "Pantone", "PMS", "process color", "CMYK", "code color", "corporate color", "line deck", "color separation", "process match", "delta E", "color specification"],
+    "app_modules": ["job_entry", "estimation", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "user enters color list for a job",
+      "estimation asks for color count breakdown",
+      "AI validates color specification completeness",
+      "user asks if a Pantone color can be process matched",
+      "job has more colors than press stations"
+    ],
+    "ai_use": "Retrieved when AI validates color count and specification in job entry or estimation. AI flags when corporate colors should be line (spot) vs process, when tint builds exceed 3 colors, and when the total color count exceeds available press stations.",
+    "text": "The inks requested by the customer could be different from the inks actually required for optimum flexographic reproduction. Key factors in deciding spot vs process color for each color in a flexo job: (1) Corporate or logo colors — colors signifying a brand name or corporate entity are almost always specified as a line (spot) color to ensure print consistency from press run to press run. Process matching of corporate colors produces run-to-run variation due to density variation of each process ink. (2) Repeating colors in a product line — when multiple items share a common printing color, that color should be printed as a line color to ensure consistency across all packages in the line. (3) Code colors — when a customer has very similar products differentiated by flavor or variety, a code color is used. Common process separations are shared across all variants and only the code color plate changes per variant. This reduces plate costs significantly. (4) Color's ability to be reproduced in screens — some PMS colors (e.g. PMS 287 blue) are more difficult to process-match than others (PMS 327 green). If the color has heavy screen coverage, a line deck gives more stable results. (5) Text size — small text in a Pantone color should use a line deck; if text is large enough, process matching may be acceptable. (6) Amount of ink coverage — heavy solid coverage colors are better served by a line deck for full, uniform coverage. Light process match colors (yellow, light orange, pink, pale blue, pale green, light gray) are more difficult to control on press and are better put on line decks. (7) Near-neutral colors are particularly sensitive — a small shift in one process constituent makes a large visible color difference. These should always be line colors. Tint build rules: Any tint built from multiple colors should use no more than three process colors. Two-color tints are highly recommended. Avoid four-color tint builds for any element — they create unnecessary dot gain interaction and register sensitivity. Extra spot colors inadvertently created by incorrect tinting (defining a new spot color instead of a percentage of an existing spot color) cause phantom separations. These must be caught in preflight.",
+    "cross_references": ["V2-001", "V2-007", "V2-008"]
+  },
+
+  {
+    "id": "V2-006",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Design",
+    "topic": "Color Proofing for Flexographic Printing",
+    "subtopic": "Contract proof types, FIRST specifications for flexo proofs, digital vs analog proofing",
+    "tags": ["color proof", "contract proof", "FIRST", "digital proof", "analog proof", "press proof", "overlay proof", "laminate proof", "blueline", "color approval", "ICC profile", "proofing device"],
+    "app_modules": ["job_entry", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "job status advances to customer artwork approval",
+      "prepress checklist — customer proof approved",
+      "user asks about proof types",
+      "customer disputes color match after printing"
+    ],
+    "ai_use": "Retrieved when AI validates the artwork approval workflow. The AI checks that proof is produced to FIRST (flexo) specifications — not offset specifications — before customer sign-off. A proof made to offset specifications will not match the flexo print output.",
+    "text": "Final approval of all copy, positioning and color should occur before the expense of platemaking. The proofing stage must be set up for flexo specifications. The most common issue with contract proofs is that they are made to offset — not flexo — specifications. The designer should work closely with the separator to provide correct flexo information. Three categories of proofing systems exist for flexo: (1) Analog Proofs: Overlay proofs — film separations are exposed to photosensitive materials in register and layered. Accurate for content, trapping and film integrity check; not accurate for color approval. Laminate proofs (single-sheet composite proofs) — film separations exposed to CMYK proofing film and laminated on substrate. Can show spot colors by mixing toners. Extremely accurate for color, trapping and film verification. Blueline proofs — single-color representation made by exposing film to light-sensitive paper; used for copy and positioning verification only. (2) Press Proofs: Run on a printing press using the same inks and substrate as the final job. Most accurate color representation but most expensive. (3) Digital Proofs: Three defined types per FIRST: Contract Analog Proof (profiled to flexo process target, not press-specific); Contract Digital Proof (profiled to flexo process target); Profiled Contract Proof (profiled to specific press, substrate and ink combination — the most accurate). CRITICAL RULE: A proof made to offset specifications will not match a flexo print. The color conversion tables in RGB-to-CMYK conversion (used by photographers and designers) are optimized for offset — not flexo. Flexo separations require: minimum 2% highlight dot; maximum 93-98% shadow dot; TAC 280-320%; GCR applied correctly. A digital file supplied by the customer must be treated as if it were an original transparency and re-separated for flexo even if it was created digitally. The customer must be informed of and approve any changes required to bring the file to flexo specifications.",
+    "cross_references": ["V2-007", "V2-009", "V2-010"]
+  },
+
+  {
+    "id": "V2-007",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Prepress",
+    "topic": "Prepress Job Engineering — Preflight Quality Control Checklist",
+    "subtopic": "The job engineer's full checklist for reviewing incoming artwork before production",
+    "tags": ["preflight", "job engineer", "QC", "quality control", "FIRST", "checklist", "prepress review", "size dimensions", "scan techniques", "inks requested", "spot color", "tint builds", "screening", "vignettes", "UPC positioning"],
+    "app_modules": ["prepress_checklist", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "artwork received for a job",
+      "job status advances to PREFLIGHT",
+      "AI runs preflight validation on job",
+      "user opens prepress checklist screen",
+      "user asks what preflight checks are required"
+    ],
+    "ai_use": "CRITICAL — this is the master preflight checklist. Retrieved every time AI runs a preflight validation on an incoming job. AI checks each item systematically and flags failures. Items marked as failed block job advancement to Esko.",
+    "text": "The job engineer is responsible for reviewing each project for manufacturing issues prior to actual execution. The preflight review is done soon after arrival of the desktop mechanical or laser proof. The job engineer looks for issues that could cause printing problems if not handled properly, and plans each job to maintain consistency. The official Job Engineer's Checklist per FIRST specifications covers: (1) SIZE AND DIMENSIONS — verify actual size of the job matches specification. Low-resolution or laser proof should be at full (100%) size or clearly marked with reduction percentage. Check dimensions with a ruler for accuracy. (2) SCAN TECHNIQUES REQUIRED — review scanning requirements. Determine if GCR can eliminate one color. If separating a field image (e.g. green vegetables), magenta may be eliminated. This can free an additional deck for a spot color. (3) INKS REQUESTED VS. INKS REQUIRED — determine which colors should be spot (line) vs process. Consider: corporate/logo colors (always spot); repeating colors across product line (spot); code colors (spot); text size for small copy; amount of ink coverage; near-neutral colors (always spot). (4) SPOT COLORS OR PROCESS MATCH — confirm how each color is to be reproduced. Use spectrophotometer to calculate ΔE values for process match candidates. The color with lowest ΔE value is put in process. (5) INK ROTATION AND TRAPPING — determine the ink print sequence. Ink rotation determines knockout vs overprint decisions, especially for opaque inks (metallic gold, white). Define trapping requirements before film assembly. (6) TINT BUILDS — verify no tint builds exceed three colors. Recommend reducing to two-color tints where possible. (7) SCREENING REQUIREMENTS — process work (100-133 lpi) requires anilox 600-800 cells/inch. Line work (solids, text) uses anilox 400-550 cells/inch. A screen on a line deck must use 65-85 lpi coarse screen — alert customer. (8) VIGNETTES AND GRADATIONS — verify vignettes meet minimum/maximum dot requirements. A vignette from 0% to 100% must be clipped to 2% minimum highlight and 93-98% maximum shadow for flexo. Check that banding will not occur. (9) UPC POSITIONING — verify barcode is in picket fence orientation (bars in machine direction) and meets FIRST X-dimension specifications.",
+    "cross_references": ["V2-001", "V2-002", "V2-005", "V2-008", "V2-009"]
+  },
+
+  {
+    "id": "V2-008",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Prepress",
+    "topic": "Color Separation for Flexography — Highlight/Shadow, GCR, UCR, and TAC",
+    "subtopic": "How flexo separations differ from offset — minimum dot, maximum dot, GCR application, TAC limits",
+    "tags": ["color separation", "highlight", "shadow", "minimum dot", "maximum dot", "GCR", "gray component replacement", "UCR", "TAC", "total area coverage", "dot gain", "dirty print", "flexo separation", "FM screening"],
+    "app_modules": ["prepress_checklist", "job_entry", "press_characterization", "knowledge_chat"],
+    "trigger_actions": [
+      "job file received from customer for color separation",
+      "AI validates color file for flexo readiness",
+      "user asks about GCR settings for flexo",
+      "press characterization data entry for TAC",
+      "damage log includes dot gain related issue"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI validates any artwork file for flexo readiness. Offset separations cannot be used for flexo without modification. AI must check and flag: minimum dot compliance, maximum dot compliance, TAC limit, GCR application, and shadow treatment.",
+    "text": "Traditional methods of producing color separations are geared toward offset reproduction. The uniquely different characteristics of flexographic printing dictate that offset separations CANNOT be used for flexo printing without modification. HIGHLIGHT TREATMENT: The smallest reproducible dot on a flexo printing plate is approximately 2%. Dots smaller than 2% do not carry sufficient support on the plate — in some cases they do not print at all; in other cases, ink builds up on the dots and releases onto the substrate in blobs, called 'dirty print'. Therefore a scan must not have anything less than a 2% dot. Current technique: Frequency Modulated (FM) stochastic dots in highlights allow fade to 0% dot cleanly without dirty print — this produces cleaner, brighter highlights and more saturated colors. SHADOW TREATMENT: Flexographic presses generally record highest density value at 93-98% screens, not on a solid. Solids, especially when printing in combination with screens, tend to produce 'picking' — ink does not fully adhere to substrate, leaving tiny holes. Screen values of 93-98% adhere better to the substrate and gain on press to appear as a solid. Therefore separations for flexo must NOT be made where shadows go to 100%. GCR (Gray Component Replacement): Today's flexo separators use a full GCR approach — separations are done predominantly with full range (0-100%) in yellow, magenta and black, and a short range (60% or greater) for cyan. Restricted GCR (single unwanted color replacement) is standard for process color in flexo — this prevents printed images from looking gray and dirty, allows more press latitude, and prevents items of significant color variation from contaminating each other. GCR should NOT be used when the printer is forced to print line black on the same station as process black. TAC (Total Area Coverage): Typical maximum TAC for flexo runs from 280% to 320%. The job engineer must know and compensate for TAC during conversion — excessive TAC causes ink setoff, blocking, and drying problems. Flexo ink density targets: Solid ink density for magenta is typically around 1.20 (vs 1.40 in offset). Yellow solid density is typically 1.00. Because flexo inks are weaker than offset, process match builds from offset swatch books will not produce the correct color — the yellow percentage must be reduced relative to the swatch book value to achieve correct balance.",
+    "cross_references": ["V2-007", "V2-009", "V2-010", "V1-013"]
+  },
+
+  {
+    "id": "V2-009",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Prepress",
+    "topic": "Ink Rotation and Trapping — The Prepress Determination",
+    "subtopic": "How ink print sequence affects trapping decisions — overprint vs knockout rules for opaque and transparent inks",
+    "tags": ["ink rotation", "print sequence", "overprint", "knockout", "opaque ink", "metallic gold", "white ink", "transparent ink", "trapping decision", "reverse print", "first down", "last down"],
+    "app_modules": ["job_entry", "prepress_checklist", "knowledge_chat"],
+    "trigger_actions": [
+      "user enters color list and ink types for job",
+      "job includes metallic, white, or opaque special colors",
+      "AI assigns ink rotation to a job",
+      "prepress checklist — ink rotation defined",
+      "user asks what order to print colors"
+    ],
+    "ai_use": "CRITICAL — retrieved every time a job is created with multiple colors. AI must define ink rotation and flag trapping implications. White and metallic inks require specific rotation decisions that affect artwork setup.",
+    "text": "Ink rotation determines how a job is eventually constructed or trapped. The ink rotation is determined by the printer, taking into account the particular press and complexity of the job. General ink rotation rules for flexo: (1) For transparent inks: Wet-trap or dry-trap printing — no matter what the rotation, proper trapping must be applied. Dark colors can generally overprint onto light colors successfully. The decision of whether to overprint or knockout must consider the specific colors involved. Green type in a yellow circle can overprint the yellow — green has sufficient saturation to show through. However, in a red square, the green type must be knocked out because the colors are too similar in density. (2) For opaque inks (metallic gold, silver, white): These inks hide any color they print over. If black type must print over metallic gold and black prints AFTER gold: black can overprint the gold (black opaque enough to cover gold). If black prints BEFORE gold: a knockout must be applied to the gold in the area of the black type, or the gold will cover and hide the black. (3) White ink on reverse-printed transparent films: White is printed LAST in the sequence (it is the outermost layer in reverse print, which becomes the first layer visible through the film). White as a flood coat on reverse print must be the last color printed so it forms a solid opaque background behind the decoration colors. (4) Process color sequence (typical): Yellow → Cyan → Magenta → Black → Spot colors → White (last). The exact sequence depends on press configuration and specific ink trapping characteristics. (5) Varnish/OPV is always the absolute last unit in any sequence. (6) Fluorescent and metallic inks: Often printed first (below) in a sequence due to poor trapping characteristics. Metallic inks require careful ink rotation planning because of their high opacity and tendency to block overprinted colors. Objectionable trapping situations discovered during preflight should be discussed with the designer and customer before film assembly — it is far cheaper to modify the design than to remake plates.",
+    "cross_references": ["V2-007", "V2-008", "V2-002"]
+  },
+
+  {
+    "id": "V2-010",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Prepress",
+    "topic": "Screening for Flexography — Screen Ruling, Angles, Dot Shape, and Stochastic",
+    "subtopic": "Line screen selection, screen angles, moiré prevention, stochastic FM screening, anilox relationship",
+    "tags": ["screening", "screen ruling", "LPI", "lines per inch", "screen angle", "moiré", "stochastic", "FM screening", "conventional screening", "AM screening", "dot shape", "anilox angle", "halftone", "process screening"],
+    "app_modules": ["press_characterization", "job_entry", "esko_export", "knowledge_chat"],
+    "trigger_actions": [
+      "Esko export requires screen ruling and dot shape",
+      "press characterization screen ruling entry",
+      "user asks about screen rulings for a machine",
+      "job requires process color halftone work",
+      "AI recommends screen ruling for substrate"
+    ],
+    "ai_use": "Retrieved when AI configures Esko CTP parameters or validates screening specification for a job. Screen ruling selection depends on press type, anilox cell count, and substrate smoothness. AI must ensure anilox cell count is compatible with screen ruling.",
+    "text": "Films containing halftones are composed of dots of varying sizes based on a screen ruling — the number of dots or lines per linear inch. Coarse screen rulings are below 100 lpi; fine screen rulings are 150 lpi and above. Line screens from 100 to 150 lpi are the most common for flexo printing. Screen ruling selection guidelines: (1) For smooth, coated substrates (PET, BOPP): 133-150 lpi is achievable. (2) For standard flexible packaging films: 100-133 lpi is typical. (3) For paper and board: 85-120 lpi depending on smoothness. (4) For corrugated board: 65-85 lpi. Screen angles: Conventional process color angles are 45° (magenta), 75° (cyan), 105° (yellow), 90° (black). To minimize moiré, process colors should be separated by 30°. Since only 90° is available, only three colors can be separated by 30° — one color is necessarily 15° from another. In flexo, there is an additional critical consideration: the angle of the anilox roll cells. The screen angle and engraving angle of the anilox roll can interact to produce moiré. Alternative angle sets (conventional minus 7.5°: 37.5°, 67.5°, 97.5°, 82.5°) or (conventional plus 7.5°: 52.5°, 82.5°, 112.5°, 97.5°) are used to avoid anilox-screen moiré. Anilox cell count compatibility rule: Process printing (halftone screens) requires high-cell-count anilox — typically 600-800 cells/inch. Line work (solids, text) uses lower cell count — typically 400-550 cells/inch. CRITICAL: Printing a screen on a line-work anilox gives only 65-85 lpi maximum — the customer must be warned before setup. Dot shapes: Round dots — standard for general flexo; Elliptical dots — smoother midtone gradient transition; Square dots — sharper edges for line/text; Flat-top dots (ESX/ESE plate type) — reduce dot gain by providing a flat printing surface vs round-top dots that squash and spread under impression. Stochastic (FM) screening: Uses randomly positioned micro-dots of uniform size instead of regularly spaced dots of variable size. Eliminates moiré completely — no angle interaction possible. Produces cleaner highlights (dots can be smaller than conventional minimum). Used for premium quality process work, particularly with digital CTP plates (Esko CDI). The minimum FM dot size must be confirmed achievable for the specific plate type and press characterization.",
+    "cross_references": ["V2-007", "V2-008", "V1-013", "V4-003"]
+  },
+
+  {
+    "id": "V2-011",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Prepress",
+    "topic": "Desktop Preflight — Electronic File Checking Before Output",
+    "subtopic": "Preflighting electronic artwork files — fonts, resolution, EPS files, tints, layers, vignettes",
+    "tags": ["desktop preflight", "electronic file", "font", "resolution", "EPS", "FPO", "OPI", "DCS", "layers", "tints", "live images", "PDF", "PostScript", "preflight checklist", "file format"],
+    "app_modules": ["prepress_checklist", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "artwork file received for prepress",
+      "user advances job to desktop preflight stage",
+      "AI validates artwork file specification",
+      "prepress operator asks about file requirements"
+    ],
+    "ai_use": "Retrieved when AI runs desktop preflight validation. AI checks file against this checklist and flags each failure. Any failure should be communicated to the customer before costly film or plate output is made.",
+    "text": "Desktop preflight is the process of reviewing all incoming electronic materials for adherence to known specifications (FIRST specs or printer's custom specifications). Preflight is done by the desktop department before creating any postscript output. Elements that must be reviewed during the preflight process: (1) SOFTWARE VERSIONS — verify the prepress house has the correct software version to view and output the file. New software versions from the designer may not be compatible with older prepress software. Verify early to allow time for resolution. (2) LOW-RESOLUTION PLACED IMAGES (FPOs) — low-resolution placeholder images (For Position Only) must all be collected and sent with the file. Without FPOs, the job assembler cannot accurately duplicate size and placement of high-resolution images. OPI (Open Prepress Interface) workflow: low-resolution FPOs are automatically replaced with high-resolution images at output. DCS (Desktop Color Separation): five-part EPS files using low-resolution display image for placement and four high-resolution separation files for CMYK. (3) LIVE IMAGES — any live (high-resolution) images placed in the layout must be checked for: proper resolution (minimum 1.5× screen ruling at final print size); correct color space (RGB images must be converted to CMYK for flexo separation); size relative to intended print size (scanning at much larger size than needed wastes processing time). Scanning resolution formula: Scan Resolution = Quality Factor × Screen Ruling × Magnification (Quality Factor = 2.0 recommended; 1.5 minimum). Images must also be flexo-ready — not offset-ready. (4) IMPORTED EPS FILES — check each placed EPS for missing fonts, sufficient resolution at output screen ruling, and flexo-readiness. (5) FONTS — all fonts must be available. TrueType fonts should be replaced with Type 1 or Type 3 PostScript fonts — TrueType has been found to be unstable in PostScript output environments. Check all fonts are embedded or available as both screen and printer fonts. (6) LINE WEIGHTS AND FONT SIZES — rules (lines) and type sizes must meet FIRST minimum specifications. Minimum type size and minimum rule weight are determined by the press characterization data. Anything below specification must be flagged to the customer. (7) TINTS AND SCREEN BUILDS — verify all screen tints adhere to minimum/maximum dot values. Check for contaminating colors (e.g. magenta in green color builds). No color build should use more than three process colors. (8) VIGNETTES AND GRADATIONS — confirm how vignettes are created and that they are specified within minimum/maximum dot requirements. A vignette from 0-100% must be clipped to flexo specs (2% minimum, 93-98% maximum). Check for banding — banding occurs when the gradient steps are too large to appear smooth. (9) LAYERS — check that extra layers with unseen content do not contain unwanted spot colors or elements that will appear in separation output.",
+    "cross_references": ["V2-007", "V2-008", "V2-003"]
+  },
+
+  {
+    "id": "V2-012",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Prepress",
+    "topic": "Film Output and Imagesetting — Properties and Distortion Compensation",
+    "subtopic": "Plate-ready film properties, screen ruling, dot shape, image distortion compensation, registration marks",
+    "tags": ["film output", "imagesetting", "platesetter", "emulsion", "film orientation", "RREU", "RRED", "film thickness", "screen ruling", "dot shape", "image distortion", "registration marks", "mounting marks", "distortion compensation"],
+    "app_modules": ["esko_export", "prepress_checklist", "job_entry", "knowledge_chat"],
+    "trigger_actions": [
+      "job status advances to ESKO_SENT",
+      "Esko export parameters are generated",
+      "AI validates film/plate output parameters",
+      "user asks about film orientation requirements"
+    ],
+    "ai_use": "Retrieved when AI generates Esko CTP export parameters. Film properties and orientation specifications directly map to CTP input parameters. Distortion compensation is a mandatory parameter for every plate produced.",
+    "text": "Film output traditionally represents the end product produced by the prepress company — the plate-ready film negatives used for plate exposure. Modern CTP systems (platesetters such as Esko CDI) expose photopolymer plates directly, eliminating film. Film and CTP output properties: EMULSION: Film has a light-sensitive silver-halide emulsion on one side (dull appearance) and a clear base on the other (high-gloss). The emulsion side is identified by its dull look vs. the glossy base side. ORIENTATION: Film can be Right-Reading Emulsion Up (RREU) or Right-Reading Emulsion Down (RRED) — determined by platemaking process requirements. Check with plate supplier for correct orientation. FILM THICKNESS: 4-mil and 7-mil thickness. 7-mil is dominant for large-format imagesetters and photopolymer platemakers. Matte finish is usually required for sheet photopolymer platemaking; clear is recommended for liquid photopolymer plates. SCREEN RULING: Determined by press characterization — typically 100-150 lpi for flexible packaging. SCREEN ANGLES: Standard process angles or modified angles to avoid anilox-screen moiré (see V2-010). DOT SHAPE: Round, elliptical, square, or stochastic FM dots — specified based on job requirements and press characterization. IMAGE DISTORTION (MANDATORY FOR ALL JOBS): Every plate exposure file must have the print distortion (elongation compensation) applied. Distortion factor = π × 2 × plate_thickness / cylinder_circumference. The image must be compressed (pre-shrunk) in the repeat direction by this factor before output. Failure to apply distortion results in printed images that are longer than the design specification. Modern CTP systems (Esko CDI) apply this compensation automatically when the correct plate thickness and repeat are entered — but the correct values MUST be entered. REGISTRATION AND MOUNTING MARKS: Each film or plate file must carry register crosshair marks at defined positions outside the print area, used for accurate mounting alignment. Pin register holes may be punched into the plate material using the register marks as reference points.",
+    "cross_references": ["V1-006", "V2-010", "V4-003"]
+  },
+
+  {
+    "id": "V2-013",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Process Color",
+    "topic": "Color Theory — Additive and Subtractive Color, RGB and CMYK",
+    "subtopic": "Light, color perception, additive RGB primaries, subtractive CMYK primaries — foundation of color reproduction",
+    "tags": ["color theory", "additive color", "subtractive color", "RGB", "CMYK", "cyan", "magenta", "yellow", "black", "light wavelength", "color perception", "visible spectrum", "process color"],
+    "app_modules": ["knowledge_chat", "press_characterization"],
+    "trigger_actions": [
+      "user asks about color theory",
+      "user asks why cyan prints for red areas",
+      "training content generation",
+      "user asks about color management basics"
+    ],
+    "ai_use": "Foundation color theory — retrieved when AI explains color management concepts, why process colors work, or why a specific color separation decision was made",
+    "text": "Color is defined as the perception of light that has been modified by an object. Three elements determine color: the light source, the object, and the human observer. Visible light ranges in wavelength from approximately 400 to 700 nanometers (nm). White light contains equal amounts of all wavelengths. ADDITIVE COLOR (Light): The three additive primaries are red, green and blue (RGB) — the colors of light. Adding red + green = yellow. Adding red + blue = magenta. Adding green + blue = cyan. Adding red + green + blue = white. This is how scanners, cameras, and monitors capture and display color. SUBTRACTIVE COLOR (Printing inks): Printing starts with a white substrate and subtracts color using inks. Each ink absorbs (subtracts) specific wavelengths of light and reflects the rest. Cyan ink absorbs red light, reflecting green and blue (appearing cyan). Magenta ink absorbs green light, reflecting red and blue (appearing magenta). Yellow ink absorbs blue light, reflecting red and green (appearing yellow). Black ink absorbs all visible wavelengths. CMYK PROCESS PRINTING: By printing dots of cyan, magenta, yellow and black at varying percentages and screen angles, a wide range of colors (the color gamut) can be reproduced. The size of the printable dot (percentage) determines how much of each ink is applied — 0% is no ink (white substrate showing through), 100% is solid ink coverage. CRITICAL INSIGHT for flexo: Flexo's color gamut (the range of achievable colors) is narrower than offset due to lower solid ink densities. Solid ink density in flexo: Yellow ≈ 1.00, Magenta ≈ 1.20, Cyan ≈ 1.20, Black ≈ 1.60. This is lower than offset (Magenta ≈ 1.40 in offset) — meaning process match builds from offset swatch books will appear weaker in flexo and require adjustment.",
+    "cross_references": ["V2-014", "V2-015", "V2-008"]
+  },
+
+  {
+    "id": "V2-014",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Process Color",
+    "topic": "Color Measurement — Densitometry, Spectrophotometry, and Delta E",
+    "subtopic": "How print color is measured — densitometers, spectrophotometers, CIELab, Delta E, dot percent, trap, print contrast",
+    "tags": ["densitometer", "spectrophotometer", "CIELab", "delta E", "density", "dot percent", "trap measurement", "print contrast", "hue error", "grayness", "color measurement", "solid ink density"],
+    "app_modules": ["press_characterization", "knowledge_chat"],
+    "trigger_actions": [
+      "press characterization data entry",
+      "user asks how to measure color on press",
+      "user asks about delta E tolerances",
+      "quality control measurement during production"
+    ],
+    "ai_use": "Retrieved when AI configures press characterization parameters or explains color measurement to operators. Density values and Delta E tolerances from press characterization drive cutback curve calculations.",
+    "text": "Color measurement in printing uses two primary instrument types: DENSITOMETER: Measures the amount of light reflected by (or transmitted through) a printed surface. Two types: transmission densitometer (for films) and reflection densitometer (for proofs and press sheets). Color densitometers use complementary color filters (red filter measures cyan, green filter measures magenta, blue filter measures yellow). The density scale is logarithmic: Density 0.0 = 100% reflectance; Density 1.0 = 10% reflectance; Density 2.0 = 1% reflectance; Density 3.0 = 0.1% reflectance. Densities add — a density of 0.2 added to 0.3 looks like 0.5 to the eye. Key metrics calculated from density: Dot Percent — calculated from measured density of the tint and the solid of the same color (Murray-Davies formula). Trap — how well one ink overprints a second, calculated from density measurements of solid colors and their overprint. Print Contrast (K value) — ratio of shadow to solid density; indicates how well the press holds shadow detail. Hue Error and Grayness — calculated from all three density readings of a process color; indicates how accurately a process ink reproduces its target hue. SPECTROPHOTOMETER: Measures the full spectral reflectance of a color, not just filtered density values. Output is the spectrum — a graph of reflectance vs. wavelength from 400-700nm. From the spectrum, CIELab (L*a*b*) color values are calculated. L* = lightness (0=black, 100=white); a* = red-green axis; b* = yellow-blue axis. DELTA E (ΔE): The numerical measure of color difference between two CIELab values. ΔE = √(ΔL*² + Δa*² + Δb*²). A ΔE of 1-2 is just perceptible to a trained observer. ΔE > 3 is clearly visible to most people. In flexo quality control, ΔE tolerances of 3-5 are typically used for solid process colors. ΔE is used to determine whether a process match is acceptable for a specific Pantone color (see V2-005).",
+    "cross_references": ["V2-015", "V2-013", "V2-008"]
+  },
+
+  {
+    "id": "V2-015",
+    "source": "Flexography: Principles & Practices, 5th Edition — FFTA",
+    "volume": 2,
+    "chapter": "Process Color",
+    "topic": "Press Characterization, Cutback Curves, and ICC Profiles",
+    "subtopic": "Fingerprinting the press — measuring dot gain, building cutback curves, ICC profiles for color management",
+    "tags": ["press characterization", "fingerprinting", "cutback curve", "dot gain", "TVI", "tone value increase", "ICC profile", "CIELab", "gray balance", "color management", "press optimization", "FIRST", "line characterization", "screen characterization"],
+    "app_modules": ["press_characterization", "machine_settings", "esko_export", "knowledge_chat"],
+    "trigger_actions": [
+      "user creates press characterization entry for a machine",
+      "AI generates Esko parameters for a machine",
+      "user asks about dot gain for a machine",
+      "AI diagnoses systematic dot gain damage pattern",
+      "machine setup changes requiring re-characterization"
+    ],
+    "ai_use": "CRITICAL — retrieved when AI retrieves press characterization data to validate job parameters or generate Esko export settings. Each machine-substrate-anilox combination has a unique characterization. The cutback curve derived from characterization is the primary dot gain compensation tool.",
+    "text": "Press characterization (also called fingerprinting) measures and analyzes a press sheet to develop the corrections needed to achieve target print quality. The goal is to match the press output to the proof (color standard). Characterization procedure: Before quantitative analysis, the press sheet must be visually examined for defects (misregister, slur, ghosting, streaking, poor solid coverage). If defects are present, characterization is invalid. Three types of characterization: (1) LINE CHARACTERIZATION: Measures growth of positive lines and reduction of reverse lines. Results are used to calculate bar width reductions for barcodes and to determine minimum printable type size and line weight for the specific press-substrate combination. The smallest printable positive line and the smallest reverse line that does not fill in are identified. (2) SCREEN CHARACTERIZATION: Determines cutback curves for screen (halftone) printing only. The procedure is the same as process-color characterization. It is not practical to develop cutback curves for all spot colors — process color curves are used as a starting point and adjusted on subsequent runs. (3) PROCESS-COLOR CHARACTERIZATION: Measures dot gain (TVI = Tone Value Increase) across the full tone scale for each process color at specific tone values (typically 25%, 50%, 75%). A CUTBACK CURVE is then calculated: it is a gradation curve applied to each process color separation to compensate for dot gain. The curve compresses the file values so that the printed result matches the target. Cutback Curve Calculation: At each tone value step, the correction = (proof dot% - press dot%). Cutback curve value = electronic file% - correction. This modified curve is applied to the electronic file before output to film or CTP. ICC PROFILES (CIELab-based correction): An alternative to densitometric cutback curves. A spectrophotometer measures L*a*b* values of overprint colors. The data is used to build an ICC profile characterizing the press as a color space. The ICC profile is used in color management software to transform file data to match the press output. Achieving optimum press performance requires: correct anilox for the job type; correct ink viscosity; correct impression (kiss impression, minimum pressure); consistent substrate surface energy; stable ink pH (water-based); and stable environmental conditions (temperature, humidity affecting ink viscosity).",
+    "cross_references": ["V2-014", "V2-008", "V1-013", "V2-010"]
+  }
+]

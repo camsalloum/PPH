@@ -1,0 +1,62 @@
+# Artillery Stress Test Configuration
+# High-load stress test to find breaking points
+# Usage: npx artillery run tests/load/stress.yml
+
+config:
+  target: "http://localhost:3001"
+  phases:
+    # Ramp up to extreme load
+    - duration: 20
+      arrivalRate: 10
+      rampTo: 100
+      name: "Ramp up to 100 users/sec"
+    # Sustain high load
+    - duration: 60
+      arrivalRate: 100
+      name: "Sustained 100 users/sec"
+    # Spike to find breaking point
+    - duration: 20
+      arrivalRate: 200
+      name: "Spike to 200 users/sec"
+    # Cool down
+    - duration: 20
+      arrivalRate: 20
+      name: "Cool down"
+  
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  
+  # Relaxed thresholds for stress test
+  ensure:
+    p95: 2000
+    p99: 5000
+    maxErrorRate: 10
+
+scenarios:
+  - name: "Health Check Stress"
+    weight: 50
+    flow:
+      - get:
+          url: "/api/health"
+      - get:
+          url: "/api/metrics"
+
+  - name: "Deep Health Check"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/health/deep"
+      - think: 1
+
+  - name: "Mixed Endpoints"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/health"
+      - get:
+          url: "/api/ready"
+      - get:
+          url: "/api/live"
+      - get:
+          url: "/api/metrics"

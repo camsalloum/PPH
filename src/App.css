@@ -1,0 +1,422 @@
+/* ========================================
+   MAIN APP STYLES - USING THEME VARIABLES
+   ======================================== */
+
+.App {
+  text-align: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  color: var(--color-text);
+  line-height: 1.6;
+  background: var(--color-background);
+  min-height: 100vh;
+  transition: background var(--transition-normal), color var(--transition-normal);
+}
+
+/* Global button styling */
+button {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+button:hover {
+  background-color: var(--color-surfaceHover);
+  border-color: var(--color-primary);
+}
+
+button:active {
+  background-color: var(--color-primaryLight);
+}
+
+button:disabled {
+  background-color: var(--color-borderLight);
+  color: var(--color-textMuted);
+  cursor: not-allowed;
+  border-color: var(--color-border);
+}
+
+/* Primary Button Style */
+button.primary, .ant-btn-primary {
+  background: var(--color-gradient) !important;
+  border-color: var(--color-primary) !important;
+  /* Use theme-specific text colour — white for dark primaries, dark for light primaries (gold/midnight) */
+  color: var(--color-primaryText, #ffffff) !important;
+}
+
+button.primary:hover, .ant-btn-primary:hover {
+  background: var(--color-primaryHover) !important;
+  color: var(--color-primaryText, #ffffff) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Universal on-primary-background rule ─────────────────────────
+   Any element whose background IS the primary colour must have       
+   readable text. Use the theme-aware variable everywhere.            
+   This prevents white-on-white (or dark-on-dark) in any theme.      
+   ────────────────────────────────────────────────────────────────── */
+[class*="primary-bg"],
+.bg-primary {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primaryText, #ffffff) !important;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: var(--color-surface);
+  padding: 20px;
+  color: var(--color-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+}
+
+.App-link {
+  color: var(--color-primary);
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ========================================
+   ANTD OVERRIDES FOR THEME SUPPORT
+   ======================================== */
+
+/* Cards */
+.ant-card {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  transition: all var(--transition-normal);
+}
+
+.ant-card:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.ant-card-head {
+  background: var(--color-surfaceHover) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+.ant-card-body {
+  color: var(--color-text) !important;
+}
+
+/* Tables */
+.ant-table {
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+}
+
+.ant-table-thead > tr > th {
+  background: var(--color-surfaceHover) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+.ant-table-tbody > tr > td {
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: var(--color-surfaceHover) !important;
+}
+
+/* Table Width Optimization + Global Horizontal Scroll */
+.ant-table-wrapper {
+  width: 100% !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.full-width-table .ant-table {
+  width: 100% !important;
+}
+
+.full-width-table .ant-table-container {
+  width: 100% !important;
+}
+
+/* Compact container utility */
+.compact-container {
+  padding: 8px !important;
+  margin: 0 !important;
+}
+
+/* Inputs */
+.ant-input, .ant-select-selector, .ant-picker {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+.ant-input:hover, .ant-select-selector:hover, .ant-picker:hover {
+  border-color: var(--color-primary) !important;
+}
+
+.ant-input:focus, .ant-select-focused .ant-select-selector {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primaryLight) !important;
+}
+
+/* Modals */
+.ant-modal-content {
+  background: var(--color-surface) !important;
+}
+
+.ant-modal-header {
+  background: var(--color-surfaceHover) !important;
+  border-color: var(--color-border) !important;
+}
+
+.ant-modal-title {
+  color: var(--color-text) !important;
+}
+
+.ant-modal-body {
+  color: var(--color-text) !important;
+}
+
+/* Dropdowns */
+.ant-dropdown-menu {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.ant-dropdown-menu-item {
+  color: var(--color-text) !important;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: var(--color-surfaceHover) !important;
+}
+
+/* Select dropdown */
+.ant-select-dropdown {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.ant-select-item {
+  color: var(--color-text) !important;
+}
+
+.ant-select-item-option-selected {
+  background: var(--color-primaryLight) !important;
+}
+
+.ant-select-item-option-active {
+  background: var(--color-surfaceHover) !important;
+}
+
+/* Tabs */
+.ant-tabs-tab {
+  color: var(--color-textSecondary) !important;
+}
+
+.ant-tabs-tab:hover {
+  color: var(--color-primary) !important;
+}
+
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--color-primary) !important;
+}
+
+.ant-tabs-ink-bar {
+  background: var(--color-primary) !important;
+}
+
+/* Menu */
+.ant-menu {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+.ant-menu-item {
+  color: var(--color-text) !important;
+}
+
+.ant-menu-item:hover {
+  background: var(--color-surfaceHover) !important;
+  color: var(--color-primary) !important;
+}
+
+.ant-menu-item-selected {
+  background: var(--color-primaryLight) !important;
+  color: var(--color-primary) !important;
+}
+
+/* ========================================
+   THEME-SPECIFIC GLOBAL STYLES
+   ======================================== */
+
+/* Dark theme body */
+.theme-dark {
+  color-scheme: dark;
+}
+
+.theme-dark .ant-card,
+.theme-dark .ant-table,
+.theme-dark .ant-modal-content,
+.theme-dark .ant-dropdown-menu {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Colorful theme accents */
+.theme-colorful .ant-btn-primary {
+  background: var(--color-gradient) !important;
+  border: none !important;
+}
+
+.theme-colorful .ant-tabs-ink-bar {
+  background: var(--color-gradient) !important;
+  height: 3px !important;
+}
+
+.theme-colorful .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #c026d3 !important;
+  font-weight: 600 !important;
+}
+
+.theme-colorful .ant-switch-checked {
+  background: linear-gradient(135deg, #c026d3 0%, #8b5cf6 100%) !important;
+}
+
+.theme-colorful .ant-checkbox-checked .ant-checkbox-inner {
+  background: linear-gradient(135deg, #c026d3 0%, #8b5cf6 100%) !important;
+  border-color: #c026d3 !important;
+}
+
+.theme-colorful .ant-radio-checked .ant-radio-inner {
+  border-color: #c026d3 !important;
+}
+
+.theme-colorful .ant-radio-checked .ant-radio-inner::after {
+  background: #c026d3 !important;
+}
+
+.theme-colorful .ant-progress-bg {
+  background: linear-gradient(90deg, #c026d3 0%, #8b5cf6 50%, #06b6d4 100%) !important;
+}
+
+.theme-colorful .ant-spin-dot-item {
+  background: #c026d3 !important;
+}
+
+.theme-colorful a:not(.ant-btn) {
+  color: #c026d3;
+}
+
+.theme-colorful a:not(.ant-btn):hover {
+  color: #a21caf;
+}
+
+/* ========================================
+   GLOBAL RESPONSIVE RULES
+   ======================================== */
+
+/* Prevent body horizontal overflow */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Global table scroll wrapper */
+.table-scroll-wrapper,
+.ant-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Native HTML tables: horizontal scroll handled by parent wrappers */
+/* Note: Do NOT set display:block on tables - it breaks tableLayout:'fixed' and width:100% */
+table {
+  max-width: 100%;
+}
+
+/* But keep table layout for tables inside scroll wrappers */
+.table-scroll-wrapper table,
+.ant-table-container table {
+  display: table;
+}
+
+/* Modals: prevent viewport overflow */
+.ant-modal {
+  max-width: calc(100vw - 32px) !important;
+}
+
+.ant-modal-body {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  /* Buttons: ensure tap-friendly size */
+  button, .ant-btn {
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  /* Cards: reduce padding on mobile */
+  .ant-card-body {
+    padding: 16px !important;
+  }
+
+  /* Modals: nearly full-width on mobile */
+  .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+
+  .ant-modal-body {
+    padding: 16px !important;
+    max-height: calc(100vh - 160px);
+  }
+
+  /* Inputs: full width on mobile */
+  .ant-input, .ant-select {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  button, .ant-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .ant-card-body {
+    padding: 12px !important;
+  }
+}

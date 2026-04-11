@@ -1,0 +1,418 @@
+/* ==========================================================================
+   Pre-Sales Inquiries Module Styles
+   Component: PresalesInquiries / InquiryCapture / InquiryBoard / InquiryDetail
+   ========================================================================== */
+
+/* ── Shared loading state ──────────────────────────────────────────────────── */
+.psi-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+/* ── InquiryBoard ─────────────────────────────────────────────────────────── */
+.psi-board-container {
+  padding: 16px 20px;
+  min-height: calc(100vh - 120px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Toolbar */
+.psi-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.psi-toolbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.psi-toolbar-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Stats row */
+.psi-stats-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.psi-stat {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #f0f0f0);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary, #8c8c8c);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.psi-stat span {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+}
+.psi-stat--converted span { color: #13c2c2; }
+.psi-stat--lost span      { color: #f5222d; }
+
+/* Kanban — CSS grid so all columns always fill the viewport */
+.psi-kanban {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  padding-bottom: 16px;
+  width: 100%;
+  min-height: 200px;
+  align-items: start;
+}
+
+.psi-column {
+  /* width driven by the 1fr grid — no fixed sizes */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.psi-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 8px 8px 0 0;
+  background: var(--col-bg, #f5f5f5);
+  border-bottom: 2px solid var(--col-color, #ccc);
+}
+.psi-col-title {
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.psi-col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 120px;
+}
+.psi-col-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+.psi-col-add {
+  margin-top: 4px;
+}
+
+/* Inquiry card */
+.psi-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #eee);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.1s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.psi-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+.psi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.psi-card-number {
+  font-size: 11px;
+  color: var(--text-secondary, #8c8c8c);
+  font-family: monospace;
+}
+.psi-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.psi-card-priority {
+  font-size: 10px;
+  padding: 0 4px;
+  line-height: 18px;
+}
+.psi-card-customer {
+  font-size: 13px;
+  line-height: 1.3;
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.psi-card-tags {
+  margin-top: 2px;
+}
+.psi-tag-small.ant-tag {
+  font-size: 10px;
+  padding: 0 4px;
+  line-height: 18px;
+  margin-inline-end: 2px;
+}
+.psi-tag-pg.ant-tag {
+  font-size: 10px;
+  padding: 0 5px;
+  line-height: 18px;
+  background: #f0f5ff;
+  border-color: #adc6ff;
+  color: #2f54eb;
+}
+.psi-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.psi-card-rep {
+  font-size: 11px;
+  color: var(--text-secondary, #8c8c8c);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+.psi-card-date {
+  font-size: 10px;
+  color: var(--text-secondary, #bfbfbf);
+  white-space: nowrap;
+}
+.psi-card-reg-badge {
+  font-size: 10px;
+  display: block;
+  margin-top: 4px;
+}
+
+/* Stagnant inquiry warning banner — shown when stuck past stage threshold */
+.psi-card-stagnant {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #fff7e6;
+  color: #d46b08;
+  border: 1px solid #ffd591;
+}
+
+/* ── InquiryCapture ──────────────────────────────────────────────────────── */
+.psi-capture-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+.psi-capture-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.psi-capture-card {
+  border-radius: 12px;
+}
+.psi-steps {
+  margin-bottom: 24px;
+}
+.psi-step-content {
+  min-height: 280px;
+  padding: 4px 0;
+}
+.psi-step-title {
+  margin-bottom: 20px;
+}
+.psi-step-title h4 {
+  margin-bottom: 2px !important;
+}
+
+/* Source grid */
+.psi-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.psi-source-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border: 2px solid var(--border-color, #f0f0f0);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--card-bg, #fff);
+}
+.psi-source-card:hover {
+  border-color: var(--src-color);
+  background: color-mix(in srgb, var(--src-color) 8%, transparent);
+}
+.psi-source-card--active {
+  border-color: var(--src-color) !important;
+  background: color-mix(in srgb, var(--src-color) 12%, transparent) !important;
+  box-shadow: 0 0 0 1px var(--src-color);
+}
+.psi-source-icon {
+  font-size: 22px;
+  color: var(--src-color);
+}
+.psi-source-label {
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.3;
+  color: var(--text-primary, #1a1a1a);
+}
+
+/* Customer type cards */
+.psi-customer-type-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.psi-ctype-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px 8px;
+  border: 2px solid var(--border-color, #f0f0f0);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.psi-ctype-card:hover        { border-color: #1890ff; }
+.psi-ctype-card--active      { border-color: #1890ff !important; background: #e6f7ff; }
+.psi-ctype-icon              { font-size: 24px; color: #1890ff; }
+.psi-ctype-label             { font-weight: 600; font-size: 13px; }
+.psi-ctype-desc              { font-size: 11px; color: #8c8c8c; }
+
+.psi-selected-customer {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+}
+
+.psi-field-row { margin-bottom: 16px; }
+
+.psi-summary-card {
+  background: var(--fill-quaternary, #fafafa);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.psi-capture-nav {
+  display: flex;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #f0f0f0);
+}
+
+/* ── InquiryDetail ───────────────────────────────────────────────────────── */
+.psi-detail-container {
+  padding: 16px 20px;
+  max-width: 1100px;
+}
+.psi-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.psi-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.psi-detail-card {
+  margin-bottom: 16px;
+  border-radius: 10px;
+}
+
+/* ── Dark theme overrides ─────────────────────────────────────────────────── */
+[data-theme="dark"] .psi-card,
+.dark .psi-card {
+  background: #1a2230;
+  border-color: #253040;
+}
+[data-theme="dark"] .psi-card:hover,
+.dark .psi-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .psi-source-card,
+.dark .psi-source-card {
+  background: #13191f;
+  border-color: #253040;
+}
+[data-theme="dark"] .psi-ctype-card,
+.dark .psi-ctype-card {
+  background: #13191f;
+  border-color: #253040;
+}
+[data-theme="dark"] .psi-stat,
+.dark .psi-stat {
+  background: #1a2230;
+  border-color: #253040;
+}
+[data-theme="dark"] .psi-summary-card,
+.dark .psi-summary-card {
+  background: #13191f;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .psi-kanban {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .psi-kanban {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .psi-column {
+    min-width: 0;
+  }
+  .psi-customer-type-row {
+    grid-template-columns: 1fr;
+  }
+  .psi-source-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .psi-toolbar {
+    flex-direction: column;
+  }
+}

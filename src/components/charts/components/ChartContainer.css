@@ -1,0 +1,37 @@
+.modern-margin-gauge-panel {
+  width: 95%;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 30px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box; /* FIX: Include padding within width */
+}
+
+/* Ensure chart spacing is consistent */
+.chart-container > div {
+  margin-bottom: 60px;
+}
+
+/* Last chart component has no bottom margin */
+.chart-container > div:last-child {
+  margin-bottom: 0;
+}
+
+/* Chart title styling */
+.chart-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Chart subtitle styling */
+.chart-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 25px;
+  text-align: center;
+} 

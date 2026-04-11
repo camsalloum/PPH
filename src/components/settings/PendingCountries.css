@@ -1,0 +1,123 @@
+.pending-countries-container {
+  padding: 24px;
+}
+
+.pending-countries-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+}
+
+.pending-countries-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.pending-countries-header h4 {
+  color: #1a1a2e;
+}
+
+/* Table styles */
+.pending-countries-container .ant-table-thead > tr > th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.pending-countries-container .ant-table-tbody > tr:hover > td {
+  background: #fafafa;
+}
+
+/* Badge with pulsing animation for high counts */
+.pending-countries-container .ant-badge-count {
+  transition: all 0.3s;
+}
+
+/* AI Suggestion highlight */
+.ai-suggestion-cell {
+  background: linear-gradient(135deg, #f6ffed 0%, #fff 100%);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+/* Action buttons */
+.pending-countries-container .ant-btn-primary {
+  background: #52c41a;
+  border-color: #52c41a;
+}
+
+.pending-countries-container .ant-btn-primary:hover {
+  background: #73d13d;
+  border-color: #73d13d;
+}
+
+/* Resolve Modal */
+.resolve-modal-content {
+  padding: 16px 0;
+}
+
+.resolve-option-group {
+  margin-bottom: 20px;
+}
+
+.resolve-option-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Tab badge */
+.pending-countries-container .ant-tabs-tab .ant-badge {
+  margin-left: 8px;
+}
+
+/* Progress bar in table */
+.pending-countries-container .ant-progress-outer {
+  display: inline-block;
+}
+
+/* Empty state */
+.pending-countries-container .ant-empty {
+  padding: 40px 0;
+}
+
+.pending-countries-container .ant-empty-description {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+/* Alert styling */
+.pending-countries-container .ant-alert-warning {
+  background: #fffbe6;
+  border-color: #ffe58f;
+}
+
+/* Source tags */
+.pending-countries-container .ant-tag-blue {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.pending-countries-container .ant-tag-green {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+/* Resolved status colors */
+.pending-countries-container .ant-tag-green {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .pending-countries-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .pending-countries-header > div:last-child {
+    align-self: flex-end;
+  }
+}

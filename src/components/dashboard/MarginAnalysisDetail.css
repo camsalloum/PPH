@@ -1,0 +1,69 @@
+.margin-analysis-detail {
+  width: 100%;
+  min-height: 500px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(15, 40, 87, 0.08);
+  overflow: hidden;
+}
+
+.margin-analysis-detail__chart-wrapper {
+  width: 100%;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.margin-analysis-detail__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  color: #5f6c7b;
+  font-size: 1.1rem;
+  padding: 40px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px dashed #d0dbe8;
+}
+
+.margin-analysis-detail__variance-note {
+  text-align: center;
+  font-size: 14px;
+  font-weight: normal;
+  color: #666;
+  font-style: italic;
+  margin-top: 40px;
+  padding: 16px 24px;
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 8px;
+}
+
+/* Ensure chart fits properly in overlay */
+.divisional-dashboard__overlay .margin-analysis-detail {
+  background: transparent;
+  box-shadow: none;
+  min-height: auto;
+  overflow: visible;
+}
+
+.divisional-dashboard__overlay .margin-analysis-detail__chart-wrapper {
+  padding: 0;
+  padding-top: 30px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .margin-analysis-detail__chart-wrapper {
+    padding: 16px 8px;
+  }
+  
+  .margin-analysis-detail__empty {
+    padding: 24px;
+    font-size: 1rem;
+    min-height: 300px;
+  }
+}
+

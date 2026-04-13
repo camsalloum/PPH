@@ -1,6 +1,6 @@
 # LIVE STATE — ProPackHub / PEBI
 > **Machine-optimized project snapshot. Updated at the end of every agent session.**
-> **Last Updated:** 2026-04-10
+> **Last Updated:** 2026-04-12
 
 ---
 
@@ -10,20 +10,20 @@
 |--------|--------|-------------|-------|
 | MIS/IMS | Production | 2026-03-26 | Dashboard perf fully optimized (MV + react-query). Raw Materials UX refined, RBAC gate added. |
 | CRM | Production | 2026-03-25 | Field trip AI workflow updated (rep-owned analyze/apply, text-first meeting briefs). 76 components stable. |
-| MES | Active Dev | 2026-04-10 | Material Specs rebuild complete. Parameter Admin (Phases A-E) complete. Custom Item Categories agreed scope complete (Phases A-E, G, I). Pricing-scope items intentionally deferred. |
+| MES | Active Dev | 2026-04-12 | Material Specs rebuild complete. Parameter Admin (Phases A-E) complete. Custom Item Categories stabilized: material-config migration repaired + run, Group Market Price editor surfaced in Overview, useForm lifecycle warnings reduced, and save timestamp feedback added. Pricing-scope expansions still deferred. |
 | AI Engine | Integrated | 2026-03-25 | Customer merging AI active. Churn/seasonality/forecasting services exist. |
 | Settings | Production | 2026-03-28 | Country/timezone support added. Tab persistence implemented. Sync time displays company timezone. |
 | Auth | Stable | 2026-03-22 | JWT flow working. Preferences cached (30s TTL). Request deduplication active. |
 
 ## Active Work
 
-**Last completed (2026-04-10):**
-- Custom Item Categories implementation completed for agreed scope: schema-driven specs metadata (Unit/Group/Test Method), Use in Estimation handoff (preview/copy/save/save-open), global mapped-item search, material-class quick filter, category item-count badges, substrate unmapped audit KPI, and cutover active in MasterDataHub Item Master tab.
+**Last completed (2026-04-12):**
+- Custom Item Categories stabilization: fixed resin `material-config` 500 by repairing/running `mes-master-040`, made migration idempotent/self-bootstrapping, moved Group Market Price editor to top Overview card for immediate editability, reduced AntD form instance lifecycle warnings, and added `Last saved` feedback after market-price save.
 
 **In progress:** None for this track. Remaining items are optional backlog or pricing-scope dependent (bulk market price update, MAP/Standard/Last PO inline editing, optional waste % editing).
 
 **Known issues from this session:**
-- None blocking in completed scope. Latest diagnostics were clean for `server/routes/mes/master-data/items.js` and `src/components/MES/MasterData/CustomCategories.jsx`.
+- None blocking in completed scope. Latest diagnostics were clean for `server/migrations/mes-master-040-universal-profile-configs.js` and `src/components/MES/MasterData/CustomCategories.jsx`.
 
 **Blocked:** RM sync requires VPN (FortiClient) — fails with 503 when VPN disconnected
 
@@ -43,6 +43,7 @@ Full list: `docs/TECH_DEBT.md` (33 items, 12 resolved)
 
 | Date | Summary |
 |------|---------|
+| 2026-04-12 | Custom Categories stabilization: resolved material-config 500 via repaired/ran mes-master-040, improved Group Market Price visibility/editability, reduced form lifecycle warnings, added Last saved indicator, and updated session-close docs. |
 | 2026-04-10 | Custom Item Categories completion + full audit: backend metadata enrichment, estimation handoff, global search/filter/badges, substrate unmapped KPI, cutover validation, and docs/session close updated. |
 | 2026-04-09 | Custom Item Categories (partial): DB + backend + test UI. Parameter Admin Phase E. RM Dashboard DB-driven. Multiple bug fixes. Feature incomplete — needs focused session. |
 | 2026-04-08 | Parameter Admin Phases A-D + Material Specs rebuild complete + schema-driven PDF parser + frontend redesign |

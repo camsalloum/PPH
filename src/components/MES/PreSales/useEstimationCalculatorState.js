@@ -20,6 +20,84 @@ const DEFAULT_DIMENSIONS = {
 };
 
 const safeDivide = (a, b) => (b && isFinite(a / b) ? a / b : 0);
+const DEFAULT_PRICE_SOURCE = 'combined_wa';
+
+const toFiniteNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+function normalizeEstimationType(value) {
+  const key = normalizeText(value);
+  if (key === 'ink') return 'ink';
+  if (key === 'adhesive' || key === 'coating' || key === 'solvent') return 'adhesive';
+  return 'substrate';
+}
+
+function buildMaterialCatalogLookup(materialGroups = {}) {
+  const catalog = new Map();
+
+  Object.entries(materialGroups || {}).forEach(([category, rows]) => {
+    const type = normalizeEstimationType(category);
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const name = normalizeText(row?.name);
+      if (!name) return;
+      catalog.set(`${type}::${name}`, row);
+    });
+  });
+
+  return catalog;
+}
+
+function resolveRowPriceBySource(priceSource, stockPriceWa, combinedPriceWa, marketPrice, fallbackCost = 0) {
+  const source = String(priceSource || DEFAULT_PRICE_SOURCE).trim().toLowerCase();
+  const stock = toFiniteNumber(stockPriceWa);
+  const combined = toFiniteNumber(combinedPriceWa);
+  const market = toFiniteNumber(marketPrice);
+  const fallback = toFiniteNumber(fallbackCost) ?? 0;
+
+  if (source === 'stock_wa') {
+    return stock ?? combined ?? market ?? fallback;
+  }
+  if (source === 'market_price') {
+    return market ?? combined ?? stock ?? fallback;
+  }
+  return combined ?? stock ?? market ?? fallback;
+}
+
+function hydrateMaterialRow(row = {}, materialCatalog = new Map()) {
+  const type = normalizeEstimationType(row.type || row.category || 'substrate');
+  const materialName = String(row.materialName || row.material_name || row.name || '').trim();
+  const material = materialCatalog.get(`${type}::${normalizeText(materialName)}`) || null;
+
+  const fallbackCost = toFiniteNumber(row.costPerKg ?? row.cost_per_kg ?? material?.cost_per_kg) ?? 0;
+  const stockPriceWa = toFiniteNumber(row.stockPriceWa ?? row.stock_price_wa ?? material?.stock_price_wa) ?? fallbackCost;
+  const combinedPriceWa = toFiniteNumber(row.combinedPriceWa ?? row.combined_price_wa ?? material?.combined_price_wa) ?? fallbackCost;
+  const marketPrice = toFiniteNumber(row.marketPrice ?? row.market_price ?? material?.market_price) ?? fallbackCost;
+
+  const requestedSource = String(row.priceSource || row.price_source || DEFAULT_PRICE_SOURCE).trim().toLowerCase();
+  const priceSource = ['combined_wa', 'stock_wa', 'market_price'].includes(requestedSource)
+    ? requestedSource
+    : DEFAULT_PRICE_SOURCE;
+
+  return {
+    ...row,
+    key: row.key || `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type,
+    materialName,
+    solidPct: toFiniteNumber(row.solidPct ?? row.solid_pct ?? material?.solid_pct),
+    micron: toFiniteNumber(row.micron ?? row.thickness_micron) ?? 0,
+    density: toFiniteNumber(row.density ?? material?.density),
+    wastePct: toFiniteNumber(row.wastePct ?? row.waste_pct ?? material?.waste_pct) ?? 0,
+    priceSource,
+    stockPriceWa,
+    combinedPriceWa,
+    marketPrice,
+    costPerKg: resolveRowPriceBySource(priceSource, stockPriceWa, combinedPriceWa, marketPrice, fallbackCost),
+  };
+}
 
 export default function useEstimationCalculatorState({ inquiryId, navigate }) {
   const { message } = App.useApp();
@@ -64,6 +142,7 @@ export default function useEstimationCalculatorState({ inquiryId, navigate }) {
         ]);
 
         const inqData = inqRes.data?.data?.inquiry;
+        const materialCatalog = buildMaterialCatalogLookup(matRes.data?.data || {});
         setInquiry(inqData);
         setMaterials(matRes.data?.data || {});
 
@@ -88,7 +167,7 @@ export default function useEstimationCalculatorState({ inquiryId, navigate }) {
           setQtyUnit(ed.header?.qtyUnit || 'Kg');
           setRemarks(ed.header?.remarks || '');
           setDimensions(ed.dimensions || DEFAULT_DIMENSIONS);
-          setMaterialRows(ed.materials || []);
+          setMaterialRows((ed.materials || []).map((row) => hydrateMaterialRow(row, materialCatalog)));
           setOperations(ed.operations || []);
           setMarkupPct(ed.totalCost?.markupPct ?? 15);
           setPlatesCost(ed.totalCost?.platesCost ?? 0);
@@ -106,7 +185,7 @@ export default function useEstimationCalculatorState({ inquiryId, navigate }) {
               });
               const def = defRes.data?.data;
               if (def) {
-                setMaterialRows((def.default_material_layers || []).map((layer, index) => ({
+                setMaterialRows((def.default_material_layers || []).map((layer, index) => hydrateMaterialRow({
                   key: `row-${index}`,
                   type: layer.type || 'substrate',
                   materialName: layer.material_name || '',
@@ -115,7 +194,8 @@ export default function useEstimationCalculatorState({ inquiryId, navigate }) {
                   density: layer.density ?? null,
                   costPerKg: layer.cost_per_kg || 0,
                   wastePct: layer.waste_pct || 0,
-                })));
+                  priceSource: DEFAULT_PRICE_SOURCE,
+                }, materialCatalog)));
                 setOperations((def.default_processes || []).map((process, index) => ({
                   key: `op-${index}`,
                   processName: process.process_name,
@@ -174,9 +254,10 @@ export default function useEstimationCalculatorState({ inquiryId, navigate }) {
       const bom = bomRes.data?.data;
       if (!bom) throw new Error('BOM not found');
 
+      const materialCatalog = buildMaterialCatalogLookup(materials);
       const newMaterialRows = (bom.layers || [])
         .filter((layer) => layer.is_active !== false)
-        .map((layer, index) => ({
+        .map((layer, index) => hydrateMaterialRow({
           key: `row-${index}`,
           type: layer.layer_type || 'substrate',
           materialName: layer.material_name || '',
@@ -186,7 +267,8 @@ export default function useEstimationCalculatorState({ inquiryId, navigate }) {
           costPerKg: layer.cost_per_kg || 0,
           wastePct: layer.waste_pct || 0,
           colorName: layer.color_name || '',
-        }));
+          priceSource: DEFAULT_PRICE_SOURCE,
+        }, materialCatalog));
       setMaterialRows(newMaterialRows);
 
       const routingData = routingRes.data?.data || [];

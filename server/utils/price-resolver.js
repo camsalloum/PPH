@@ -1,32 +1,65 @@
 /**
  * Price Resolver Utility
  *
- * SAP-like costing variant logic for material price resolution.
- * Two profiles: STANDARD (internal costing) and QUOTATION (customer quotes).
+ * Unified pricing policy for material price resolution.
+ * Supported sources: COMBINED_WA, STOCK_WA, MARKET_PRICE.
+ * Backward compatibility aliases: STANDARD -> COMBINED_WA, QUOTATION -> MARKET_PRICE.
  *
  * A1 fix: Uses explicit null-checks instead of || to avoid falsy-zero bug.
  */
 
 /**
- * Resolve material price using SAP-like priority chain.
+ * Resolve material price using unified source selection.
  * @param {object} item - Item from mes_item_master or fp_actualrmdata
- * @param {'STANDARD'|'QUOTATION'} profile - Costing variant
+ * @param {'COMBINED_WA'|'STOCK_WA'|'MARKET_PRICE'|'STANDARD'|'QUOTATION'} profile - Pricing source
  * @returns {number} Resolved price per kg
  */
-function resolvePrice(item, profile = 'STANDARD') {
-  const defined = v => v !== null && v !== undefined;
+function resolvePrice(item, profile = 'COMBINED_WA') {
+  const toNum = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
 
-  if (profile === 'QUOTATION') {
-    // ZQT1: Market Reference → MAP → Last PO
-    if (defined(item.market_ref_price)) return Number(item.market_ref_price);
-    if (defined(item.map_price))        return Number(item.map_price);
-    return Number(item.last_po_price) || 0;
+  const requested = String(profile || 'COMBINED_WA').trim().toUpperCase();
+  const stock = toNum(item.stock_price_wa) ?? toNum(item.stock_price);
+  const onOrder = toNum(item.on_order_price_wa) ?? toNum(item.on_order_price);
+  const stockQty = toNum(item.stock_qty);
+  const orderQty = toNum(item.order_qty);
+
+  let combined = toNum(item.combined_price_wa) ?? toNum(item.avg_price_wa);
+  if (combined == null) {
+    const hasStockWeighted = stock != null && stockQty != null && stockQty > 0;
+    const hasOrderWeighted = onOrder != null && orderQty != null && orderQty > 0;
+
+    if (hasStockWeighted || hasOrderWeighted) {
+      const weightedValue = (hasStockWeighted ? stock * stockQty : 0) + (hasOrderWeighted ? onOrder * orderQty : 0);
+      const weightedQty = (hasStockWeighted ? stockQty : 0) + (hasOrderWeighted ? orderQty : 0);
+      combined = weightedQty > 0 ? (weightedValue / weightedQty) : null;
+    }
+  }
+  if (combined == null) {
+    combined = onOrder ?? stock;
   }
 
-  // ZSTD: MAP → Standard → Last PO
-  if (defined(item.map_price))      return Number(item.map_price);
-  if (defined(item.standard_price)) return Number(item.standard_price);
-  return Number(item.last_po_price) || 0;
+  const market = toNum(item.market_price) ?? toNum(item.market_ref_price);
+
+  switch (requested) {
+    case 'STOCK':
+    case 'STOCK_WA':
+    case 'STK':
+      return stock ?? combined ?? market ?? onOrder ?? 0;
+    case 'MARKET':
+    case 'MARKET_PRICE':
+    case 'MKT':
+    case 'QUOTATION':
+      return market ?? combined ?? stock ?? onOrder ?? 0;
+    case 'STANDARD':
+    case 'COMBINED':
+    case 'COMBINED_WA':
+    case 'CMB':
+    default:
+      return combined ?? stock ?? market ?? onOrder ?? 0;
+  }
 }
 
 /**

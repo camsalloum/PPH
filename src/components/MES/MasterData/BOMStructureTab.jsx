@@ -150,6 +150,41 @@ export default function BOMStructureTab({
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
+    const stockPrice = Number(item.stock_price);
+    const onOrderPrice = Number(item.on_order_price);
+    const marketRefPrice = Number(item.market_ref_price);
+    const stockQty = Number(item.stock_qty) || 0;
+    const orderQty = Number(item.order_qty) || 0;
+
+    const hasStockPrice = Number.isFinite(stockPrice) && stockPrice > 0;
+    const hasOnOrderPrice = Number.isFinite(onOrderPrice) && onOrderPrice > 0;
+    const hasMarketPrice = Number.isFinite(marketRefPrice) && marketRefPrice > 0;
+
+    let combinedPriceWa = null;
+    const totalQty = stockQty + orderQty;
+    if (totalQty > 0) {
+      let weightedValue = 0;
+      let weightedQty = 0;
+      if (hasStockPrice && stockQty > 0) {
+        weightedValue += stockPrice * stockQty;
+        weightedQty += stockQty;
+      }
+      if (hasOnOrderPrice && orderQty > 0) {
+        weightedValue += onOrderPrice * orderQty;
+        weightedQty += orderQty;
+      }
+      if (weightedQty > 0) {
+        combinedPriceWa = weightedValue / weightedQty;
+      }
+    }
+
+    const defaultCostPerKg =
+      combinedPriceWa
+      ?? (hasStockPrice ? stockPrice : null)
+      ?? (hasMarketPrice ? marketRefPrice : null)
+      ?? (hasOnOrderPrice ? onOrderPrice : null)
+      ?? 0;
+
     const resolvedCategory =
       resolveResinCategoryDisplay(item.display_cat_desc
       || item.oracle_cat_desc
@@ -164,7 +199,7 @@ export default function BOMStructureTab({
       material_cat_desc: resolvedCategory,
       density_g_cm3: item.density_g_cm3,
       thickness_micron: item.micron_thickness,
-      cost_per_kg: item.map_price || item.standard_price || item.last_po_price,
+      cost_per_kg: defaultCostPerKg,
       solid_pct: item.solid_pct,
     });
   };

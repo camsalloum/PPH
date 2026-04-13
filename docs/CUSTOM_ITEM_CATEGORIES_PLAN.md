@@ -4,6 +4,27 @@
 > **Created:** 2026-04-09 (revised from original plan)
 > **Test case:** Resins only first, then extend to Substrates and all others.
 
+## 2026-04-12 — Stabilization Update
+
+### Completed in this session
+
+1. Resolved runtime `GET /items/material-config` 500 for resin flows by repairing and executing `mes-master-040` migration.
+2. Hardened `mes-master-040-universal-profile-configs` to be idempotent and self-bootstrapping:
+  - creates `mes_material_profile_configs` if missing
+  - re-applies relaxed material-class constraint safely
+  - ensures canonical indexes exist
+3. Promoted **Group Market Price** editor to a visible top card in Overview so users can edit without deep scrolling.
+4. Reduced AntD form lifecycle warnings by:
+  - force-rendering category modal form host
+  - force-rendering MRP tab pane
+  - guarding `bulkMrpForm.resetFields()` on drawer close lifecycle.
+5. Added Group Market Price **Last saved** timestamp indicator after successful save.
+
+### Scope note
+
+- This session hardened and improved existing pricing editability UX.
+- It did not expand pricing data model scope (MAP/Standard/Last PO bulk workflows remain deferred).
+
 ## 2026-04-10 — Recent Implementation Update
 
 ### Completed recently

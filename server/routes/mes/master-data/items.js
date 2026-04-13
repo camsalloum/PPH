@@ -49,7 +49,6 @@ const PARAM_LABEL_OVERRIDES = {
   td_pct: 'TD %',
 };
 
-const PRICE_CONTROL_KEYS = ['MAP', 'STD'];
 const MRP_TYPE_KEYS = ['PD', 'ND', 'VB'];
 
 function normalizeMaterialKey(value) {
@@ -104,6 +103,34 @@ function toFiniteNumber(value) {
 
 function isPlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+const LEGACY_PRICING_KEYS = [
+  ['price', 'control'],
+  ['map', 'price'],
+  ['standard', 'price'],
+  ['last', 'po', 'price'],
+  ['default', 'price'],
+].map((parts) => parts.join('_'));
+
+function stripLegacyPricingFields(row) {
+  if (!isPlainObject(row)) return row;
+  const next = { ...row };
+  LEGACY_PRICING_KEYS.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(next, key)) {
+      delete next[key];
+    }
+  });
+  return next;
+}
+
+function stripLegacyPricingArray(rows) {
+  return (Array.isArray(rows) ? rows : []).map((row) => stripLegacyPricingFields(row));
+}
+
+function isMissingParamsOverrideColumn(err) {
+  return err?.code === '42703'
+    && String(err?.message || '').toLowerCase().includes('params_override');
 }
 
 function resolveSubstrateProfile(catDesc, appearance, sampleText = '') {
@@ -352,7 +379,6 @@ function buildDetailAggregates(items, materialClass, parameterDefinitionsMap = {
     on_order_price_wa: onOrderPriceWA,
     avg_price_wa: avgPriceWA,
     market_price_wa: marketPriceWA,
-    default_price: onOrderPriceWA ?? stockPriceWA ?? null,
   };
 
   const specRows = Object.entries(specAgg)
@@ -548,7 +574,7 @@ module.exports = function (router) {
         ORDER BY i.item_type, i.item_code
       `;
       const { rows } = await pool.query(sql, params);
-      res.json({ success: true, data: rows });
+      res.json({ success: true, data: stripLegacyPricingArray(rows) });
     } catch (err) {
       logger.error('GET /items error:', err);
       res.status(500).json({ success: false, error: 'Failed to fetch items' });
@@ -1210,12 +1236,8 @@ module.exports = function (router) {
           yield_m2_per_kg,
           roll_length_m,
           core_diameter_mm,
-          price_control,
           market_ref_price,
           market_price_date,
-          map_price,
-          standard_price,
-          last_po_price,
           mrp_type,
           reorder_point,
           safety_stock_kg,
@@ -1225,7 +1247,7 @@ module.exports = function (router) {
           updated_by,
           created_at,
           updated_at
-        FROM mes_substrate_profile_configs
+        FROM mes_material_profile_configs
         WHERE ${where.join(' AND ')}
         ORDER BY cat_desc, appearance
       `, params);
@@ -1235,7 +1257,7 @@ module.exports = function (router) {
       if (err.code === '42P01') {
         return res.status(500).json({
           success: false,
-          error: 'mes_substrate_profile_configs table not found. Run migration mes-master-026 first.',
+          error: 'mes_material_profile_configs table not found. Run migration mes-master-040 first.',
         });
       }
       logger.error('GET /items/substrate-configs error:', err);
@@ -1278,12 +1300,8 @@ module.exports = function (router) {
           yield_m2_per_kg,
           roll_length_m,
           core_diameter_mm,
-          price_control,
           market_ref_price,
           market_price_date,
-          map_price,
-          standard_price,
-          last_po_price,
           mrp_type,
           reorder_point,
           safety_stock_kg,
@@ -1293,7 +1311,7 @@ module.exports = function (router) {
           updated_by,
           created_at,
           updated_at
-        FROM mes_substrate_profile_configs
+        FROM mes_material_profile_configs
         WHERE material_class = $1
           AND cat_desc = $2
           AND appearance = $3
@@ -1305,7 +1323,7 @@ module.exports = function (router) {
       if (err.code === '42P01') {
         return res.status(500).json({
           success: false,
-          error: 'mes_substrate_profile_configs table not found. Run migration mes-master-026 first.',
+          error: 'mes_material_profile_configs table not found. Run migration mes-master-040 first.',
         });
       }
       logger.error('GET /items/substrate-config error:', err);
@@ -1332,14 +1350,6 @@ module.exports = function (router) {
       }
       if (!catDesc) {
         return res.status(400).json({ success: false, error: 'cat_desc is required' });
-      }
-
-      const priceControl = String(b.price_control || 'MAP').trim().toUpperCase();
-      if (!PRICE_CONTROL_KEYS.includes(priceControl)) {
-        return res.status(400).json({
-          success: false,
-          error: `price_control must be one of: ${PRICE_CONTROL_KEYS.join(', ')}`,
-        });
       }
 
       const mrpType = String(b.mrp_type || 'PD').trim().toUpperCase();
@@ -1372,9 +1382,6 @@ module.exports = function (router) {
         'roll_length_m',
         'core_diameter_mm',
         'market_ref_price',
-        'map_price',
-        'standard_price',
-        'last_po_price',
         'reorder_point',
         'safety_stock_kg',
       ];
@@ -1391,7 +1398,7 @@ module.exports = function (router) {
       const mappedMaterialKeys = normalizeMaterialKeyArray(b.mapped_material_keys);
 
       const { rows } = await pool.query(`
-        INSERT INTO mes_substrate_profile_configs (
+        INSERT INTO mes_material_profile_configs (
           material_class,
           cat_desc,
           appearance,
@@ -1405,12 +1412,8 @@ module.exports = function (router) {
           yield_m2_per_kg,
           roll_length_m,
           core_diameter_mm,
-          price_control,
           market_ref_price,
           market_price_date,
-          map_price,
-          standard_price,
-          last_po_price,
           mrp_type,
           reorder_point,
           safety_stock_kg,
@@ -1421,7 +1424,7 @@ module.exports = function (router) {
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
           $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-          $21,$22,$23,$24,$25,$25
+          $21,$21
         )
         ON CONFLICT (material_class, cat_desc, appearance) DO UPDATE
         SET
@@ -1435,12 +1438,8 @@ module.exports = function (router) {
           yield_m2_per_kg = EXCLUDED.yield_m2_per_kg,
           roll_length_m = EXCLUDED.roll_length_m,
           core_diameter_mm = EXCLUDED.core_diameter_mm,
-          price_control = EXCLUDED.price_control,
           market_ref_price = EXCLUDED.market_ref_price,
           market_price_date = EXCLUDED.market_price_date,
-          map_price = EXCLUDED.map_price,
-          standard_price = EXCLUDED.standard_price,
-          last_po_price = EXCLUDED.last_po_price,
           mrp_type = EXCLUDED.mrp_type,
           reorder_point = EXCLUDED.reorder_point,
           safety_stock_kg = EXCLUDED.safety_stock_kg,
@@ -1463,12 +1462,8 @@ module.exports = function (router) {
         parsedNumbers.yield_m2_per_kg,
         parsedNumbers.roll_length_m,
         parsedNumbers.core_diameter_mm,
-        priceControl,
         parsedNumbers.market_ref_price,
         marketPriceDate,
-        parsedNumbers.map_price,
-        parsedNumbers.standard_price,
-        parsedNumbers.last_po_price,
         mrpType,
         parsedNumbers.reorder_point,
         parsedNumbers.safety_stock_kg,
@@ -1477,22 +1472,725 @@ module.exports = function (router) {
         req.user.id,
       ]);
 
+      const sanitizedRow = stripLegacyPricingFields(rows[0] || {});
       return res.json({
         success: true,
         data: {
-          ...rows[0],
-          mapped_material_keys: rows[0].mapped_material_keys || [],
+          ...sanitizedRow,
+          mapped_material_keys: sanitizedRow.mapped_material_keys || [],
         },
       });
     } catch (err) {
       if (err.code === '42P01') {
         return res.status(500).json({
           success: false,
-          error: 'mes_substrate_profile_configs table not found. Run migration mes-master-026 first.',
+          error: 'mes_material_profile_configs table not found. Run migration mes-master-040 first.',
         });
       }
       logger.error('PUT /items/substrate-config error:', err);
       return res.status(500).json({ success: false, error: 'Failed to save substrate config' });
+    }
+  });
+
+  // ─── GET /items/material-profile — UNIVERSAL profile for ALL material classes ──
+  // Replaces separate resin-profile + substrate-profile. One response shape for all.
+  // MUST be before /:id to avoid route ambiguity
+  router.get('/items/material-profile', authenticate, async (req, res) => {
+    const materialClass = normalizeMaterialKey(req.query.material_class);
+    const catDesc = cleanText(req.query.cat_desc);
+    const appearance = cleanText(req.query.appearance) || '';
+    const materialKeys = normalizeMaterialKeyArray(req.query.material_keys);
+
+    if (!materialClass) {
+      return res.status(400).json({ success: false, error: 'material_class is required' });
+    }
+
+    try {
+      // 1. Fetch param definitions for this material class
+      const { rows: paramDefs } = await pool.query(`
+        SELECT field_key, label, unit, display_group, sort_order
+        FROM mes_parameter_definitions
+        WHERE LOWER(TRIM(material_class)) = $1
+          AND profile IS NULL
+        ORDER BY sort_order
+      `, [materialClass]);
+
+      // 2. If no material keys, return empty response with param definitions
+      if (!materialKeys.length) {
+        return res.json({
+          success: true,
+          data: {
+            material_class: materialClass,
+            parameter_profile: null,
+            param_definitions: paramDefs,
+            param_values: {},
+            inventory: { total_stock_qty: 0, total_stock_val: 0, total_order_qty: 0, total_order_val: 0 },
+            pricing: { stock_price_wa: null, on_order_price_wa: null, combined_price_wa: null },
+            density_wa: null,
+            spec_count: 0,
+            specs: [],
+          },
+        });
+      }
+
+      // 3. Inventory aggregation from fp_actualrmdata
+      const inventoryResult = await pool.query(`
+        SELECT
+          COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0) AS total_stock_qty,
+          COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0) AS total_stock_val,
+          COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0) AS total_order_qty,
+          COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0) AS total_order_val,
+          CASE WHEN SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END) > 0
+            THEN ROUND((
+              SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END)
+              / SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END)
+            )::numeric, 4)
+            ELSE NULL
+          END AS stock_price_wa,
+          CASE WHEN SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END) > 0
+            THEN ROUND((
+              SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END)
+              / SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END)
+            )::numeric, 4)
+            ELSE NULL
+          END AS on_order_price_wa,
+          CASE WHEN (
+            SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END)
+            + SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END)
+          ) > 0
+            THEN ROUND((
+              (
+                SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END)
+                + SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END)
+              )
+              / (
+                SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END)
+                + SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END)
+              )
+            )::numeric, 4)
+            ELSE NULL
+          END AS combined_price_wa
+        FROM fp_actualrmdata
+        WHERE LOWER(TRIM(COALESCE(mainitem, ''))) = ANY($1::text[])
+      `, [materialKeys]);
+
+      const inv = inventoryResult.rows[0] || {};
+      const paramValues = {};
+      let densityWa = null;
+      const specs = [];
+
+      // 4. Branch only on spec source table
+      if (materialClass === 'resins') {
+        // ── RESINS: read from mes_material_tds ──
+        const tdsCatDesc = catDesc && String(catDesc).toLowerCase().startsWith('film scrap')
+          ? 'Film Scrap' : catDesc;
+
+        const { rows: tdsColumnsRows } = await pool.query(`
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'mes_material_tds'
+        `);
+        const tdsColumns = new Set(tdsColumnsRows.map((row) => String(row.column_name || '').trim()));
+
+        const brandGradeSelectSql = tdsColumns.has('brand_grade')
+          ? 't.brand_grade,'
+          : 'NULL::text AS brand_grade,';
+        const supplierSelectSql = tdsColumns.has('supplier_id')
+          ? "COALESCE(NULLIF(TRIM(s.name), ''), 'Unknown') AS supplier_name,"
+          : 'NULL::text AS supplier_name,';
+        const unitSelectSql = tdsColumns.has('unit')
+          ? "COALESCE(NULLIF(TRIM(t.unit), ''), 'KG') AS unit,"
+          : "'KG'::text AS unit,";
+        const supplierJoinSql = tdsColumns.has('supplier_id')
+          ? 'LEFT JOIN mes_suppliers s ON s.id = t.supplier_id'
+          : '';
+        const selectedParamDefs = paramDefs.filter((def) => tdsColumns.has(def.field_key));
+        const paramSelectSql = selectedParamDefs.length
+          ? selectedParamDefs.map((def) => `t.${def.field_key}`).join(',\n            ')
+          : 'NULL::numeric AS _no_param_columns';
+        const shouldFilterByCatDesc = Boolean(tdsCatDesc && tdsColumns.has('cat_desc'));
+
+        const { rows: tdsRows } = await pool.query(`
+          WITH rm_by_item AS (
+            SELECT
+              mainitem,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0) AS stock_qty,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0) AS stock_val,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0) AS order_qty,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0) AS order_val
+            FROM fp_actualrmdata
+            WHERE LOWER(TRIM(COALESCE(mainitem, ''))) = ANY($1::text[])
+            GROUP BY mainitem
+          )
+          SELECT
+            t.oracle_item_code,
+            ${brandGradeSelectSql}
+            ${supplierSelectSql}
+            ${unitSelectSql}
+            COALESCE(r.stock_qty, 0)::numeric AS stock_qty,
+            COALESCE(r.order_qty, 0)::numeric AS order_qty,
+            COALESCE(r.stock_val, 0)::numeric AS stock_val,
+            COALESCE(r.order_val, 0)::numeric AS order_val,
+            ${paramSelectSql}
+          FROM mes_material_tds t
+          ${supplierJoinSql}
+          LEFT JOIN rm_by_item r ON r.mainitem = t.oracle_item_code
+          WHERE LOWER(TRIM(t.oracle_item_code)) = ANY($1::text[])
+            ${shouldFilterByCatDesc ? `AND t.cat_desc = $2` : ''}
+          ORDER BY COALESCE(r.stock_qty, 0) DESC
+        `, shouldFilterByCatDesc ? [materialKeys, tdsCatDesc] : [materialKeys]);
+
+        // Compute weighted averages per param definition
+        const agg = {};
+        for (const def of paramDefs) {
+          agg[def.field_key] = { weightedSum: 0, weightedQty: 0, min: null, max: null, count: 0 };
+        }
+
+        for (const row of tdsRows) {
+          const stockQty = Number(row.stock_qty) || 0;
+          const weight = stockQty > 0 ? stockQty : 1;
+          const stockPriceWA = stockQty > 0 ? Math.round(Number(row.stock_val) / stockQty * 10000) / 10000 : null;
+          const orderQty = Number(row.order_qty) || 0;
+          const onOrderPriceWA = orderQty > 0 ? Math.round(Number(row.order_val) / orderQty * 10000) / 10000 : null;
+
+          const params = {};
+          for (const def of paramDefs) {
+            const rawVal = row[def.field_key];
+            const val = toFiniteNumber(rawVal);
+            // Density columns in TDS are stored ×1000, normalize
+            const divisor = (def.field_key === 'density' || def.field_key === 'bulk_density') ? 1000 : 1;
+            const normalizedVal = val != null ? val / divisor : null;
+
+            params[def.field_key] = normalizedVal;
+
+            if (normalizedVal != null && agg[def.field_key]) {
+              agg[def.field_key].weightedSum += normalizedVal * weight;
+              agg[def.field_key].weightedQty += weight;
+              agg[def.field_key].count += 1;
+              if (agg[def.field_key].min == null || normalizedVal < agg[def.field_key].min) agg[def.field_key].min = normalizedVal;
+              if (agg[def.field_key].max == null || normalizedVal > agg[def.field_key].max) agg[def.field_key].max = normalizedVal;
+            }
+          }
+
+          specs.push({
+            material_key: row.oracle_item_code,
+            description: row.brand_grade,
+            stock_qty: stockQty,
+            order_qty: orderQty,
+            stock_price_wa: stockPriceWA,
+            on_order_price_wa: onOrderPriceWA,
+            params,
+          });
+        }
+
+        for (const [key, a] of Object.entries(agg)) {
+          if (a.count > 0) {
+            paramValues[key] = {
+              weightedAvg: Math.round(a.weightedSum / a.weightedQty * 10000) / 10000,
+              min: Math.round(a.min * 10000) / 10000,
+              max: Math.round(a.max * 10000) / 10000,
+              count: a.count,
+            };
+          }
+        }
+
+        // Density WA from inventory weights column
+        try {
+          const { rows: dwRows } = await pool.query(`
+            SELECT
+              CASE WHEN SUM(
+                CASE WHEN mainitemstock > 0 AND trim(COALESCE(weights, '')) ~ '^-?[0-9]+(\\.[0-9]+)?$'
+                  THEN mainitemstock ELSE 0 END
+              ) > 0
+              THEN ROUND((
+                SUM(CASE WHEN mainitemstock > 0 AND trim(COALESCE(weights, '')) ~ '^-?[0-9]+(\\.[0-9]+)?$'
+                  THEN (weights::numeric * mainitemstock) ELSE 0 END)
+                / SUM(CASE WHEN mainitemstock > 0 AND trim(COALESCE(weights, '')) ~ '^-?[0-9]+(\\.[0-9]+)?$'
+                  THEN mainitemstock ELSE 0 END)
+              )::numeric, 4)
+              ELSE NULL END AS density_wa
+            FROM fp_actualrmdata
+            WHERE LOWER(TRIM(COALESCE(mainitem, ''))) = ANY($1::text[])
+          `, [materialKeys]);
+          densityWa = dwRows[0]?.density_wa != null ? Number(dwRows[0].density_wa) : null;
+        } catch (_) { /* ignore */ }
+
+      } else {
+        // ── NON-RESINS: read from mes_non_resin_material_specs ──
+        const { rows: specRows } = await pool.query(`
+          WITH rm_by_item AS (
+            SELECT
+              LOWER(TRIM(COALESCE(mainitem, ''))) AS item_key,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0)::numeric AS stock_val,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0)::numeric AS order_qty,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0)::numeric AS order_val
+            FROM fp_actualrmdata
+            WHERE LOWER(TRIM(COALESCE(mainitem, ''))) = ANY($1::text[])
+            GROUP BY LOWER(TRIM(COALESCE(mainitem, '')))
+          )
+          SELECT
+            s.material_key,
+            s.mainitem,
+            s.maindescription,
+            s.supplier_name,
+            s.parameters_json,
+            COALESCE(r.stock_qty, 0) AS stock_qty,
+            COALESCE(r.order_qty, 0) AS order_qty,
+            CASE WHEN COALESCE(r.stock_qty, 0) > 0
+              THEN ROUND((r.stock_val / NULLIF(r.stock_qty, 0))::numeric, 4)
+              ELSE NULL
+            END AS stock_price_wa,
+            CASE WHEN COALESCE(r.order_qty, 0) > 0
+              THEN ROUND((r.order_val / NULLIF(r.order_qty, 0))::numeric, 4)
+              ELSE NULL
+            END AS on_order_price_wa
+          FROM mes_non_resin_material_specs s
+          LEFT JOIN rm_by_item r
+            ON r.item_key = COALESCE(NULLIF(LOWER(TRIM(s.mainitem)), ''), LOWER(TRIM(s.material_key)))
+          WHERE s.material_class = $2
+            AND (
+              LOWER(TRIM(s.material_key)) = ANY($1::text[])
+              OR LOWER(TRIM(COALESCE(s.mainitem, ''))) = ANY($1::text[])
+            )
+          ORDER BY COALESCE(r.stock_qty, 0) DESC, s.material_key
+        `, [materialKeys, materialClass]);
+
+        const agg = {};
+        for (const row of specRows) {
+          const stockQty = Number(row.stock_qty) || 0;
+          const weight = stockQty > 0 ? stockQty : 1;
+          const params = isPlainObject(row.parameters_json) ? row.parameters_json : {};
+
+          Object.entries(params).forEach(([key, raw]) => {
+            const value = toFiniteNumber(raw);
+            if (value == null) return;
+
+            if (!agg[key]) agg[key] = { weightedSum: 0, weightedQty: 0, min: null, max: null, count: 0 };
+            agg[key].weightedSum += value * weight;
+            agg[key].weightedQty += weight;
+            agg[key].count += 1;
+            if (agg[key].min == null || value < agg[key].min) agg[key].min = value;
+            if (agg[key].max == null || value > agg[key].max) agg[key].max = value;
+          });
+
+          specs.push({
+            material_key: row.material_key || row.mainitem,
+            description: row.maindescription || row.material_key,
+            stock_qty: stockQty,
+            order_qty: Number(row.order_qty) || 0,
+            stock_price_wa: row.stock_price_wa != null ? Number(row.stock_price_wa) : null,
+            on_order_price_wa: row.on_order_price_wa != null ? Number(row.on_order_price_wa) : null,
+            params,
+          });
+        }
+
+        for (const [key, a] of Object.entries(agg)) {
+          if (a.count > 0) {
+            paramValues[key] = {
+              weightedAvg: Math.round(a.weightedSum / a.weightedQty * 10000) / 10000,
+              min: Math.round(a.min * 10000) / 10000,
+              max: Math.round(a.max * 10000) / 10000,
+              count: a.count,
+            };
+          }
+        }
+
+        // Density WA from inventory
+        if (paramValues.density_g_cm3) {
+          densityWa = paramValues.density_g_cm3.weightedAvg;
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          material_class: materialClass,
+          parameter_profile: null,
+          param_definitions: paramDefs,
+          param_values: paramValues,
+          inventory: {
+            total_stock_qty: Number(inv.total_stock_qty) || 0,
+            total_stock_val: Number(inv.total_stock_val) || 0,
+            total_order_qty: Number(inv.total_order_qty) || 0,
+            total_order_val: Number(inv.total_order_val) || 0,
+          },
+          pricing: {
+            stock_price_wa: inv.stock_price_wa != null ? Number(inv.stock_price_wa) : null,
+            on_order_price_wa: inv.on_order_price_wa != null ? Number(inv.on_order_price_wa) : null,
+            combined_price_wa: inv.combined_price_wa != null ? Number(inv.combined_price_wa) : null,
+          },
+          density_wa: densityWa,
+          spec_count: specs.length,
+          specs,
+        },
+      });
+    } catch (err) {
+      logger.error('GET /items/material-profile error:', err);
+      res.status(500).json({ success: false, error: 'Failed to fetch material profile' });
+    }
+  });
+
+  // ─── GET /items/material-configs — list persisted configs (universal) ────
+  // MUST be before /:id to avoid route ambiguity
+  router.get('/items/material-configs', authenticate, async (req, res) => {
+    try {
+      const materialClass = normalizeMaterialKey(req.query.material_class);
+      const catDesc = cleanText(req.query.cat_desc);
+      const appearance = cleanText(req.query.appearance);
+
+      const params = [materialClass];
+      const where = ['material_class = $1'];
+
+      if (catDesc) {
+        params.push(catDesc);
+        where.push(`cat_desc = $${params.length}`);
+      }
+      if (appearance) {
+        params.push(appearance);
+        where.push(`appearance = $${params.length}`);
+      }
+
+      let rows;
+      try {
+        ({ rows } = await pool.query(`
+          SELECT
+            id, material_class, cat_desc, appearance, supplier_name,
+            resin_type, alloy_code, density_g_cm3, solid_pct, micron_thickness,
+            width_mm, yield_m2_per_kg, roll_length_m, core_diameter_mm,
+            market_ref_price, market_price_date,
+            mrp_type, reorder_point, safety_stock_kg, planned_lead_time_days,
+            params_override,
+            COALESCE(mapped_material_keys, '{}'::text[]) AS mapped_material_keys,
+            created_by, updated_by, created_at, updated_at
+          FROM mes_material_profile_configs
+          WHERE ${where.join(' AND ')}
+          ORDER BY cat_desc, appearance
+        `, params));
+      } catch (queryErr) {
+        if (!isMissingParamsOverrideColumn(queryErr)) throw queryErr;
+
+        ({ rows } = await pool.query(`
+          SELECT
+            id, material_class, cat_desc, appearance, supplier_name,
+            resin_type, alloy_code, density_g_cm3, solid_pct, micron_thickness,
+            width_mm, yield_m2_per_kg, roll_length_m, core_diameter_mm,
+            market_ref_price, market_price_date,
+            mrp_type, reorder_point, safety_stock_kg, planned_lead_time_days,
+            COALESCE(mapped_material_keys, '{}'::text[]) AS mapped_material_keys,
+            created_by, updated_by, created_at, updated_at
+          FROM mes_material_profile_configs
+          WHERE ${where.join(' AND ')}
+          ORDER BY cat_desc, appearance
+        `, params));
+
+        rows = rows.map((row) => ({ ...row, params_override: {} }));
+      }
+
+      return res.json({ success: true, data: rows });
+    } catch (err) {
+      if (err.code === '42P01') {
+        return res.status(500).json({
+          success: false,
+          error: 'mes_material_profile_configs table not found. Run migration mes-master-040 first.',
+        });
+      }
+      logger.error('GET /items/material-configs error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to fetch material configs' });
+    }
+  });
+
+  // ─── GET /items/material-config — single persisted config (universal) ───
+  // MUST be before /:id to avoid route ambiguity
+  router.get('/items/material-config', authenticate, async (req, res) => {
+    try {
+      const materialClass = normalizeMaterialKey(req.query.material_class);
+      const catDesc = cleanText(req.query.cat_desc);
+      const appearance = cleanText(req.query.appearance) || '';
+
+      if (!catDesc) {
+        return res.status(400).json({ success: false, error: 'cat_desc is required' });
+      }
+
+      const selectMaterialConfig = async (whereSql, params, orderSql = '') => {
+        let rows;
+        try {
+          ({ rows } = await pool.query(`
+            SELECT
+              id, material_class, cat_desc, appearance, supplier_name,
+              resin_type, alloy_code, density_g_cm3, solid_pct, micron_thickness,
+              width_mm, yield_m2_per_kg, roll_length_m, core_diameter_mm,
+              market_ref_price, market_price_date,
+              mrp_type, reorder_point, safety_stock_kg, planned_lead_time_days,
+              params_override,
+              COALESCE(mapped_material_keys, '{}'::text[]) AS mapped_material_keys,
+              created_by, updated_by, created_at, updated_at
+            FROM mes_material_profile_configs
+            WHERE ${whereSql}
+            ${orderSql}
+            LIMIT 1
+          `, params));
+        } catch (queryErr) {
+          if (!isMissingParamsOverrideColumn(queryErr)) throw queryErr;
+
+          ({ rows } = await pool.query(`
+            SELECT
+              id, material_class, cat_desc, appearance, supplier_name,
+              resin_type, alloy_code, density_g_cm3, solid_pct, micron_thickness,
+              width_mm, yield_m2_per_kg, roll_length_m, core_diameter_mm,
+              market_ref_price, market_price_date,
+              mrp_type, reorder_point, safety_stock_kg, planned_lead_time_days,
+              COALESCE(mapped_material_keys, '{}'::text[]) AS mapped_material_keys,
+              created_by, updated_by, created_at, updated_at
+            FROM mes_material_profile_configs
+            WHERE ${whereSql}
+            ${orderSql}
+            LIMIT 1
+          `, params));
+
+          rows = rows.map((row) => ({ ...row, params_override: {} }));
+        }
+
+        return rows;
+      };
+
+      // 1) Exact match for the requested context.
+      let rows = await selectMaterialConfig(
+        'material_class = $1 AND cat_desc = $2 AND appearance = $3',
+        [materialClass, catDesc, appearance]
+      );
+
+      // 2) Legacy compatibility: older saves used blank appearance.
+      if (!rows.length && appearance) {
+        rows = await selectMaterialConfig(
+          'material_class = $1 AND cat_desc = $2 AND appearance = $3',
+          [materialClass, catDesc, '']
+        );
+      }
+
+      // 3) Last-resort fallback: return best candidate by category when no exact row exists.
+      if (!rows.length) {
+        rows = await selectMaterialConfig(
+          'material_class = $1 AND cat_desc = $2',
+          [materialClass, catDesc, appearance],
+          'ORDER BY CASE WHEN appearance = $3 THEN 0 WHEN appearance = \'\' THEN 1 ELSE 2 END, updated_at DESC'
+        );
+      }
+
+      return res.json({ success: true, data: rows[0] || null });
+    } catch (err) {
+      if (err.code === '42P01') {
+        return res.status(500).json({
+          success: false,
+          error: 'mes_material_profile_configs table not found. Run migration mes-master-040 first.',
+        });
+      }
+      logger.error('GET /items/material-config error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to fetch material config' });
+    }
+  });
+
+  // ─── PUT /items/material-profile-config — UNIVERSAL upsert for ALL classes ──
+  // Replaces PUT /substrate-config. Works for resins, substrates, and all other classes.
+  // MUST be before /:id to avoid route ambiguity
+  router.put('/items/material-profile-config', authenticate, async (req, res) => {
+    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+
+    try {
+      const b = req.body || {};
+      const materialClass = normalizeMaterialKey(b.material_class);
+      const catDesc = cleanText(b.cat_desc);
+      const appearance = cleanText(b.appearance) || '';
+
+      if (!materialClass) {
+        return res.status(400).json({ success: false, error: 'material_class is required' });
+      }
+      if (!catDesc) {
+        return res.status(400).json({ success: false, error: 'cat_desc is required' });
+      }
+
+      const mrpType = String(b.mrp_type || 'PD').trim().toUpperCase();
+      if (!MRP_TYPE_KEYS.includes(mrpType)) {
+        return res.status(400).json({
+          success: false,
+          error: `mrp_type must be one of: ${MRP_TYPE_KEYS.join(', ')}`,
+        });
+      }
+
+      const marketPriceDate = parseOptionalDate(b.market_price_date);
+      if (marketPriceDate === undefined) {
+        return res.status(400).json({ success: false, error: 'market_price_date must be a valid date' });
+      }
+
+      const plannedLeadTimeDays = parseOptionalInteger(b.planned_lead_time_days);
+      if (plannedLeadTimeDays === undefined || (plannedLeadTimeDays != null && plannedLeadTimeDays < 0)) {
+        return res.status(400).json({
+          success: false,
+          error: 'planned_lead_time_days must be a non-negative integer',
+        });
+      }
+
+      const numericFields = [
+        'density_g_cm3', 'solid_pct', 'micron_thickness', 'width_mm',
+        'yield_m2_per_kg', 'roll_length_m', 'core_diameter_mm',
+        'market_ref_price',
+        'reorder_point', 'safety_stock_kg',
+      ];
+
+      const parsedNumbers = {};
+      for (const field of numericFields) {
+        const parsed = parseOptionalNumber(b[field]);
+        if (parsed === undefined) {
+          return res.status(400).json({ success: false, error: `${field} must be a valid number` });
+        }
+        parsedNumbers[field] = parsed;
+      }
+
+      const mappedMaterialKeys = normalizeMaterialKeyArray(b.mapped_material_keys);
+
+      // Parse params_override — must be a plain object with numeric values
+      let paramsOverride = {};
+      if (b.params_override != null) {
+        if (!isPlainObject(b.params_override)) {
+          return res.status(400).json({ success: false, error: 'params_override must be an object' });
+        }
+        for (const [k, v] of Object.entries(b.params_override)) {
+          if (v != null) {
+            const n = toFiniteNumber(v);
+            paramsOverride[k] = n;
+          }
+        }
+      }
+
+      const commonParams = [
+        materialClass,
+        catDesc,
+        appearance,
+        cleanText(b.supplier_name, 200),
+        cleanText(b.resin_type, 120),
+        cleanText(b.alloy_code, 80),
+        parsedNumbers.density_g_cm3,
+        parsedNumbers.solid_pct,
+        parsedNumbers.micron_thickness,
+        parsedNumbers.width_mm,
+        parsedNumbers.yield_m2_per_kg,
+        parsedNumbers.roll_length_m,
+        parsedNumbers.core_diameter_mm,
+        parsedNumbers.market_ref_price,
+        marketPriceDate,
+        mrpType,
+        parsedNumbers.reorder_point,
+        parsedNumbers.safety_stock_kg,
+        plannedLeadTimeDays,
+        mappedMaterialKeys,
+      ];
+
+      let rows;
+      try {
+        ({ rows } = await pool.query(`
+          INSERT INTO mes_material_profile_configs (
+            material_class, cat_desc, appearance, supplier_name,
+            resin_type, alloy_code, density_g_cm3, solid_pct, micron_thickness,
+            width_mm, yield_m2_per_kg, roll_length_m, core_diameter_mm,
+            market_ref_price, market_price_date,
+            mrp_type, reorder_point, safety_stock_kg, planned_lead_time_days,
+            mapped_material_keys, params_override, created_by, updated_by
+          ) VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+            $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+            $21,$22,$23
+          )
+          ON CONFLICT (material_class, cat_desc, appearance) DO UPDATE
+          SET
+            supplier_name = EXCLUDED.supplier_name,
+            resin_type = EXCLUDED.resin_type,
+            alloy_code = EXCLUDED.alloy_code,
+            density_g_cm3 = EXCLUDED.density_g_cm3,
+            solid_pct = EXCLUDED.solid_pct,
+            micron_thickness = EXCLUDED.micron_thickness,
+            width_mm = EXCLUDED.width_mm,
+            yield_m2_per_kg = EXCLUDED.yield_m2_per_kg,
+            roll_length_m = EXCLUDED.roll_length_m,
+            core_diameter_mm = EXCLUDED.core_diameter_mm,
+            market_ref_price = EXCLUDED.market_ref_price,
+            market_price_date = EXCLUDED.market_price_date,
+            mrp_type = EXCLUDED.mrp_type,
+            reorder_point = EXCLUDED.reorder_point,
+            safety_stock_kg = EXCLUDED.safety_stock_kg,
+            planned_lead_time_days = EXCLUDED.planned_lead_time_days,
+            mapped_material_keys = EXCLUDED.mapped_material_keys,
+            params_override = EXCLUDED.params_override,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = NOW()
+          RETURNING *
+        `, [
+          ...commonParams,
+          JSON.stringify(paramsOverride),
+          req.user.id,
+          req.user.id,
+        ]));
+      } catch (queryErr) {
+        if (!isMissingParamsOverrideColumn(queryErr)) throw queryErr;
+
+        ({ rows } = await pool.query(`
+          INSERT INTO mes_material_profile_configs (
+            material_class, cat_desc, appearance, supplier_name,
+            resin_type, alloy_code, density_g_cm3, solid_pct, micron_thickness,
+            width_mm, yield_m2_per_kg, roll_length_m, core_diameter_mm,
+            market_ref_price, market_price_date,
+            mrp_type, reorder_point, safety_stock_kg, planned_lead_time_days,
+            mapped_material_keys, created_by, updated_by
+          ) VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+            $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+            $21,$22
+          )
+          ON CONFLICT (material_class, cat_desc, appearance) DO UPDATE
+          SET
+            supplier_name = EXCLUDED.supplier_name,
+            resin_type = EXCLUDED.resin_type,
+            alloy_code = EXCLUDED.alloy_code,
+            density_g_cm3 = EXCLUDED.density_g_cm3,
+            solid_pct = EXCLUDED.solid_pct,
+            micron_thickness = EXCLUDED.micron_thickness,
+            width_mm = EXCLUDED.width_mm,
+            yield_m2_per_kg = EXCLUDED.yield_m2_per_kg,
+            roll_length_m = EXCLUDED.roll_length_m,
+            core_diameter_mm = EXCLUDED.core_diameter_mm,
+            market_ref_price = EXCLUDED.market_ref_price,
+            market_price_date = EXCLUDED.market_price_date,
+            mrp_type = EXCLUDED.mrp_type,
+            reorder_point = EXCLUDED.reorder_point,
+            safety_stock_kg = EXCLUDED.safety_stock_kg,
+            planned_lead_time_days = EXCLUDED.planned_lead_time_days,
+            mapped_material_keys = EXCLUDED.mapped_material_keys,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = NOW()
+          RETURNING *, '{}'::jsonb AS params_override
+        `, [
+          ...commonParams,
+          req.user.id,
+          req.user.id,
+        ]));
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          ...stripLegacyPricingFields(rows[0] || {}),
+          mapped_material_keys: (rows[0] || {}).mapped_material_keys || [],
+        },
+      });
+    } catch (err) {
+      if (err.code === '42P01') {
+        return res.status(500).json({
+          success: false,
+          error: 'mes_material_profile_configs table not found. Run migration mes-master-040 first.',
+        });
+      }
+      logger.error('PUT /items/material-profile-config error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to save material profile config' });
     }
   });
 
@@ -1529,7 +2227,151 @@ module.exports = function (router) {
         GROUP BY c.id, cnt.item_count, cnt.item_group_count
         ORDER BY c.sort_order, c.name
       `);
-      res.json({ success: true, data: categories });
+
+      let unmappedByCategory = new Map();
+      try {
+        const { rows: unmappedRows } = await pool.query(`
+          WITH category_groups AS (
+            SELECT
+              c.id AS category_id,
+              LOWER(TRIM(c.material_class)) AS material_class_key,
+              LOWER(TRIM(g.catlinedesc)) AS catlinedesc_key
+            FROM mes_item_categories c
+            JOIN mes_item_category_groups g
+              ON g.category_id = c.id
+             AND g.is_active = true
+            WHERE c.is_active = true
+              AND COALESCE(TRIM(c.material_class), '') <> ''
+            GROUP BY c.id, LOWER(TRIM(c.material_class)), LOWER(TRIM(g.catlinedesc))
+          ),
+          bucket_items AS (
+            SELECT
+              cg.category_id,
+              cg.material_class_key,
+              cg.catlinedesc_key,
+              LOWER(TRIM(r.itemgroup)) AS appearance_key,
+              LOWER(TRIM(r.mainitem)) AS item_key,
+              MIN(TRIM(r.mainitem)) AS item_code,
+              MIN(NULLIF(TRIM(r.maindescription), '')) AS item_description,
+              MIN(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc
+            FROM category_groups cg
+            JOIN fp_actualrmdata r
+              ON LOWER(TRIM(r.catlinedesc)) = cg.catlinedesc_key
+             AND COALESCE(TRIM(r.mainitem), '') <> ''
+            WHERE COALESCE(TRIM(r.itemgroup), '') <> ''
+            GROUP BY
+              cg.category_id,
+              cg.material_class_key,
+              cg.catlinedesc_key,
+              LOWER(TRIM(r.itemgroup)),
+              LOWER(TRIM(r.mainitem))
+          ),
+          unmapped_raw AS (
+            SELECT
+              bi.category_id,
+              bi.item_key,
+              bi.item_code,
+              bi.item_description,
+              bi.catlinedesc
+            FROM bucket_items bi
+            LEFT JOIN LATERAL (
+              SELECT
+                mp.id,
+                COALESCE(mp.mapped_material_keys, '{}'::text[]) AS mapped_material_keys
+              FROM mes_material_profile_configs mp
+              WHERE LOWER(TRIM(mp.material_class)) = bi.material_class_key
+                AND LOWER(TRIM(mp.cat_desc)) = bi.catlinedesc_key
+              ORDER BY
+                CASE
+                  WHEN LOWER(TRIM(mp.appearance)) = bi.appearance_key THEN 0
+                  WHEN COALESCE(TRIM(mp.appearance), '') = '' THEN 1
+                  ELSE 2
+                END,
+                mp.updated_at DESC NULLS LAST,
+                mp.id DESC
+              LIMIT 1
+            ) cfg ON TRUE
+            WHERE cfg.id IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1
+                FROM UNNEST(cfg.mapped_material_keys) AS mk
+                WHERE LOWER(TRIM(mk)) = bi.item_key
+              )
+          ),
+          unmapped AS (
+            SELECT
+              ur.category_id,
+              ur.item_key,
+              MIN(ur.item_code) AS item_code,
+              MIN(ur.item_description) AS item_description,
+              MIN(ur.catlinedesc) AS catlinedesc
+            FROM unmapped_raw ur
+            GROUP BY ur.category_id, ur.item_key
+          ),
+          ranked AS (
+            SELECT
+              u.*,
+              ROW_NUMBER() OVER (PARTITION BY u.category_id ORDER BY u.item_code) AS rn
+            FROM unmapped u
+          ),
+          summary AS (
+            SELECT
+              category_id,
+              COUNT(*)::INT AS unmapped_item_count
+            FROM unmapped
+            GROUP BY category_id
+          )
+          SELECT
+            s.category_id,
+            s.unmapped_item_count,
+            GREATEST(s.unmapped_item_count - 80, 0)::INT AS unmapped_overflow_count,
+            COALESCE(
+              JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'item_key', r.item_key,
+                  'item_code', r.item_code,
+                  'item_description', r.item_description,
+                  'catlinedesc', r.catlinedesc
+                )
+                ORDER BY r.item_code
+              ) FILTER (WHERE r.rn <= 80),
+              '[]'::json
+            ) AS unmapped_items
+          FROM summary s
+          LEFT JOIN ranked r ON r.category_id = s.category_id
+          GROUP BY s.category_id, s.unmapped_item_count
+        `);
+
+        unmappedByCategory = new Map(
+          unmappedRows.map((row) => [
+            Number(row.category_id),
+            {
+              unmapped_item_count: Number(row.unmapped_item_count) || 0,
+              unmapped_overflow_count: Number(row.unmapped_overflow_count) || 0,
+              unmapped_items: Array.isArray(row.unmapped_items) ? row.unmapped_items : [],
+            },
+          ])
+        );
+      } catch (unmappedErr) {
+        // Keep endpoint available even if profile config table is not ready in some environments.
+        if (unmappedErr?.code !== '42P01') {
+          logger.warn('GET /items/custom-categories unmapped summary warning', { error: unmappedErr.message });
+        }
+      }
+
+      const data = categories.map((cat) => {
+        const meta = unmappedByCategory.get(Number(cat.id)) || {
+          unmapped_item_count: 0,
+          unmapped_overflow_count: 0,
+          unmapped_items: [],
+        };
+        return {
+          ...cat,
+          ...meta,
+        };
+      });
+
+      res.json({ success: true, data });
     } catch (err) {
       logger.error('GET /items/custom-categories error:', err);
       res.status(500).json({ success: false, error: 'Failed to fetch categories' });
@@ -1814,7 +2656,7 @@ module.exports = function (router) {
         WHERE TRIM(catlinedesc) = ANY($1)
           AND ${rmSearchSql}
         GROUP BY TRIM(catlinedesc)
-        ORDER BY stock_qty DESC
+        ORDER BY LOWER(TRIM(catlinedesc)) ASC
       `, [catlinedescList, searchLike]);
 
       // ── Level 3: Item Groups per catlinedesc ────────────────────────────
@@ -1832,7 +2674,7 @@ module.exports = function (router) {
           AND ${rmSearchSql}
           AND COALESCE(TRIM(itemgroup), '') <> ''
         GROUP BY TRIM(catlinedesc), TRIM(itemgroup)
-        ORDER BY TRIM(catlinedesc), stock_qty DESC
+        ORDER BY LOWER(TRIM(catlinedesc)) ASC, LOWER(TRIM(itemgroup)) ASC
       `, [catlinedescList, searchLike]);
 
       // ── Market Price from mes_item_master — weighted by stock qty per item ──
@@ -1890,8 +2732,7 @@ module.exports = function (router) {
         const totalQ = stockQty + orderQty;
         const avgPriceWA = totalQ > 0 ? r4((stockVal + orderVal) / totalQ) : null;
         const marketPriceWA = mktQty > 0 ? r4(mktVal / mktQty) : (onOrderPriceWA ?? stockPriceWA ?? null);
-        const defaultPrice = onOrderPriceWA ?? stockPriceWA ?? null;
-        return { stock_price_wa: stockPriceWA, on_order_price_wa: onOrderPriceWA, avg_price_wa: avgPriceWA, market_price_wa: marketPriceWA, default_price: defaultPrice };
+        return { stock_price_wa: stockPriceWA, on_order_price_wa: onOrderPriceWA, avg_price_wa: avgPriceWA, market_price_wa: marketPriceWA };
       };
 
       // Group item_groups by catlinedesc
@@ -2308,7 +3149,6 @@ module.exports = function (router) {
         const totalQ = stockQty + orderQty;
         const avgPriceWA = totalQ > 0 ? r4((stockVal + orderVal) / totalQ) : null;
         const marketPrice = mktPrice > 0 ? mktPrice : (onOrderPriceWA ?? stockPriceWA ?? null);
-        const defaultPrice = onOrderPriceWA ?? stockPriceWA ?? null;
 
         return {
           item_key: rm.item_key,
@@ -2324,13 +3164,8 @@ module.exports = function (router) {
           avg_price: avgPriceWA,
           market_price: marketPrice,
           market_price_date: master.market_price_date || null,
-          default_price: defaultPrice,
           // mes_item_master fields
           master_id: master.id || null,
-          price_control: master.price_control || null,
-          standard_price: master.standard_price ? Number(master.standard_price) : null,
-          map_price: master.map_price ? Number(master.map_price) : null,
-          last_po_price: master.last_po_price ? Number(master.last_po_price) : null,
           // MRP fields
           mrp_type: master.mrp_type || null,
           reorder_point: master.reorder_point ? Number(master.reorder_point) : null,
@@ -2352,7 +3187,6 @@ module.exports = function (router) {
       const totalQ = grpStockQty + grpOrderQty;
       const avgPriceWA = totalQ > 0 ? r4((grpStockVal + grpOrderVal) / totalQ) : null;
       const marketPriceWA = grpMktQty > 0 ? r4(grpMktVal / grpMktQty) : (onOrderPriceWA ?? stockPriceWA ?? null);
-      const defaultPrice = onOrderPriceWA ?? stockPriceWA ?? null;
 
       const totals = {
         stock_qty: grpStockQty,
@@ -2361,7 +3195,6 @@ module.exports = function (router) {
         on_order_price_wa: onOrderPriceWA,
         avg_price_wa: avgPriceWA,
         market_price_wa: marketPriceWA,
-        default_price: defaultPrice,
         stock_val: Math.round(grpStockVal * 100) / 100,
         order_val: Math.round(grpOrderVal * 100) / 100,
       };
@@ -2574,7 +3407,6 @@ module.exports = function (router) {
         const totalQ = stockQty + orderQty;
         const avgPriceWA = totalQ > 0 ? r4((stockVal + orderVal) / totalQ) : null;
         const marketPrice = mktPrice > 0 ? mktPrice : (onOrderPriceWA ?? stockPriceWA ?? null);
-        const defaultPrice = onOrderPriceWA ?? stockPriceWA ?? null;
 
         return {
           item_key: rm.item_key,
@@ -2591,12 +3423,7 @@ module.exports = function (router) {
           avg_price: avgPriceWA,
           market_price: marketPrice,
           market_price_date: master.market_price_date || null,
-          default_price: defaultPrice,
           master_id: master.id || null,
-          price_control: master.price_control || null,
-          standard_price: master.standard_price ? Number(master.standard_price) : null,
-          map_price: master.map_price ? Number(master.map_price) : null,
-          last_po_price: master.last_po_price ? Number(master.last_po_price) : null,
           mrp_type: master.mrp_type || null,
           reorder_point: master.reorder_point ? Number(master.reorder_point) : null,
           safety_stock_kg: master.safety_stock_kg ? Number(master.safety_stock_kg) : null,
@@ -2615,7 +3442,6 @@ module.exports = function (router) {
       const totalQ = grpStockQty + grpOrderQty;
       const avgPriceWA = totalQ > 0 ? r4((grpStockVal + grpOrderVal) / totalQ) : null;
       const marketPriceWA = grpMktQty > 0 ? r4(grpMktVal / grpMktQty) : (onOrderPriceWA ?? stockPriceWA ?? null);
-      const defaultPrice = onOrderPriceWA ?? stockPriceWA ?? null;
 
       const totals = {
         stock_qty: grpStockQty,
@@ -2624,7 +3450,6 @@ module.exports = function (router) {
         on_order_price_wa: onOrderPriceWA,
         avg_price_wa: avgPriceWA,
         market_price_wa: marketPriceWA,
-        default_price: defaultPrice,
         stock_val: Math.round(grpStockVal * 100) / 100,
         order_val: Math.round(grpOrderVal * 100) / 100,
       };
@@ -2816,13 +3641,141 @@ module.exports = function (router) {
     }
   });
 
+  // ─── PATCH /items/custom-categories/:id/item-group/:itemgroup/market-price ─
+  // Item-group-level market price editor: applies one market price/date to all items in the item group.
+  router.patch('/items/custom-categories/:id/item-group/:itemgroup/market-price', authenticate, async (req, res) => {
+    try {
+      if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+
+      const catId = parseInt(req.params.id, 10);
+      const itemgroup = decodeURIComponent(req.params.itemgroup).trim();
+      const catlinedesc = String(req.body?.catlinedesc || '').trim();
+      const marketRefPrice = parseOptionalNumber(req.body?.market_ref_price);
+      const marketPriceDate = parseOptionalDate(req.body?.market_price_date);
+
+      if (!Number.isFinite(catId) || catId <= 0 || !itemgroup) {
+        return res.status(400).json({ success: false, error: 'Invalid category or item group' });
+      }
+      if (marketRefPrice === undefined || marketPriceDate === undefined) {
+        return res.status(400).json({ success: false, error: 'Invalid market_ref_price or market_price_date' });
+      }
+      if (marketRefPrice != null && marketRefPrice < 0) {
+        return res.status(400).json({ success: false, error: 'market_ref_price cannot be negative' });
+      }
+
+      const { rows: catRows } = await pool.query(
+        'SELECT id FROM mes_item_categories WHERE id=$1 AND is_active=true',
+        [catId]
+      );
+      if (!catRows.length) {
+        return res.status(404).json({ success: false, error: 'Category not found' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const conditions = ['TRIM(itemgroup) = $1', "COALESCE(TRIM(mainitem), '') <> ''"];
+        const params = [itemgroup];
+        let paramIdx = 2;
+
+        if (catlinedesc) {
+          params.push(catlinedesc);
+          conditions.push(`TRIM(catlinedesc) = $${paramIdx}`);
+          paramIdx++;
+        }
+
+        const { rows: rmItems } = await client.query(`
+          SELECT
+            LOWER(TRIM(mainitem)) AS item_key,
+            MAX(TRIM(mainitem)) AS item_code,
+            MAX(NULLIF(TRIM(maindescription), '')) AS item_name,
+            MAX(NULLIF(TRIM(mainunit), '')) AS base_uom,
+            MAX(NULLIF(TRIM(category), '')) AS item_type
+          FROM fp_actualrmdata
+          WHERE ${conditions.join(' AND ')}
+          GROUP BY LOWER(TRIM(mainitem))
+        `, params);
+
+        if (!rmItems.length) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ success: false, error: 'No items found in item group' });
+        }
+
+        for (const row of rmItems) {
+          const itemCode = cleanText(row.item_code, 120);
+          if (!itemCode) continue;
+
+          await client.query(`
+            INSERT INTO mes_item_master (
+              item_code,
+              item_name,
+              item_type,
+              base_uom,
+              oracle_cat_desc,
+              market_ref_price,
+              market_price_date,
+              is_active,
+              updated_at
+            )
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              true,
+              NOW()
+            )
+            ON CONFLICT (item_code) DO UPDATE SET
+              market_ref_price = EXCLUDED.market_ref_price,
+              market_price_date = EXCLUDED.market_price_date,
+              oracle_cat_desc = COALESCE(NULLIF(EXCLUDED.oracle_cat_desc, ''), mes_item_master.oracle_cat_desc),
+              is_active = true,
+              updated_at = NOW()
+          `, [
+            itemCode,
+            cleanText(row.item_name, 255) || itemCode,
+            cleanText(row.item_type, 50) || 'raw_material',
+            cleanText(row.base_uom, 20) || 'KG',
+            catlinedesc || null,
+            marketRefPrice,
+            marketPriceDate,
+          ]);
+        }
+
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          data: {
+            updated: rmItems.length,
+            itemgroup,
+            catlinedesc: catlinedesc || null,
+            market_ref_price: marketRefPrice,
+            market_price_date: marketPriceDate,
+          },
+        });
+      } catch (txnErr) {
+        await client.query('ROLLBACK');
+        throw txnErr;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      logger.error('PATCH /items/custom-categories/:id/item-group/:itemgroup/market-price error:', err);
+      res.status(500).json({ success: false, error: 'Failed to update item group market price' });
+    }
+  });
+
 
   // ─── GET /items/:id — Single item detail ──────────────────────────────────
   router.get('/items/:id', authenticate, async (req, res) => {
     try {
       const { rows } = await pool.query('SELECT * FROM mes_item_master WHERE id = $1', [req.params.id]);
       if (!rows.length) return res.status(404).json({ success: false, error: 'Item not found' });
-      res.json({ success: true, data: rows[0] });
+      res.json({ success: true, data: stripLegacyPricingFields(rows[0]) });
     } catch (err) {
       logger.error('GET /items/:id error:', err);
       res.status(500).json({ success: false, error: 'Failed to fetch item' });
@@ -2836,7 +3789,7 @@ module.exports = function (router) {
       const {
         item_code, item_name, item_type, product_group, base_uom,
         density_g_cm3, micron_thickness, width_mm, solid_pct,
-        price_control, standard_price, map_price, market_ref_price, market_price_date, last_po_price,
+        market_ref_price, market_price_date,
         mrp_type, reorder_point, safety_stock_kg, procurement_type, planned_lead_time_days,
         lot_size_rule, fixed_lot_size_kg, assembly_scrap_pct,
         subcategory, grade_code, waste_pct,
@@ -2853,7 +3806,7 @@ module.exports = function (router) {
         INSERT INTO mes_item_master (
           item_code, item_name, item_type, product_group, base_uom,
           density_g_cm3, micron_thickness, width_mm, solid_pct,
-          price_control, standard_price, map_price, market_ref_price, market_price_date, last_po_price,
+          market_ref_price, market_price_date,
           mrp_type, reorder_point, safety_stock_kg, procurement_type, planned_lead_time_days,
           lot_size_rule, fixed_lot_size_kg, assembly_scrap_pct,
           subcategory, grade_code, waste_pct,
@@ -2864,19 +3817,19 @@ module.exports = function (router) {
         ) VALUES (
           $1, $2, $3, $4, $5,
           $6, $7, $8, $9,
-          $10, $11, $12, $13, $14, $15,
-          $16, $17, $18, $19, $20,
-          $21, $22, $23,
-          $24, $25, $26,
-          $27, $28, $29, $30,
-          $31, $32, $33,
-          $34, $35, $36,
-          $37
+          $10, $11,
+          $12, $13, $14, $15, $16,
+          $17, $18, $19,
+          $20, $21, $22,
+          $23, $24, $25, $26,
+          $27, $28, $29,
+          $30, $31, $32,
+          $33
         ) RETURNING *
       `, [
         item_code, item_name, item_type, product_group, base_uom || 'KG',
         density_g_cm3, micron_thickness, width_mm, solid_pct,
-        price_control || 'MAP', standard_price, map_price, market_ref_price, market_price_date, last_po_price,
+        market_ref_price, market_price_date,
         mrp_type || 'PD', reorder_point, safety_stock_kg, procurement_type || 'EXTERNAL', planned_lead_time_days,
         lot_size_rule || 'EX', fixed_lot_size_kg, assembly_scrap_pct,
         subcategory, grade_code, waste_pct ?? 3.0,
@@ -2886,7 +3839,7 @@ module.exports = function (router) {
         req.user.id
       ]);
 
-      res.status(201).json({ success: true, data: rows[0] });
+      res.status(201).json({ success: true, data: stripLegacyPricingFields(rows[0]) });
     } catch (err) {
       if (err.code === '23505') {
         return res.status(409).json({ success: false, error: 'Item code already exists' });
@@ -2903,7 +3856,7 @@ module.exports = function (router) {
       const {
         item_name, item_type, product_group, base_uom,
         density_g_cm3, micron_thickness, width_mm, solid_pct,
-        price_control, standard_price, map_price, market_ref_price, market_price_date, last_po_price,
+        market_ref_price, market_price_date,
         mrp_type, reorder_point, safety_stock_kg, procurement_type, planned_lead_time_days,
         lot_size_rule, fixed_lot_size_kg, assembly_scrap_pct,
         subcategory, grade_code, waste_pct,
@@ -2916,21 +3869,20 @@ module.exports = function (router) {
         UPDATE mes_item_master SET
           item_name = $1, item_type = $2, product_group = $3, base_uom = $4,
           density_g_cm3 = $5, micron_thickness = $6, width_mm = $7, solid_pct = $8,
-          price_control = $9, standard_price = $10, map_price = $11, market_ref_price = $12,
-          market_price_date = $13, last_po_price = $14,
-          mrp_type = $15, reorder_point = $16, safety_stock_kg = $17, procurement_type = $18,
-          planned_lead_time_days = $19, lot_size_rule = $20, fixed_lot_size_kg = $21, assembly_scrap_pct = $22,
-          subcategory = $23, grade_code = $24, waste_pct = $25,
-          mfi = $26, cof = $27, sealing_temp_min = $28, sealing_temp_max = $29,
-          oracle_category = $30, oracle_cat_desc = $31, oracle_type = $32,
-          category = $33, stock_price = $34, on_order_price = $35,
+          market_ref_price = $9, market_price_date = $10,
+          mrp_type = $11, reorder_point = $12, safety_stock_kg = $13, procurement_type = $14,
+          planned_lead_time_days = $15, lot_size_rule = $16, fixed_lot_size_kg = $17, assembly_scrap_pct = $18,
+          subcategory = $19, grade_code = $20, waste_pct = $21,
+          mfi = $22, cof = $23, sealing_temp_min = $24, sealing_temp_max = $25,
+          oracle_category = $26, oracle_cat_desc = $27, oracle_type = $28,
+          category = $29, stock_price = $30, on_order_price = $31,
           updated_at = NOW()
-        WHERE id = $36
+        WHERE id = $32
         RETURNING *
       `, [
         item_name, item_type, product_group, base_uom,
         density_g_cm3, micron_thickness, width_mm, solid_pct,
-        price_control, standard_price, map_price, market_ref_price, market_price_date, last_po_price,
+        market_ref_price, market_price_date,
         mrp_type, reorder_point, safety_stock_kg, procurement_type,
         planned_lead_time_days, lot_size_rule, fixed_lot_size_kg, assembly_scrap_pct,
         subcategory, grade_code, waste_pct,
@@ -2941,7 +3893,7 @@ module.exports = function (router) {
       ]);
 
       if (!rows.length) return res.status(404).json({ success: false, error: 'Item not found' });
-      res.json({ success: true, data: rows[0] });
+      res.json({ success: true, data: stripLegacyPricingFields(rows[0]) });
     } catch (err) {
       logger.error('PUT /items/:id error:', err);
       res.status(500).json({ success: false, error: 'Failed to update item' });
@@ -2965,9 +3917,6 @@ module.exports = function (router) {
 
       const numericFields = [
         'market_ref_price',
-        'map_price',
-        'standard_price',
-        'last_po_price',
         'reorder_point',
         'safety_stock_kg',
         'fixed_lot_size_kg',
@@ -3019,19 +3968,6 @@ module.exports = function (router) {
         vals.push(normalizedMrpType);
       }
 
-      if (Object.prototype.hasOwnProperty.call(body, 'price_control')) {
-        const priceControl = cleanText(body.price_control, 20);
-        const normalizedPriceControl = priceControl ? priceControl.toUpperCase() : null;
-        if (normalizedPriceControl && !PRICE_CONTROL_KEYS.includes(normalizedPriceControl)) {
-          return res.status(400).json({
-            success: false,
-            error: `price_control must be one of: ${PRICE_CONTROL_KEYS.join(', ')}`,
-          });
-        }
-        sets.push(`price_control = $${p++}`);
-        vals.push(normalizedPriceControl);
-      }
-
       const textFieldDefs = [
         { field: 'procurement_type', maxLength: 40, transform: (v) => v?.toUpperCase() || null },
         { field: 'lot_size_rule', maxLength: 10, transform: (v) => v?.toUpperCase() || null },
@@ -3057,7 +3993,7 @@ module.exports = function (router) {
       `, vals);
 
       if (!rows.length) return res.status(404).json({ success: false, error: 'Item not found' });
-      return res.json({ success: true, data: rows[0] });
+      return res.json({ success: true, data: stripLegacyPricingFields(rows[0]) });
     } catch (err) {
       logger.error('PATCH /items/:id/custom-fields error:', err);
       return res.status(500).json({ success: false, error: 'Failed to update item fields' });
@@ -3068,25 +4004,24 @@ module.exports = function (router) {
   router.patch('/items/:id/prices', authenticate, async (req, res) => {
     if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
     try {
-      const { standard_price, map_price, market_ref_price, market_price_date, last_po_price, updated_at } = req.body;
+      const { stock_price, on_order_price, market_ref_price, market_price_date, updated_at } = req.body;
 
       // A14: Optimistic locking — if updated_at provided, check it matches
       let lockClause = '';
-      const params = [standard_price, map_price, market_ref_price, market_price_date, last_po_price, req.params.id];
+      const params = [stock_price, on_order_price, market_ref_price, market_price_date, req.params.id];
       if (updated_at) {
-        lockClause = ' AND updated_at = $7';
+        lockClause = ' AND updated_at = $6';
         params.push(updated_at);
       }
 
       const { rows } = await pool.query(`
         UPDATE mes_item_master SET
-          standard_price = COALESCE($1, standard_price),
-          map_price = COALESCE($2, map_price),
+          stock_price = COALESCE($1, stock_price),
+          on_order_price = COALESCE($2, on_order_price),
           market_ref_price = COALESCE($3, market_ref_price),
           market_price_date = COALESCE($4, market_price_date),
-          last_po_price = COALESCE($5, last_po_price),
           updated_at = NOW()
-        WHERE id = $6 ${lockClause}
+        WHERE id = $5 ${lockClause}
         RETURNING *
       `, params);
 
@@ -3094,7 +4029,7 @@ module.exports = function (router) {
         if (updated_at) return res.status(409).json({ success: false, error: 'Record modified by another user. Please refresh.' });
         return res.status(404).json({ success: false, error: 'Item not found' });
       }
-      res.json({ success: true, data: rows[0] });
+      res.json({ success: true, data: stripLegacyPricingFields(rows[0]) });
     } catch (err) {
       logger.error('PATCH /items/:id/prices error:', err);
       res.status(500).json({ success: false, error: 'Failed to update prices' });

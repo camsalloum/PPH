@@ -34,19 +34,181 @@ module.exports = function (router) {
   // ── GET /materials — material master grouped by category ──────────────────
   router.get('/materials', authenticate, async (req, res) => {
     try {
-      const { rows } = await pool.query(
-        `SELECT id, category, subcategory, name, solid_pct, density, cost_per_kg, waste_pct
-         FROM mes_material_master
-         WHERE is_active = true
-         ORDER BY category, subcategory, name`
-      );
+      const grouped = {
+        substrate: [],
+        ink: [],
+        adhesive: [],
+      };
 
-      // Group by category
-      const grouped = {};
-      for (const r of rows) {
-        if (!grouped[r.category]) grouped[r.category] = [];
-        grouped[r.category].push(r);
+      const seenByCategory = {
+        substrate: new Set(),
+        ink: new Set(),
+        adhesive: new Set(),
+      };
+
+      const normalizeText = (value) => String(value || '').trim().toLowerCase();
+      const toFiniteNumber = (value) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+
+      const normalizeLegacyCategory = (value) => {
+        const key = normalizeText(value);
+        if (key === 'ink') return 'ink';
+        if (key === 'adhesive') return 'adhesive';
+        if (key === 'substrate') return 'substrate';
+        if (key.includes('ink')) return 'ink';
+        if (key.includes('adhesive') || key.includes('coating') || key.includes('solvent')) return 'adhesive';
+        return 'substrate';
+      };
+
+      const pushMaterial = (category, row) => {
+        if (!grouped[category]) grouped[category] = [];
+        if (!seenByCategory[category]) seenByCategory[category] = new Set();
+
+        const nameKey = normalizeText(row?.name);
+        if (!nameKey || seenByCategory[category].has(nameKey)) return;
+
+        seenByCategory[category].add(nameKey);
+        grouped[category].push(row);
+      };
+
+      // Primary source: live item master pricing with WA + market policy prices.
+      try {
+        const { rows: liveRows } = await pool.query(`
+          WITH rm_prices AS (
+            SELECT
+              catlinedesc,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0) AS stock_qty,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0) AS order_qty,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0) AS stock_val,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0) AS order_val
+            FROM fp_actualrmdata
+            WHERE catlinedesc IS NOT NULL
+            GROUP BY catlinedesc
+          ),
+          item_prices AS (
+            SELECT
+              i.id,
+              CASE
+                WHEN i.item_type = 'raw_ink' THEN 'ink'
+                WHEN i.item_type IN ('raw_adhesive', 'raw_solvent', 'raw_coating') THEN 'adhesive'
+                ELSE 'substrate'
+              END AS category,
+              COALESCE(NULLIF(TRIM(i.subcategory), ''), i.item_type) AS subcategory,
+              COALESCE(NULLIF(TRIM(i.item_name), ''), NULLIF(TRIM(i.item_code), '')) AS name,
+              i.solid_pct,
+              NULLIF(i.density_g_cm3, 0) AS density,
+              COALESCE(i.waste_pct, 0) AS waste_pct,
+              i.market_ref_price,
+              CASE
+                WHEN COALESCE(rp.stock_qty, 0) > 0
+                THEN ROUND((rp.stock_val / NULLIF(rp.stock_qty, 0))::numeric, 4)
+                ELSE NULL
+              END AS stock_price_wa,
+              CASE
+                WHEN COALESCE(rp.order_qty, 0) > 0
+                THEN ROUND((rp.order_val / NULLIF(rp.order_qty, 0))::numeric, 4)
+                ELSE NULL
+              END AS on_order_price_wa,
+              CASE
+                WHEN (COALESCE(rp.stock_qty, 0) + COALESCE(rp.order_qty, 0)) > 0
+                THEN ROUND(((rp.stock_val + rp.order_val) / NULLIF(rp.stock_qty + rp.order_qty, 0))::numeric, 4)
+                ELSE NULL
+              END AS combined_price_wa
+            FROM mes_item_master i
+            LEFT JOIN rm_prices rp ON rp.catlinedesc = i.oracle_cat_desc
+            WHERE i.is_active = true
+              AND i.item_type IN (
+                'raw_resin',
+                'raw_ink',
+                'raw_adhesive',
+                'raw_solvent',
+                'raw_coating',
+                'raw_packaging'
+              )
+          )
+          SELECT
+            id,
+            category,
+            subcategory,
+            name,
+            solid_pct,
+            density,
+            waste_pct,
+            stock_price_wa,
+            on_order_price_wa,
+            combined_price_wa,
+            COALESCE(market_ref_price, on_order_price_wa, stock_price_wa, combined_price_wa, 0)::numeric AS market_price,
+            COALESCE(combined_price_wa, stock_price_wa, market_ref_price, on_order_price_wa, 0)::numeric AS cost_per_kg
+          FROM item_prices
+          WHERE name IS NOT NULL
+          ORDER BY category, subcategory, name
+        `);
+
+        liveRows.forEach((row) => {
+          const category = normalizeLegacyCategory(row.category);
+          pushMaterial(category, {
+            id: row.id,
+            category,
+            subcategory: row.subcategory || category,
+            name: row.name,
+            solid_pct: toFiniteNumber(row.solid_pct),
+            density: toFiniteNumber(row.density),
+            waste_pct: toFiniteNumber(row.waste_pct) ?? 0,
+            stock_price_wa: toFiniteNumber(row.stock_price_wa),
+            on_order_price_wa: toFiniteNumber(row.on_order_price_wa),
+            combined_price_wa: toFiniteNumber(row.combined_price_wa),
+            market_price: toFiniteNumber(row.market_price),
+            cost_per_kg: toFiniteNumber(row.cost_per_kg) ?? 0,
+          });
+        });
+      } catch (liveErr) {
+        // Legacy DB snapshots may not have item master tables yet.
+        if (liveErr.code !== '42P01') throw liveErr;
       }
+
+      // Fallback source: legacy estimation material master.
+      try {
+        const { rows: legacyRows } = await pool.query(`
+          SELECT id, category, subcategory, name, solid_pct, density, cost_per_kg, waste_pct
+          FROM mes_material_master
+          WHERE is_active = true
+          ORDER BY category, subcategory, name
+        `);
+
+        legacyRows.forEach((row) => {
+          const category = normalizeLegacyCategory(row.category);
+          const baseCost = toFiniteNumber(row.cost_per_kg) ?? 0;
+          pushMaterial(category, {
+            id: row.id,
+            category,
+            subcategory: row.subcategory || category,
+            name: row.name,
+            solid_pct: toFiniteNumber(row.solid_pct),
+            density: toFiniteNumber(row.density),
+            waste_pct: toFiniteNumber(row.waste_pct) ?? 0,
+            stock_price_wa: baseCost,
+            on_order_price_wa: baseCost,
+            combined_price_wa: baseCost,
+            market_price: baseCost,
+            cost_per_kg: baseCost,
+          });
+        });
+      } catch (legacyErr) {
+        // Keep live rows when legacy table is unavailable.
+        if (legacyErr.code !== '42P01') throw legacyErr;
+      }
+
+      Object.keys(grouped).forEach((category) => {
+        grouped[category].sort((a, b) => {
+          const subA = String(a.subcategory || '');
+          const subB = String(b.subcategory || '');
+          if (subA !== subB) return subA.localeCompare(subB);
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+      });
+
       res.json({ success: true, data: grouped });
     } catch (err) {
       logger.error('GET /materials error:', err);

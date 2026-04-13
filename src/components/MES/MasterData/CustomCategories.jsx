@@ -37,7 +37,6 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '../../../contexts/CurrencyContext';
 import UAEDirhamSymbol from '../../dashboard/UAEDirhamSymbol';
 
@@ -49,6 +48,8 @@ const MRP_TYPE_OPTIONS = [
   { value: 'ND', label: 'ND' },
   { value: 'VB', label: 'VB' },
 ];
+
+const MRP_TYPE_LEGEND = 'MRP codes: PD = Auto MRP, ND = No Planning, VB = Manual reorder point.';
 
 const PROCUREMENT_OPTIONS = [
   { value: 'EXTERNAL', label: 'External' },
@@ -62,34 +63,7 @@ const LOT_SIZE_OPTIONS = [
   { value: 'WB', label: 'WB' },
 ];
 
-const PARAM_LABELS = {
-  mfr_190_2_16: 'MFR 190/2.16',
-  mfr_190_5_0: 'MFR 190/5.0',
-  hlmi_190_21_6: 'HLMI 190/21.6',
-  mfr_230_2_16_pp: 'MFR 230/2.16 PP',
-  melt_flow_ratio: 'Melt Flow Ratio',
-  density: 'Density (g/cm3)',
-  crystalline_melting_point: 'Melting Point (C)',
-  vicat_softening_point: 'Vicat (C)',
-  heat_deflection_temp: 'HDT (C)',
-  tensile_strength_break: 'Tensile Break (MPa)',
-  elongation_break: 'Elongation (%)',
-  brittleness_temp: 'Brittleness (C)',
-  bulk_density: 'Bulk Density (g/cm3)',
-  flexural_modulus: 'Flexural Modulus (MPa)',
-};
-
-const NON_RESIN_MATERIAL_CLASSES = new Set([
-  'substrates',
-  'adhesives',
-  'chemicals',
-  'additives',
-  'coating',
-  'packing_materials',
-  'mounting_tapes',
-]);
-
-const SUBSTRATE_CONFIG_DEFAULTS = {
+const PROFILE_CONFIG_DEFAULTS = {
   supplier_name: null,
   resin_type: null,
   alloy_code: null,
@@ -100,12 +74,8 @@ const SUBSTRATE_CONFIG_DEFAULTS = {
   yield_m2_per_kg: null,
   roll_length_m: null,
   core_diameter_mm: null,
-  price_control: 'MAP',
   market_ref_price: null,
   market_price_date: null,
-  map_price: null,
-  standard_price: null,
-  last_po_price: null,
   mrp_type: 'PD',
   reorder_point: null,
   safety_stock_kg: null,
@@ -122,7 +92,6 @@ const EMPTY_DETAIL_TOTALS = {
   on_order_price_wa: null,
   avg_price_wa: null,
   market_price_wa: null,
-  default_price: null,
 };
 
 const WEIGHTED_AVG_NOTE = 'Weighted price is calculated as: (Stock Price x Stock Qty + On Order Price x On Order Qty) / (Stock Qty + On Order Qty).';
@@ -151,9 +120,50 @@ function toOptionalInteger(value) {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
 }
 
+function deriveMaterialProfilePriceFallback(detail = {}) {
+  const items = Array.isArray(detail?.items) ? detail.items : [];
+  const totals = detail?.totals || {};
+
+  const weightedAvg = (field) => {
+    let weightedSum = 0;
+    let weightedQty = 0;
+
+    for (const item of items) {
+      const value = toOptionalNumber(item?.[field]);
+      if (value == null) continue;
+
+      const stockQty = toOptionalNumber(item?.stock_qty) || 0;
+      const orderQty = toOptionalNumber(item?.order_qty) || 0;
+      const weight = stockQty > 0 ? stockQty : (orderQty > 0 ? orderQty : 1);
+
+      weightedSum += value * weight;
+      weightedQty += weight;
+    }
+
+    if (!weightedQty) return null;
+    return Math.round((weightedSum / weightedQty) * 10000) / 10000;
+  };
+
+  const latestMarketDate = (() => {
+    const dates = items
+      .map((item) => String(item?.market_price_date || '').slice(0, 10))
+      .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
+      .sort((a, b) => b.localeCompare(a));
+    return dates[0] || null;
+  })();
+
+  return {
+    market_ref_price:
+      toOptionalNumber(totals.market_price_wa)
+      ?? weightedAvg('market_price')
+      ?? null,
+    market_price_date: latestMarketDate,
+  };
+}
+
 function buildSubstrateDraft(row = {}) {
   return {
-    ...SUBSTRATE_CONFIG_DEFAULTS,
+    ...PROFILE_CONFIG_DEFAULTS,
     ...row,
     material_class: normalizeKey(row.material_class),
     cat_desc: String(row.cat_desc || '').trim(),
@@ -165,7 +175,6 @@ function buildSubstrateDraft(row = {}) {
 
 function toPrettyLabel(key) {
   if (!key) return '';
-  if (PARAM_LABELS[key]) return PARAM_LABELS[key];
   return String(key)
     .replace(/_/g, ' ')
     .replace(/\s+/g, ' ')
@@ -184,7 +193,6 @@ function toMaterialClassLabel(value) {
 }
 
 export default function CustomCategories() {
-  const navigate = useNavigate();
   const { companyCurrency, isUAEDirham } = useCurrency();
   const { message } = App.useApp();
 
@@ -234,12 +242,12 @@ export default function CustomCategories() {
   const [detailSupplierFilter, setDetailSupplierFilter] = useState('all');
   const [detailAggregates, setDetailAggregates] = useState(null);
   const [detailAggregatesLoading, setDetailAggregatesLoading] = useState(false);
-  const [estimationPreviewOpen, setEstimationPreviewOpen] = useState(false);
   const [groupPricingDraft, setGroupPricingDraft] = useState({
     market_ref_price: null,
     market_price_date: null,
   });
   const [groupPricingSaving, setGroupPricingSaving] = useState(false);
+  const [groupPricingSavedAt, setGroupPricingSavedAt] = useState(null);
 
   const [substrateDraft, setSubstrateDraft] = useState(null);
   const [substrateLoading, setSubstrateLoading] = useState(false);
@@ -429,6 +437,11 @@ export default function CustomCategories() {
     [visibleCategories]
   );
 
+  const allVisibleCategoryUnmappedCount = useMemo(
+    () => visibleCategories.reduce((sum, cat) => sum + (Number(cat.unmapped_item_count) || 0), 0),
+    [visibleCategories]
+  );
+
   const categoryGroupFilters = useMemo(
     () => (profile?.groups || []).map((group) => group.catlinedesc).filter(Boolean),
     [profile]
@@ -436,7 +449,9 @@ export default function CustomCategories() {
 
   /* ---- Unified sidebar groups (used by all categories) ---- */
   const sidebarGroups = useMemo(
-    () => (profile?.groups || []),
+    () => ([...(profile?.groups || [])].sort(
+      (a, b) => String(a?.catlinedesc || '').localeCompare(String(b?.catlinedesc || ''), undefined, { sensitivity: 'base' })
+    )),
     [profile]
   );
 
@@ -447,11 +462,9 @@ export default function CustomCategories() {
 
   const selectedSidebarItemGroups = useMemo(() => {
     const rows = selectedSidebarGroup?.item_groups || [];
-    return [...rows].sort((a, b) => {
-      const stockA = Number(a?.stock_qty) || 0;
-      const stockB = Number(b?.stock_qty) || 0;
-      return stockB - stockA;
-    });
+    return [...rows].sort(
+      (a, b) => String(a?.itemgroup || '').localeCompare(String(b?.itemgroup || ''), undefined, { sensitivity: 'base' })
+    );
   }, [selectedSidebarGroup]);
 
   const selectedSidebarPricing = useMemo(() => ({
@@ -652,9 +665,6 @@ export default function CustomCategories() {
       nextDrafts[item.item_key] = {
         market_ref_price: item.market_price ?? null,
         market_price_date: item.market_price_date ? String(item.market_price_date).slice(0, 10) : null,
-        map_price: item.map_price ?? null,
-        standard_price: item.standard_price ?? null,
-        last_po_price: item.last_po_price ?? null,
         mrp_type: item.mrp_type ?? null,
         reorder_point: item.reorder_point ?? null,
         safety_stock_kg: item.safety_stock_kg ?? null,
@@ -673,8 +683,8 @@ export default function CustomCategories() {
       setDetailSearchText('');
       setDetailSupplierFilter('all');
       setDetailAggregates(null);
-      setEstimationPreviewOpen(false);
       setGroupPricingDraft({ market_ref_price: null, market_price_date: null });
+      setGroupPricingSavedAt(null);
       return;
     }
 
@@ -688,6 +698,7 @@ export default function CustomCategories() {
       market_ref_price: igDetail?.totals?.market_price_wa ?? igDetail?.totals?.on_order_price_wa ?? igDetail?.totals?.stock_price_wa ?? null,
       market_price_date: firstMarketDate ? String(firstMarketDate).slice(0, 10) : null,
     });
+    setGroupPricingSavedAt(null);
   }, [igDetail]);
 
   const updateRowDraft = useCallback((itemKey, field, value) => {
@@ -704,34 +715,51 @@ export default function CustomCategories() {
 
   const handleSaveGroupMarketPrice = useCallback(async () => {
     if (!igDetail || !selectedCatId) return;
-    if (igDetail.scope_type !== 'category_group') {
-      message.warning('Group market price can only be updated from Category Group view.');
+
+    const scopeType = igDetail.scope_type;
+    const catlinedesc = String(igDetail.catlinedesc || '').trim();
+    const itemgroup = String(igDetail.itemgroup || '').trim();
+
+    if (scopeType === 'category_group' && !catlinedesc) {
+      message.warning('Category group context is missing for market price update.');
       return;
     }
-
-    const catlinedesc = String(igDetail.catlinedesc || '').trim();
-
-    if (!catlinedesc) {
-      message.warning('Category group context is missing for market price update.');
+    if (scopeType === 'item_group' && !itemgroup) {
+      message.warning('Item group context is missing for market price update.');
       return;
     }
 
     setGroupPricingSaving(true);
     try {
-      await axios.patch(
-        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/category-group/${encodeURIComponent(catlinedesc)}/market-price`,
-        {
-          market_ref_price: toOptionalNumber(groupPricingDraft.market_ref_price),
-          market_price_date: groupPricingDraft.market_price_date || null,
-        },
-        { headers }
-      );
+      const payload = {
+        market_ref_price: toOptionalNumber(groupPricingDraft.market_ref_price),
+        market_price_date: groupPricingDraft.market_price_date || null,
+      };
 
-      message.success('Category group market price updated');
+      if (scopeType === 'item_group') {
+        // Item Group level — include catlinedesc for scoped lookup
+        if (catlinedesc) payload.catlinedesc = catlinedesc;
+        await axios.patch(
+          `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/item-group/${encodeURIComponent(itemgroup)}/market-price`,
+          payload,
+          { headers }
+        );
+        message.success('Item group market price updated');
+      } else {
+        // Category Group level
+        await axios.patch(
+          `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/category-group/${encodeURIComponent(catlinedesc)}/market-price`,
+          payload,
+          { headers }
+        );
+        message.success('Category group market price updated');
+      }
+
+      setGroupPricingSavedAt(new Date());
       await refreshDetail();
       fetchProfile(selectedCatId, searchText);
     } catch (err) {
-      message.error(err.response?.data?.error || 'Failed to update category group market price');
+      message.error(err.response?.data?.error || 'Failed to update market price');
     } finally {
       setGroupPricingSaving(false);
     }
@@ -845,8 +873,9 @@ export default function CustomCategories() {
     }
   }, [rowDrafts, headers, message, igDetail, refreshDetail, fetchProfile, selectedCatId, searchText]);
 
-  const isNonResinDrawer = useMemo(
-    () => NON_RESIN_MATERIAL_CLASSES.has(normalizeKey(igDetail?.category?.material_class)),
+  // Material Profile tab is now universal — shown for ALL material classes (resins + non-resins)
+  const isMaterialProfileDrawer = useMemo(
+    () => !!igDetail?.category?.material_class,
     [igDetail]
   );
 
@@ -876,14 +905,6 @@ export default function CustomCategories() {
     [substrateCandidateItems]
   );
 
-  const substrateItemOptions = useMemo(
-    () => substrateCandidateItems.map((row) => ({
-      value: row.key,
-      label: `${row.item_code}${row.description ? ` - ${row.description}` : ''}`,
-    })),
-    [substrateCandidateItems]
-  );
-
   const substrateMappedKeys = useMemo(
     () => normalizeStringArray(substrateDraft?.mapped_material_keys),
     [substrateDraft]
@@ -895,28 +916,104 @@ export default function CustomCategories() {
   }, [substrateCandidateItems, substrateMappedKeys]);
 
   const substrateParamCards = useMemo(() => {
-    const params = substrateProfile?.spec_params || {};
-    const meta = substrateProfile?.param_meta || {};
+    // Support both new universal response (param_definitions + param_values)
+    // and legacy response (spec_params + param_meta)
+    const paramValues = substrateProfile?.param_values || {};
+    const paramDefs = substrateProfile?.param_definitions || [];
+    const legacyParams = substrateProfile?.spec_params || {};
+    const legacyMeta = substrateProfile?.param_meta || {};
 
-    return Object.entries(params)
-      .map(([key, rawValue]) => {
+    const cards = [];
+
+    if (Object.keys(paramValues).length) {
+      // New universal response shape — driven by param_definitions
+      const defMap = {};
+      const sortedDefs = [...paramDefs].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      for (const def of sortedDefs) {
+        defMap[def.field_key] = def;
+      }
+
+      // Render in definition order; include defs even if no value
+      const renderedKeys = new Set();
+      for (const def of sortedDefs) {
+        const key = def.field_key;
+        const agg = paramValues[key];
+        const value = agg ? toOptionalNumber(agg.weightedAvg) : null;
+        const decimals = String(key).includes('density') ? 4 : 2;
+        cards.push({
+          key,
+          value,
+          decimals,
+          unit: def.unit || '',
+          label: def.label || toPrettyLabel(key),
+          group: def.display_group || null,
+          min: agg ? toOptionalNumber(agg.min) : null,
+          max: agg ? toOptionalNumber(agg.max) : null,
+          count: agg?.count || 0,
+        });
+        renderedKeys.add(key);
+      }
+
+      // Append any values not in definitions (unknown params)
+      for (const [key, agg] of Object.entries(paramValues)) {
+        if (renderedKeys.has(key)) continue;
+        const value = toOptionalNumber(agg?.weightedAvg);
+        const decimals = String(key).includes('density') ? 4 : 2;
+        cards.push({
+          key,
+          value,
+          decimals,
+          unit: '',
+          label: toPrettyLabel(key),
+          group: null,
+          min: toOptionalNumber(agg?.min),
+          max: toOptionalNumber(agg?.max),
+          count: agg?.count || 0,
+        });
+      }
+    } else {
+      // Legacy response shape
+      for (const [key, rawValue] of Object.entries(legacyParams)) {
         const value = toOptionalNumber(rawValue);
-        const metaRow = meta?.[key] || {};
+        const metaRow = legacyMeta?.[key] || {};
         const parsedDecimals = Number(metaRow.decimals);
         const decimals = Number.isFinite(parsedDecimals)
           ? parsedDecimals
           : (String(key).includes('density') ? 4 : 2);
-
-        return {
+        cards.push({
           key,
           value,
           decimals,
           unit: metaRow.unit || '',
           label: metaRow.label || toPrettyLabel(key),
-        };
-      })
-      .sort((a, b) => a.label.localeCompare(b.label));
+          group: null,
+        });
+      }
+      cards.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    return cards;
   }, [substrateProfile]);
+
+  /** Group param cards by display_group for sectioned rendering */
+  const substrateParamGroups = useMemo(() => {
+    const groups = [];
+    const groupMap = new Map();
+
+    for (const card of substrateParamCards) {
+      const groupName = card.group || '';
+      if (!groupMap.has(groupName)) {
+        groupMap.set(groupName, []);
+        groups.push(groupName);
+      }
+      groupMap.get(groupName).push(card);
+    }
+
+    return groups.map((name) => ({
+      name,
+      cards: groupMap.get(name),
+    }));
+  }, [substrateParamCards]);
 
   const fetchSubstrateProfile = useCallback(async ({ materialClass, catDesc, appearance, materialKeys }) => {
     const keys = normalizeStringArray(materialKeys);
@@ -935,19 +1032,39 @@ export default function CustomCategories() {
       if (keys.length) params.set('material_keys', keys.join(','));
 
       const res = await axios.get(
-        `${API}/api/mes/master-data/items/substrate-profile?${params.toString()}`,
+        `${API}/api/mes/master-data/items/material-profile?${params.toString()}`,
         { headers }
       );
       setSubstrateProfile(res.data?.data || null);
     } catch {
-      setSubstrateProfile(null);
+      if (materialClass === 'resins') {
+        setSubstrateProfile(null);
+      } else {
+        // Fallback to legacy endpoint for DBs without migration 040
+        try {
+          const params = new URLSearchParams();
+          params.set('material_class', materialClass);
+          params.set('cat_desc', catDesc);
+          params.set('appearance', appearance || '');
+          if (keys.length) params.set('material_keys', keys.join(','));
+
+          const res = await axios.get(
+            `${API}/api/mes/master-data/items/substrate-profile?${params.toString()}`,
+            { headers }
+          );
+          setSubstrateProfile(res.data?.data || null);
+        } catch {
+          setSubstrateProfile(null);
+        }
+      }
     } finally {
       setSubstrateProfileLoading(false);
     }
   }, [headers]);
 
   const loadSubstrateConfig = useCallback(async (detail) => {
-    if (!detail || !NON_RESIN_MATERIAL_CLASSES.has(normalizeKey(detail.category?.material_class))) {
+    // Universal: now works for ALL material classes (resins + non-resins)
+    if (!detail || !detail.category?.material_class) {
       setSubstrateDraft(null);
       setSubstrateProfile(null);
       setSubstrateLoading(false);
@@ -958,6 +1075,7 @@ export default function CustomCategories() {
     const catDesc = String(detail.catlinedesc || detail.items?.[0]?.catlinedesc || '').trim();
     const appearance = String(detail.itemgroup || '').trim();
     const fallbackKeys = normalizeStringArray((detail.items || []).map((item) => item.mainitem || item.item_key));
+    const pricingFallback = deriveMaterialProfilePriceFallback(detail);
 
     if (!catDesc) {
       setSubstrateDraft(null);
@@ -967,24 +1085,49 @@ export default function CustomCategories() {
 
     setSubstrateLoading(true);
     try {
-      const res = await axios.get(
-        `${API}/api/mes/master-data/items/substrate-config`,
-        {
-          headers,
-          params: {
-            material_class: materialClass,
-            cat_desc: catDesc,
-            appearance,
-          },
-        }
-      );
+      let res;
+      try {
+        res = await axios.get(
+          `${API}/api/mes/master-data/items/material-config`,
+          {
+            headers,
+            params: {
+              material_class: materialClass,
+              cat_desc: catDesc,
+              appearance,
+            },
+          }
+        );
+      } catch (err) {
+        if (materialClass === 'resins') throw err;
+        // Fallback to legacy endpoint
+        res = await axios.get(
+          `${API}/api/mes/master-data/items/substrate-config`,
+          {
+            headers,
+            params: {
+              material_class: materialClass,
+              cat_desc: catDesc,
+              appearance,
+            },
+          }
+        );
+      }
 
       const existing = res.data?.data || {};
+      const hydratedExisting = { ...existing };
+      ['market_ref_price', 'market_price_date'].forEach((field) => {
+        if (hydratedExisting[field] == null || hydratedExisting[field] === '') {
+          hydratedExisting[field] = pricingFallback[field] ?? null;
+        }
+      });
+
       const configuredKeys = normalizeStringArray(existing.mapped_material_keys);
-      const mappedKeys = configuredKeys.length ? configuredKeys : fallbackKeys;
+      const hasPersistedConfig = Boolean(existing?.id);
+      const mappedKeys = hasPersistedConfig ? configuredKeys : (configuredKeys.length ? configuredKeys : fallbackKeys);
 
       const nextDraft = buildSubstrateDraft({
-        ...existing,
+        ...hydratedExisting,
         material_class: materialClass,
         cat_desc: catDesc,
         appearance,
@@ -996,10 +1139,11 @@ export default function CustomCategories() {
         materialClass,
         catDesc,
         appearance,
-        materialKeys: mappedKeys.length ? mappedKeys : fallbackKeys,
+        materialKeys: mappedKeys,
       });
     } catch (err) {
       const fallbackDraft = buildSubstrateDraft({
+        ...pricingFallback,
         material_class: materialClass,
         cat_desc: catDesc,
         appearance,
@@ -1031,7 +1175,6 @@ export default function CustomCategories() {
     if (!substrateDraft) return;
 
     const normalized = normalizeStringArray(values);
-    const keys = normalized.length ? normalized : substrateCandidateKeys;
 
     setSubstrateDraft((prev) => {
       if (!prev) return prev;
@@ -1045,9 +1188,9 @@ export default function CustomCategories() {
       materialClass: substrateDraft.material_class,
       catDesc: substrateDraft.cat_desc,
       appearance: substrateDraft.appearance,
-      materialKeys: keys,
+      materialKeys: normalized,
     });
-  }, [substrateDraft, substrateCandidateKeys, fetchSubstrateProfile]);
+  }, [substrateDraft, fetchSubstrateProfile]);
 
   const handleMapAllSubstrateItems = useCallback(() => {
     if (!substrateDraft || !substrateCandidateKeys.length) return;
@@ -1071,17 +1214,16 @@ export default function CustomCategories() {
   const handleRefreshSubstrateProfile = useCallback(() => {
     if (!substrateDraft) return;
 
-    const keys = substrateMappedKeys.length ? substrateMappedKeys : substrateCandidateKeys;
     fetchSubstrateProfile({
       materialClass: substrateDraft.material_class,
       catDesc: substrateDraft.cat_desc,
       appearance: substrateDraft.appearance,
-      materialKeys: keys,
+      materialKeys: substrateMappedKeys,
     });
-  }, [substrateDraft, substrateMappedKeys, substrateCandidateKeys, fetchSubstrateProfile]);
+  }, [substrateDraft, substrateMappedKeys, fetchSubstrateProfile]);
 
   const handleSaveSubstrateConfig = useCallback(async () => {
-    if (!substrateDraft || !isNonResinDrawer) return;
+    if (!substrateDraft || !isMaterialProfileDrawer) return;
 
     if (!substrateDraft.cat_desc) {
       message.warning('Category group (cat_desc) is required before saving substrate config.');
@@ -1102,12 +1244,8 @@ export default function CustomCategories() {
       yield_m2_per_kg: toOptionalNumber(substrateDraft.yield_m2_per_kg),
       roll_length_m: toOptionalNumber(substrateDraft.roll_length_m),
       core_diameter_mm: toOptionalNumber(substrateDraft.core_diameter_mm),
-      price_control: (substrateDraft.price_control || 'MAP').toUpperCase(),
       market_ref_price: toOptionalNumber(substrateDraft.market_ref_price),
       market_price_date: substrateDraft.market_price_date || null,
-      map_price: toOptionalNumber(substrateDraft.map_price),
-      standard_price: toOptionalNumber(substrateDraft.standard_price),
-      last_po_price: toOptionalNumber(substrateDraft.last_po_price),
       mrp_type: (substrateDraft.mrp_type || 'PD').toUpperCase(),
       reorder_point: toOptionalNumber(substrateDraft.reorder_point),
       safety_stock_kg: toOptionalNumber(substrateDraft.safety_stock_kg),
@@ -1117,11 +1255,21 @@ export default function CustomCategories() {
 
     setSubstrateSaving(true);
     try {
-      const res = await axios.put(
-        `${API}/api/mes/master-data/items/substrate-config`,
-        payload,
-        { headers }
-      );
+      let res;
+      try {
+        res = await axios.put(
+          `${API}/api/mes/master-data/items/material-profile-config`,
+          payload,
+          { headers }
+        );
+      } catch {
+        // Fallback to legacy endpoint
+        res = await axios.put(
+          `${API}/api/mes/master-data/items/substrate-config`,
+          payload,
+          { headers }
+        );
+      }
 
       const saved = buildSubstrateDraft({
         ...payload,
@@ -1132,12 +1280,11 @@ export default function CustomCategories() {
       setSubstrateDraft(saved);
       message.success('Substrate profile saved');
 
-      const keys = saved.mapped_material_keys.length ? saved.mapped_material_keys : substrateCandidateKeys;
       fetchSubstrateProfile({
         materialClass: saved.material_class,
         catDesc: saved.cat_desc,
         appearance: saved.appearance,
-        materialKeys: keys,
+        materialKeys: saved.mapped_material_keys,
       });
 
       if (selectedCatId) fetchProfile(selectedCatId, searchText);
@@ -1146,7 +1293,7 @@ export default function CustomCategories() {
     } finally {
       setSubstrateSaving(false);
     }
-  }, [substrateDraft, isNonResinDrawer, headers, message, substrateCandidateKeys, fetchSubstrateProfile, selectedCatId, fetchProfile, searchText]);
+  }, [substrateDraft, isMaterialProfileDrawer, headers, message, fetchSubstrateProfile, selectedCatId, fetchProfile, searchText]);
 
   const detailSupplierOptions = useMemo(() => {
     const values = Array.from(new Set(
@@ -1258,105 +1405,6 @@ export default function CustomCategories() {
     return [supplierLabel, searchLabel, `${visible}/${total} visible`].filter(Boolean).join(' • ');
   }, [detailAggregates, igDetail, detailVisibleItems.length, detailSupplierFilter, detailSearchText]);
 
-  const estimationHandoffPayload = useMemo(() => {
-    if (!igDetail) return null;
-
-    const specByKey = {};
-    aggregatedSpecRows.forEach((row) => {
-      specByKey[normalizeKey(row.key)] = toOptionalNumber(row.weightedAvg);
-    });
-
-    const pickSpec = (...keys) => {
-      for (const key of keys) {
-        const value = specByKey[normalizeKey(key)];
-        if (value != null) return value;
-      }
-      return null;
-    };
-
-    const visibleRows = (detailVisibleItems || []).slice(0, 250).map((item) => ({
-      item_code: item.mainitem || null,
-      description: item.maindescription || null,
-      supplier: item.supplier || null,
-      stock_qty: toOptionalNumber(item.stock_qty),
-      order_qty: toOptionalNumber(item.order_qty),
-      default_price: toOptionalNumber(item.default_price ?? item.on_order_price ?? item.stock_price),
-    }));
-
-    return {
-      source: 'custom_categories',
-      generated_at: new Date().toISOString(),
-      category_id: selectedCatId,
-      category_name: igDetail?.category?.name || null,
-      material_class: igDetail?.category?.material_class || null,
-      scope_type: igDetail.scope_type || 'item_group',
-      catlinedesc: igDetail.catlinedesc || null,
-      itemgroup: igDetail.itemgroup || null,
-      filters: {
-        supplier: detailSupplierFilter,
-        search: String(detailSearchText || '').trim() || null,
-        visible_count: Number(detailAggregates?.visible_count ?? detailVisibleItems.length) || 0,
-        total_count: Number(detailAggregates?.total_count ?? (igDetail?.items || []).length) || 0,
-      },
-      pricing: {
-        stock_price_wa: toOptionalNumber(visiblePricingTotals.stock_price_wa),
-        on_order_price_wa: toOptionalNumber(visiblePricingTotals.on_order_price_wa),
-        avg_price_wa: toOptionalNumber(visiblePricingTotals.avg_price_wa),
-        market_price_wa: toOptionalNumber(visiblePricingTotals.market_price_wa),
-        default_price: toOptionalNumber(visiblePricingTotals.default_price),
-      },
-      process_inputs: {
-        density_g_cm3: pickSpec('density_g_cm3', 'density'),
-        yield_m2_per_kg: pickSpec('yield_m2_per_kg'),
-        waste_pct: pickSpec('waste_pct', 'waste_percent', 'conversion_waste_pct', 'startup_waste_pct'),
-      },
-      items: visibleRows,
-      items_truncated: (detailVisibleItems || []).length > visibleRows.length,
-    };
-  }, [igDetail, selectedCatId, detailSupplierFilter, detailSearchText, detailAggregates, detailVisibleItems, visiblePricingTotals, aggregatedSpecRows]);
-
-  const handleSaveEstimationHandoff = useCallback(() => {
-    if (!estimationHandoffPayload) {
-      message.warning('No payload available for estimation handoff.');
-      return false;
-    }
-
-    try {
-      localStorage.setItem('mes_estimation_handoff_payload', JSON.stringify(estimationHandoffPayload));
-      message.success('Handoff payload saved for Estimation.');
-      return true;
-    } catch {
-      message.error('Failed to save estimation handoff payload.');
-      return false;
-    }
-  }, [estimationHandoffPayload, message]);
-
-  const handleCopyEstimationHandoff = useCallback(async () => {
-    if (!estimationHandoffPayload) {
-      message.warning('No payload available for estimation handoff.');
-      return;
-    }
-
-    if (!navigator?.clipboard?.writeText) {
-      message.warning('Clipboard API is not available in this browser context.');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(estimationHandoffPayload, null, 2));
-      message.success('Payload copied to clipboard.');
-    } catch {
-      message.error('Failed to copy payload to clipboard.');
-    }
-  }, [estimationHandoffPayload, message]);
-
-  const handleSaveAndOpenEstimation = useCallback(() => {
-    const saved = handleSaveEstimationHandoff();
-    if (!saved) return;
-    setEstimationPreviewOpen(false);
-    navigate('/mes/estimation');
-  }, [handleSaveEstimationHandoff, navigate]);
-
   return (
     <div style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -1369,33 +1417,87 @@ export default function CustomCategories() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {visibleCategories.map((cat) => {
               const active = selectedCatId === cat.id;
+              const unmappedCount = Number(cat.unmapped_item_count) || 0;
+              const unmappedRows = Array.isArray(cat.unmapped_items) ? cat.unmapped_items : [];
+              const overflowCount = Number(cat.unmapped_overflow_count) || 0;
+
+              const unmappedTooltip = (
+                <div style={{ maxWidth: 520 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                    {cat.name} — Unmapped Items ({unmappedCount.toLocaleString()})
+                  </div>
+                  {unmappedRows.length ? (
+                    <div style={{ maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
+                      {unmappedRows.map((row) => (
+                        <div key={`${cat.id}-${row.item_key || row.item_code}`} style={{ fontSize: 12, marginBottom: 4 }}>
+                          <Text strong>{row.item_code || '—'}</Text>
+                          {row.item_description ? (
+                            <span style={{ color: '#64748b' }}> — {row.item_description}</span>
+                          ) : null}
+                        </div>
+                      ))}
+                      {overflowCount > 0 ? (
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                          +{overflowCount.toLocaleString()} more
+                        </Text>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <Text type="secondary" style={{ fontSize: 12 }}>No unmapped items.</Text>
+                  )}
+                </div>
+              );
+
               return (
-                <Button
+                <div
                   key={cat.id}
-                  size="small"
-                  type="text"
-                  onClick={() => setSelectedCatId(cat.id)}
                   style={{
-                    borderRadius: 999,
-                    border: active ? '1px solid #7c3aed' : '1px solid #e2e8f0',
-                    background: active
-                      ? 'linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)'
-                      : '#ffffff',
-                    color: active ? '#ffffff' : '#312e81',
-                    fontWeight: active ? 700 : 500,
-                    paddingInline: 12,
-                    height: 30,
+                    display: 'inline-flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                    minWidth: 92,
                   }}
                 >
-                  {cat.name}
-                </Button>
+                  <Button
+                    size="small"
+                    type="text"
+                    onClick={() => setSelectedCatId(cat.id)}
+                    style={{
+                      borderRadius: 999,
+                      border: active ? '1px solid #7c3aed' : '1px solid #e2e8f0',
+                      background: active
+                        ? 'linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)'
+                        : '#ffffff',
+                      color: active ? '#ffffff' : '#312e81',
+                      fontWeight: active ? 700 : 500,
+                      paddingInline: 12,
+                      height: 30,
+                    }}
+                  >
+                    {cat.name}
+                  </Button>
+                  <Tooltip title={unmappedTooltip} placement="bottom" mouseEnterDelay={0.2}>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        lineHeight: '14px',
+                        cursor: 'help',
+                        color: unmappedCount > 0 ? '#cf1322' : '#52c41a',
+                        userSelect: 'none',
+                      }}
+                    >
+                      unmapped: {unmappedCount.toLocaleString()}
+                    </Text>
+                  </Tooltip>
+                </div>
               );
             })}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {visibleCategories.length} category{visibleCategories.length === 1 ? '' : 'ies'} · {allVisibleCategoryItemCount} mapped items
+              {visibleCategories.length} category{visibleCategories.length === 1 ? '' : 'ies'} · {allVisibleCategoryItemCount} mapped items · {allVisibleCategoryUnmappedCount} unmapped items
             </Text>
           </div>
 
@@ -1509,8 +1611,8 @@ export default function CustomCategories() {
                     />
                   )}
 
-                  <Row gutter={[12, 12]} align="stretch">
-                      <Col xs={24} xl={8} xxl={7}>
+                    <Row gutter={[12, 12]} align="stretch">
+                      <Col xs={24} xl={6} xxl={5}>
                         <Card size="small" title="Category Groups" styles={{ body: { padding: 10 } }}>
                           <div style={{ maxHeight: 560, overflowY: 'auto', display: 'grid', gap: 8 }}>
                             {sidebarGroups.map((group) => {
@@ -1558,7 +1660,7 @@ export default function CustomCategories() {
                         </Card>
                       </Col>
 
-                      <Col xs={24} xl={16} xxl={17}>
+                      <Col xs={24} xl={18} xxl={19}>
                         <Card
                           size="small"
                           title={selectedSidebarGroup ? `Item Groups — ${selectedSidebarGroup.catlinedesc}` : 'Item Groups'}
@@ -1614,7 +1716,7 @@ export default function CustomCategories() {
                           <Table
                             dataSource={selectedSidebarItemGroups}
                             rowKey="itemgroup"
-                            size="middle"
+                            size="small"
                             pagination={false}
                             locale={{ emptyText: 'No item groups under the selected category group.' }}
                             scroll={{ y: 470 }}
@@ -1622,38 +1724,61 @@ export default function CustomCategories() {
                               {
                                 title: 'Item Group',
                                 dataIndex: 'itemgroup',
-                                render: (v) => <Text strong style={{ fontSize: 14 }}>{v}</Text>,
+                                width: 220,
+                                render: (v) => <Text strong style={{ fontSize: 13, whiteSpace: 'normal' }}>{v}</Text>,
                               },
                               {
-                                title: 'Mapped Items',
-                                dataIndex: 'item_count',
+                                title: 'Stock Price (W.A)',
+                                dataIndex: 'stock_price_wa',
                                 align: 'center',
-                                width: 110,
+                                width: 100,
+                                render: (v) => <span style={{ color: '#389e0d' }}>{fmtCurrency(v, 2)}</span>,
+                              },
+                              {
+                                title: 'On Order Price (W.A)',
+                                dataIndex: 'on_order_price_wa',
+                                align: 'center',
+                                width: 108,
+                                render: (v) => <span style={{ color: '#d46b08' }}>{fmtCurrency(v, 2)}</span>,
+                              },
+                              {
+                                title: 'Combined Weighted',
+                                dataIndex: 'avg_price_wa',
+                                align: 'center',
+                                width: 108,
+                                render: (v) => <span style={{ color: '#1d39c4' }}>{fmtCurrency(v, 2)}</span>,
+                              },
+                              {
+                                title: 'Market Price',
+                                dataIndex: 'market_price_wa',
+                                align: 'center',
+                                width: 100,
+                                render: (v) => <span style={{ color: '#7c3aed' }}>{fmtCurrency(v, 2)}</span>,
                               },
                               {
                                 title: 'Stock Qty',
                                 dataIndex: 'stock_qty',
                                 align: 'center',
-                                width: 120,
+                                width: 90,
                                 render: fmtQty,
                               },
                               {
                                 title: 'Order Qty',
                                 dataIndex: 'order_qty',
                                 align: 'center',
-                                width: 120,
+                                width: 90,
                                 render: fmtQty,
                               },
                               {
                                 title: 'Total Qty',
                                 align: 'center',
-                                width: 120,
+                                width: 90,
                                 render: (_, rec) => fmtQty((Number(rec.stock_qty) || 0) + (Number(rec.order_qty) || 0)),
                               },
                               {
                                 title: 'Action',
                                 align: 'center',
-                                width: 100,
+                                width: 64,
                                 render: (_, rec) => (
                                   <Button
                                     size="small"
@@ -1681,6 +1806,7 @@ export default function CustomCategories() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={handleSaveCat}
+        forceRender
         okText="Save"
       >
         <Form form={form} layout="vertical">
@@ -1695,7 +1821,7 @@ export default function CustomCategories() {
             label="Material Class"
             help="Determines which parameter profile is used"
           >
-            <Select allowClear placeholder="Select" options={materialClassFieldOptions} />
+            <Select allowClear placeholder="Select" style={{ width: '100%' }} options={materialClassFieldOptions} />
           </Form.Item>
         </Form>
       </Modal>
@@ -1763,6 +1889,7 @@ export default function CustomCategories() {
               : `Item Group: ${igDetail.itemgroup}`)
             : 'Category / Item Group Detail'
         }
+        rootClassName="mes-fullscreen-modal"
         open={igDrawerOpen}
         onCancel={() => {
           setIgDrawerOpen(false);
@@ -1770,15 +1897,19 @@ export default function CustomCategories() {
           setRowDrafts({});
           setDetailSearchText('');
           setDetailSupplierFilter('all');
-          setEstimationPreviewOpen(false);
           setGroupPricingDraft({ market_ref_price: null, market_price_date: null });
-          bulkMrpForm.resetFields();
+          setGroupPricingSavedAt(null);
+          if (igDetail) bulkMrpForm.resetFields();
         }}
         footer={null}
         width="100vw"
-        style={{ top: 0, paddingBottom: 0 }}
-        styles={{ body: { height: 'calc(100vh - 110px)', overflow: 'auto', padding: 12 } }}
-        destroyOnClose
+        style={{ top: 0, paddingBottom: 0, maxWidth: '100vw', margin: 0 }}
+        styles={{
+          wrapper: { inset: 0, padding: 0, overflow: 'hidden' },
+          content: { height: '100vh', borderRadius: 0, display: 'flex', flexDirection: 'column' },
+          body: { flex: 1, minHeight: 0, padding: 12, maxHeight: 'none', overflowY: 'auto', overflowX: 'hidden' },
+        }}
+        destroyOnHidden
       >
         <Spin spinning={igLoading}>
           {igDetail && (
@@ -1819,16 +1950,62 @@ export default function CustomCategories() {
                         <Col xs={24} md={15}>
                           <Tag color="processing" style={{ marginTop: 2 }}>{detailScopeBadge}</Tag>
                         </Col>
-                        <Col xs={24} md={9} style={{ textAlign: 'right' }}>
-                          <Button
-                            size="small"
-                            onClick={() => setEstimationPreviewOpen(true)}
-                            disabled={!Number(detailAggregates?.visible_count || 0)}
-                          >
-                            Use in Estimation
-                          </Button>
-                        </Col>
                       </Row>
+
+                      <Card
+                        size="small"
+                        style={{ marginBottom: 12, border: '1px solid #dbeafe', background: '#f8fbff' }}
+                        title={(
+                          <Space size={8}>
+                            <Text strong>Group Market Price</Text>
+                            <Tag color="processing">
+                              {igDetail.scope_type === 'category_group' ? 'Category Group' : 'Item Group'} level
+                            </Tag>
+                          </Space>
+                        )}
+                      >
+                        <Row gutter={[10, 10]} align="bottom">
+                          <Col xs={24} md={9} lg={8}>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Market Price</div>
+                            <InputNumber
+                              size="small"
+                              min={0}
+                              step={0.01}
+                              style={{ width: '100%' }}
+                              value={groupPricingDraft.market_ref_price}
+                              onChange={(value) => setGroupPricingDraft((prev) => ({ ...prev, market_ref_price: value }))}
+                            />
+                          </Col>
+                          <Col xs={24} md={8} lg={7}>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Market Date</div>
+                            <Input
+                              size="small"
+                              type="date"
+                              value={groupPricingDraft.market_price_date || ''}
+                              onChange={(e) => setGroupPricingDraft((prev) => ({ ...prev, market_price_date: e.target.value || null }))}
+                            />
+                          </Col>
+                          <Col xs={24} md={7} lg={5}>
+                            <Button
+                              size="small"
+                              type="primary"
+                              loading={groupPricingSaving}
+                              onClick={handleSaveGroupMarketPrice}
+                              block
+                            >
+                              Save Market Price
+                            </Button>
+                          </Col>
+                        </Row>
+                        <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block' }}>
+                          Saved value applies to all items in this {igDetail.scope_type === 'category_group' ? 'category group' : 'item group'}.
+                        </Text>
+                        {groupPricingSavedAt && (
+                          <Text type="secondary" style={{ fontSize: 11, marginTop: 2, display: 'block' }}>
+                            Last saved: {groupPricingSavedAt.toLocaleString()}
+                          </Text>
+                        )}
+                      </Card>
 
                       <Row gutter={[12, 12]}>
                         <Col xs={24} xl={16} xxl={16}>
@@ -1880,48 +2057,6 @@ export default function CustomCategories() {
                                 },
                               ]}
                             />
-
-                            <Divider style={{ margin: '12px 0 10px 0' }} />
-
-                            <Row gutter={10} align="bottom">
-                              <Col span={10}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Group Market Price</div>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  step={0.01}
-                                  style={{ width: '100%' }}
-                                  value={groupPricingDraft.market_ref_price}
-                                  disabled={igDetail.scope_type !== 'category_group'}
-                                  onChange={(value) => setGroupPricingDraft((prev) => ({ ...prev, market_ref_price: value }))}
-                                />
-                              </Col>
-                              <Col span={8}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Market Date</div>
-                                <Input
-                                  size="small"
-                                  type="date"
-                                  value={groupPricingDraft.market_price_date || ''}
-                                  disabled={igDetail.scope_type !== 'category_group'}
-                                  onChange={(e) => setGroupPricingDraft((prev) => ({ ...prev, market_price_date: e.target.value || null }))}
-                                />
-                              </Col>
-                              <Col span={6}>
-                                <Button
-                                  size="small"
-                                  type="primary"
-                                  loading={groupPricingSaving}
-                                  disabled={igDetail.scope_type !== 'category_group'}
-                                  onClick={handleSaveGroupMarketPrice}
-                                  block
-                                >
-                                  Save Market Price
-                                </Button>
-                              </Col>
-                            </Row>
-                            <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block' }}>
-                              Market price is maintained at group level and applied to all items in this category group.
-                            </Text>
                           </Card>
                         </Col>
 
@@ -1954,10 +2089,14 @@ export default function CustomCategories() {
                 {
                   key: 'mrp',
                   label: 'MRP',
+                  forceRender: true,
                   children: (
                     <>
-                      <Text type="secondary" style={{ fontSize: 11, marginBottom: 10, display: 'block' }}>
+                      <Text type="secondary" style={{ fontSize: 11, marginBottom: 4, display: 'block' }}>
                         Card-based MRP editor for the current group. Use bulk apply for quick defaults.
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 11, marginBottom: 10, display: 'block' }}>
+                        {MRP_TYPE_LEGEND}
                       </Text>
 
                       <Card size="small" style={{ marginBottom: 12, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
@@ -1965,12 +2104,12 @@ export default function CustomCategories() {
                           <Row gutter={[10, 8]} align="bottom">
                             <Col xs={12} md={4}>
                               <Form.Item name="mrp_type" label="MRP Type" style={{ marginBottom: 0 }}>
-                                <Select allowClear options={MRP_TYPE_OPTIONS} />
+                                <Select allowClear style={{ width: '100%' }} options={MRP_TYPE_OPTIONS} />
                               </Form.Item>
                             </Col>
                             <Col xs={12} md={4}>
                               <Form.Item name="lot_size_rule" label="Lot Size" style={{ marginBottom: 0 }}>
-                                <Select allowClear options={LOT_SIZE_OPTIONS} />
+                                <Select allowClear style={{ width: '100%' }} options={LOT_SIZE_OPTIONS} />
                               </Form.Item>
                             </Col>
                             <Col xs={12} md={4}>
@@ -2100,10 +2239,10 @@ export default function CustomCategories() {
                     </>
                   ),
                 },
-                ...(isNonResinDrawer ? [
+                ...(isMaterialProfileDrawer ? [
                   {
-                    key: 'substrate-profile',
-                    label: 'Substrate Profile',
+                    key: 'material-profile',
+                    label: 'Material Profile',
                     children: (
                       <Spin spinning={substrateLoading || substrateProfileLoading}>
 
@@ -2157,8 +2296,9 @@ export default function CustomCategories() {
                           </Col>
                         </Row>
 
+                        {/* ── Supplier (universal) + non-resin identity fields ── */}
                         <Row gutter={12} style={{ marginBottom: 4 }}>
-                          <Col span={8}>
+                          <Col span={substrateDraft?.material_class === 'resins' ? 24 : 8}>
                             <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Supplier Name</div>
                             <Input
                               size="small"
@@ -2166,126 +2306,140 @@ export default function CustomCategories() {
                               onChange={(e) => updateSubstrateDraft('supplier_name', e.target.value || null)}
                             />
                           </Col>
-                          <Col span={8}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Resin Type / Material</div>
-                            <Input
-                              size="small"
-                              value={substrateDraft?.resin_type || ''}
-                              onChange={(e) => updateSubstrateDraft('resin_type', e.target.value || null)}
-                            />
-                          </Col>
-                          <Col span={8}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Alloy Code</div>
-                            <Input
-                              size="small"
-                              value={substrateDraft?.alloy_code || ''}
-                              onChange={(e) => updateSubstrateDraft('alloy_code', e.target.value || null)}
-                            />
-                          </Col>
+                          {substrateDraft?.material_class !== 'resins' && (
+                            <>
+                              <Col span={8}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Resin Type / Material</div>
+                                <Input
+                                  size="small"
+                                  value={substrateDraft?.resin_type || ''}
+                                  onChange={(e) => updateSubstrateDraft('resin_type', e.target.value || null)}
+                                />
+                              </Col>
+                              <Col span={8}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Alloy Code</div>
+                                <Input
+                                  size="small"
+                                  value={substrateDraft?.alloy_code || ''}
+                                  onChange={(e) => updateSubstrateDraft('alloy_code', e.target.value || null)}
+                                />
+                              </Col>
+                            </>
+                          )}
                         </Row>
 
-                        <Row gutter={12} style={{ marginBottom: 4 }}>
-                          <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Density</div>
-                            <InputNumber
-                              size="small"
-                              min={0}
-                              step={0.0001}
-                              style={{ width: '100%' }}
-                              value={substrateDraft?.density_g_cm3}
-                              onChange={(v) => updateSubstrateDraft('density_g_cm3', v)}
-                            />
-                          </Col>
-                          <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Solid %</div>
-                            <InputNumber
-                              size="small"
-                              min={0}
-                              max={100}
-                              step={0.1}
-                              style={{ width: '100%' }}
-                              value={substrateDraft?.solid_pct}
-                              onChange={(v) => updateSubstrateDraft('solid_pct', v)}
-                            />
-                          </Col>
-                          <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Thickness (mic)</div>
-                            <InputNumber
-                              size="small"
-                              min={0}
-                              step={0.1}
-                              style={{ width: '100%' }}
-                              value={substrateDraft?.micron_thickness}
-                              onChange={(v) => updateSubstrateDraft('micron_thickness', v)}
-                            />
-                          </Col>
-                          <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Width (mm)</div>
-                            <InputNumber
-                              size="small"
-                              min={0}
-                              step={1}
-                              style={{ width: '100%' }}
-                              value={substrateDraft?.width_mm}
-                              onChange={(v) => updateSubstrateDraft('width_mm', v)}
-                            />
-                          </Col>
-                          <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Yield (m²/kg)</div>
-                            <InputNumber
-                              size="small"
-                              min={0}
-                              step={0.01}
-                              style={{ width: '100%' }}
-                              value={substrateDraft?.yield_m2_per_kg}
-                              onChange={(v) => updateSubstrateDraft('yield_m2_per_kg', v)}
-                            />
-                          </Col>
-                          <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Roll Length (m)</div>
-                            <InputNumber
-                              size="small"
-                              min={0}
-                              step={1}
-                              style={{ width: '100%' }}
-                              value={substrateDraft?.roll_length_m}
-                              onChange={(v) => updateSubstrateDraft('roll_length_m', v)}
-                            />
-                          </Col>
-                        </Row>
+                        {/* ── Physical property overrides (non-resin only) ── */}
+                        {substrateDraft?.material_class !== 'resins' && (
+                          <>
+                            <Row gutter={12} style={{ marginBottom: 4 }}>
+                              <Col span={4}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Density</div>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={0.0001}
+                                  style={{ width: '100%' }}
+                                  value={substrateDraft?.density_g_cm3}
+                                  onChange={(v) => updateSubstrateDraft('density_g_cm3', v)}
+                                />
+                              </Col>
+                              <Col span={4}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Solid %</div>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  max={100}
+                                  step={0.1}
+                                  style={{ width: '100%' }}
+                                  value={substrateDraft?.solid_pct}
+                                  onChange={(v) => updateSubstrateDraft('solid_pct', v)}
+                                />
+                              </Col>
+                              <Col span={4}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Thickness (mic)</div>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={0.1}
+                                  style={{ width: '100%' }}
+                                  value={substrateDraft?.micron_thickness}
+                                  onChange={(v) => updateSubstrateDraft('micron_thickness', v)}
+                                />
+                              </Col>
+                              <Col span={4}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Width (mm)</div>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={1}
+                                  style={{ width: '100%' }}
+                                  value={substrateDraft?.width_mm}
+                                  onChange={(v) => updateSubstrateDraft('width_mm', v)}
+                                />
+                              </Col>
+                              <Col span={4}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Yield (m²/kg)</div>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={0.01}
+                                  style={{ width: '100%' }}
+                                  value={substrateDraft?.yield_m2_per_kg}
+                                  onChange={(v) => updateSubstrateDraft('yield_m2_per_kg', v)}
+                                />
+                              </Col>
+                              <Col span={4}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Roll Length (m)</div>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={1}
+                                  style={{ width: '100%' }}
+                                  value={substrateDraft?.roll_length_m}
+                                  onChange={(v) => updateSubstrateDraft('roll_length_m', v)}
+                                />
+                              </Col>
+                            </Row>
 
-                        <Row gutter={12} style={{ marginBottom: 10 }}>
+                            <Row gutter={12} style={{ marginBottom: 10 }}>
+                              <Col span={4}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Core Dia (mm)</div>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={0.1}
+                                  style={{ width: '100%' }}
+                                  value={substrateDraft?.core_diameter_mm}
+                                  onChange={(v) => updateSubstrateDraft('core_diameter_mm', v)}
+                                />
+                              </Col>
+                            </Row>
+                          </>
+                        )}
+
+                        {/* ── Pricing & MRP (universal — all categories) ── */}
+                        <Row gutter={12} style={{ marginBottom: 6 }}>
                           <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Core Dia (mm)</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Stock Price (WA)</div>
                             <InputNumber
                               size="small"
-                              min={0}
-                              step={0.1}
                               style={{ width: '100%' }}
-                              value={substrateDraft?.core_diameter_mm}
-                              onChange={(v) => updateSubstrateDraft('core_diameter_mm', v)}
-                            />
-                          </Col>
-                          <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Price Ctrl</div>
-                            <Select
-                              size="small"
-                              value={substrateDraft?.price_control || 'MAP'}
-                              options={[{ value: 'MAP', label: 'MAP' }, { value: 'STD', label: 'STD' }]}
-                              onChange={(v) => updateSubstrateDraft('price_control', v || 'MAP')}
+                              value={substrateProfile?.pricing?.stock_price_wa ?? null}
+                              disabled
                             />
                           </Col>
                           <Col span={4}>
                             <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>MRP Type</div>
                             <Select
                               size="small"
+                              style={{ width: '100%' }}
                               value={substrateDraft?.mrp_type || 'PD'}
                               options={MRP_TYPE_OPTIONS}
                               onChange={(v) => updateSubstrateDraft('mrp_type', v || 'PD')}
                             />
                           </Col>
                           <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Reorder Pt</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Reorder Point</div>
                             <InputNumber
                               size="small"
                               min={0}
@@ -2318,6 +2472,9 @@ export default function CustomCategories() {
                             />
                           </Col>
                         </Row>
+                        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 10 }}>
+                          {MRP_TYPE_LEGEND}
+                        </Text>
 
                         <Row gutter={12} style={{ marginBottom: 14 }}>
                           <Col span={4}>
@@ -2332,36 +2489,30 @@ export default function CustomCategories() {
                             />
                           </Col>
                           <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>MAP Price</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Stock Price (WA)</div>
                             <InputNumber
                               size="small"
-                              min={0}
-                              step={0.01}
                               style={{ width: '100%' }}
-                              value={substrateDraft?.map_price}
-                              onChange={(v) => updateSubstrateDraft('map_price', v)}
+                              value={substrateProfile?.pricing?.stock_price_wa ?? null}
+                              disabled
                             />
                           </Col>
                           <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Standard Price</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>On Order Price (WA)</div>
                             <InputNumber
                               size="small"
-                              min={0}
-                              step={0.01}
                               style={{ width: '100%' }}
-                              value={substrateDraft?.standard_price}
-                              onChange={(v) => updateSubstrateDraft('standard_price', v)}
+                              value={substrateProfile?.pricing?.on_order_price_wa ?? null}
+                              disabled
                             />
                           </Col>
                           <Col span={4}>
-                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Last PO</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Combined Weighted</div>
                             <InputNumber
                               size="small"
-                              min={0}
-                              step={0.01}
                               style={{ width: '100%' }}
-                              value={substrateDraft?.last_po_price}
-                              onChange={(v) => updateSubstrateDraft('last_po_price', v)}
+                              value={substrateProfile?.pricing?.combined_price_wa ?? null}
+                              disabled
                             />
                           </Col>
                           <Col span={4}>
@@ -2378,67 +2529,87 @@ export default function CustomCategories() {
                         <Divider orientation="left" style={{ marginTop: 8 }}>Mapped Material Keys</Divider>
                         <Space style={{ marginBottom: 8 }}>
                           <Button size="small" onClick={handleMapAllSubstrateItems} disabled={!substrateCandidateItems.length}>
-                            Map All Group Items
+                            Select All Group Items
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={() => handleSubstrateMappedKeysChange([])}
+                            disabled={!substrateMappedKeys.length}
+                          >
+                            Clear Selection
                           </Button>
                           <Button size="small" icon={<ReloadOutlined />} onClick={handleRefreshSubstrateProfile}>
                             Refresh Profile
                           </Button>
                         </Space>
-                        <Select
-                          mode="multiple"
-                          allowClear
-                          style={{ width: '100%', marginBottom: 10 }}
-                          placeholder="Select mapped material keys for this substrate bucket"
-                          optionFilterProp="label"
-                          value={substrateMappedKeys}
-                          options={substrateItemOptions}
-                          onChange={handleSubstrateMappedKeysChange}
+                        <Text type="secondary" style={{ display: 'block', fontSize: 11, marginBottom: 8 }}>
+                          Tick or untick the checkboxes to map or unmap items, then click Save Material Profile to persist.
+                        </Text>
+                        <Table
+                          size="small"
+                          style={{ marginBottom: 12 }}
+                          pagination={false}
+                          dataSource={substrateCandidateItems}
+                          rowKey="key"
+                          scroll={{ y: 220 }}
+                          rowSelection={{
+                            selectedRowKeys: substrateMappedKeys,
+                            onChange: handleSubstrateMappedKeysChange,
+                            preserveSelectedRowKeys: true,
+                          }}
+                          columns={[
+                            { title: 'Item', dataIndex: 'item_code', width: 220, render: (v) => <Text strong style={{ fontSize: 12 }}>{v}</Text> },
+                            { title: 'Description', dataIndex: 'description', ellipsis: true },
+                            { title: 'Stock Qty', dataIndex: 'stock_qty', width: 110, align: 'center', render: fmtQty },
+                            { title: 'Order Qty', dataIndex: 'order_qty', width: 110, align: 'center', render: fmtQty },
+                          ]}
                         />
-
-                        {unmappedSubstrateItems.length > 0 && (
-                          <Table
-                            size="small"
-                            style={{ marginBottom: 12 }}
-                            pagination={false}
-                            dataSource={unmappedSubstrateItems}
-                            rowKey="key"
-                            scroll={{ y: 180 }}
-                            columns={[
-                              { title: 'Unmapped Item', dataIndex: 'item_code', width: 180, render: (v) => <Text strong style={{ fontSize: 12 }}>{v}</Text> },
-                              { title: 'Description', dataIndex: 'description', ellipsis: true },
-                              { title: 'Stock Qty', dataIndex: 'stock_qty', width: 110, align: 'center', render: fmtQty },
-                              { title: 'Order Qty', dataIndex: 'order_qty', width: 110, align: 'center', render: fmtQty },
-                            ]}
-                          />
-                        )}
 
                         <Divider orientation="left" style={{ marginTop: 8 }}>Aggregated Parameters</Divider>
                         {substrateParamCards.length ? (
-                          <Row gutter={[8, 8]}>
-                            {substrateParamCards.map((param) => (
-                              <Col span={4} key={param.key}>
-                                <Card size="small" style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{param.label}</div>
-                                  <div style={{ fontSize: 14, fontWeight: 700 }}>
-                                    {param.value != null
-                                      ? Number(param.value).toLocaleString(undefined, {
-                                        minimumFractionDigits: param.decimals,
-                                        maximumFractionDigits: param.decimals,
-                                      })
-                                      : '—'}
-                                  </div>
-                                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{param.unit || ' '}</div>
-                                </Card>
-                              </Col>
-                            ))}
-                          </Row>
+                          substrateParamGroups.map((group) => (
+                            <div key={group.name || '_ungrouped'} style={{ marginBottom: 12 }}>
+                              {group.name && (
+                                <div style={{
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: '#475569',
+                                  borderBottom: '1px solid #e2e8f0',
+                                  paddingBottom: 4,
+                                  marginBottom: 8,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em',
+                                }}>
+                                  {group.name}
+                                </div>
+                              )}
+                              <Row gutter={[8, 8]}>
+                                {group.cards.map((param) => (
+                                  <Col span={4} key={param.key}>
+                                    <Card size="small" style={{ textAlign: 'center' }}>
+                                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{param.label}</div>
+                                      <div style={{ fontSize: 14, fontWeight: 700 }}>
+                                        {param.value != null
+                                          ? Number(param.value).toLocaleString(undefined, {
+                                            minimumFractionDigits: param.decimals,
+                                            maximumFractionDigits: param.decimals,
+                                          })
+                                          : '—'}
+                                      </div>
+                                      <div style={{ fontSize: 10, color: '#94a3b8' }}>{param.unit || ' '}</div>
+                                    </Card>
+                                  </Col>
+                                ))}
+                              </Row>
+                            </div>
+                          ))
                         ) : (
-                          <Text type="secondary">No mapped non-resin parameters available for this bucket yet.</Text>
+                          <Text type="secondary">No mapped parameters available for this bucket yet.</Text>
                         )}
 
                         <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
                           <Button type="primary" loading={substrateSaving} onClick={handleSaveSubstrateConfig}>
-                            Save Substrate Profile
+                            Save Material Profile
                           </Button>
                         </div>
                       </Spin>
@@ -2449,61 +2620,6 @@ export default function CustomCategories() {
             />
           )}
         </Spin>
-      </Modal>
-
-      <Modal
-        title="Use in Estimation"
-        open={estimationPreviewOpen}
-        onCancel={() => setEstimationPreviewOpen(false)}
-        width={900}
-        footer={[
-          <Button key="close" onClick={() => setEstimationPreviewOpen(false)}>Close</Button>,
-          <Button key="copy" onClick={handleCopyEstimationHandoff} disabled={!estimationHandoffPayload}>Copy Payload</Button>,
-          <Button key="save" onClick={handleSaveEstimationHandoff} disabled={!estimationHandoffPayload}>Save Handoff</Button>,
-          <Button key="save-open" type="primary" onClick={handleSaveAndOpenEstimation} disabled={!estimationHandoffPayload}>Save & Open Estimation</Button>,
-        ]}
-      >
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 10 }}
-          message="Pricing inputs remain unchanged. This action only prepares and previews handoff payload for Estimation."
-        />
-
-        {estimationHandoffPayload && (
-          <Row gutter={[8, 8]} style={{ marginBottom: 10 }}>
-            <Col xs={12} md={6}>
-              <div style={{ padding: '2px 0' }}>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Default Price</div>
-                <div style={{ fontWeight: 700 }}>{fmtCurrency(estimationHandoffPayload.pricing.default_price, 2)}</div>
-              </div>
-            </Col>
-            <Col xs={12} md={6}>
-              <div style={{ padding: '2px 0' }}>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Density</div>
-                <div style={{ fontWeight: 700 }}>{fmtNum(estimationHandoffPayload.process_inputs.density_g_cm3, 4)}</div>
-              </div>
-            </Col>
-            <Col xs={12} md={6}>
-              <div style={{ padding: '2px 0' }}>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Yield (m2/kg)</div>
-                <div style={{ fontWeight: 700 }}>{fmtNum(estimationHandoffPayload.process_inputs.yield_m2_per_kg, 2)}</div>
-              </div>
-            </Col>
-            <Col xs={12} md={6}>
-              <div style={{ padding: '2px 0' }}>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Waste %</div>
-                <div style={{ fontWeight: 700 }}>{fmtNum(estimationHandoffPayload.process_inputs.waste_pct, 2)}</div>
-              </div>
-            </Col>
-          </Row>
-        )}
-
-        <Input.TextArea
-          readOnly
-          value={estimationHandoffPayload ? JSON.stringify(estimationHandoffPayload, null, 2) : ''}
-          autoSize={{ minRows: 12, maxRows: 22 }}
-        />
       </Modal>
     </div>
   );

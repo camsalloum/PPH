@@ -2274,6 +2274,9 @@ module.exports = function (router) {
               bi.item_description,
               bi.catlinedesc
             FROM bucket_items bi
+            LEFT JOIN mes_item_group_overrides o
+              ON o.category_id = bi.category_id
+             AND o.item_key = bi.item_key
             LEFT JOIN LATERAL (
               SELECT
                 mp.id,
@@ -2292,6 +2295,7 @@ module.exports = function (router) {
               LIMIT 1
             ) cfg ON TRUE
             WHERE cfg.id IS NOT NULL
+              AND o.item_key IS NULL
               AND NOT EXISTS (
                 SELECT 1
                 FROM UNNEST(cfg.mapped_material_keys) AS mk
@@ -2549,7 +2553,31 @@ module.exports = function (router) {
         ORDER BY stock_qty DESC, catlinedesc
       `, [catId, oracleCats]);
 
-      res.json({ success: true, data: groups });
+      // Also include custom groups for this category
+      const { rows: customGroups } = await pool.query(`
+        SELECT
+          g.catlinedesc,
+          g.id AS group_id,
+          true AS is_selected,
+          true AS is_custom,
+          g.display_name,
+          COALESCE(oc.item_count, 0)::INT AS item_count,
+          COALESCE(oc.stock_qty, 0)::NUMERIC AS stock_qty
+        FROM mes_item_category_groups g
+        LEFT JOIN (
+          SELECT o.category_id, o.override_group_name,
+            COUNT(DISTINCT o.item_key)::INT AS item_count,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0)::NUMERIC AS stock_qty
+          FROM mes_item_group_overrides o
+          LEFT JOIN fp_actualrmdata r ON LOWER(TRIM(r.mainitem)) = o.item_key
+          GROUP BY o.category_id, o.override_group_name
+        ) oc ON oc.category_id = g.category_id AND oc.override_group_name = g.catlinedesc
+        WHERE g.category_id = $1 AND g.is_custom = true AND g.is_active = true
+      `, [catId]);
+
+      // Merge: oracle groups first, then custom groups
+      const allGroups = [...groups, ...customGroups];
+      res.json({ success: true, data: allGroups });
     } catch (err) {
       logger.error('GET /items/custom-categories/:id/available-groups error:', err);
       res.status(500).json({ success: false, error: 'Failed to fetch available groups' });
@@ -2567,16 +2595,17 @@ module.exports = function (router) {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        // Deactivate all existing groups for this category
-        await client.query('UPDATE mes_item_category_groups SET is_active=false, updated_at=NOW() WHERE category_id=$1', [catId]);
+        // Deactivate only Oracle (non-custom) groups for this category; keep custom groups intact
+        await client.query('UPDATE mes_item_category_groups SET is_active=false, updated_at=NOW() WHERE category_id=$1 AND is_custom = false', [catId]);
         // Upsert provided groups
         for (const g of groups) {
           if (!g.catlinedesc?.trim()) continue;
           await client.query(`
-            INSERT INTO mes_item_category_groups (category_id, catlinedesc, is_active)
-            VALUES ($1, $2, true)
+            INSERT INTO mes_item_category_groups (category_id, catlinedesc, is_active, is_custom)
+            VALUES ($1, $2, true, false)
             ON CONFLICT (category_id, catlinedesc) DO UPDATE SET
               is_active = true,
+              is_custom = CASE WHEN mes_item_category_groups.is_custom THEN true ELSE false END,
               updated_at = NOW()
           `, [catId, g.catlinedesc.trim()]);
         }
@@ -2619,7 +2648,13 @@ module.exports = function (router) {
         return res.json({ success: true, data: { category, groups: [], totals: {}, parameters: {} } });
       }
 
-      const catlinedescList = selectedGroups.map(g => g.catlinedesc);
+      // Separate Oracle vs custom groups
+      const oracleGroups = selectedGroups.filter(g => !g.is_custom);
+      const customGroups = selectedGroups.filter(g => !!g.is_custom);
+      const oracleDescList = oracleGroups.map(g => g.catlinedesc);
+      const customGroupNames = customGroups.map(g => g.catlinedesc);
+      // catlinedescList used for TDS/non-resin parameter queries (includes Oracle only)
+      const catlinedescList = oracleDescList;
 
       const { rows: rmColumnsRows } = await pool.query(`
         SELECT column_name
@@ -2648,8 +2683,25 @@ module.exports = function (router) {
       const rmSearchSqlR = buildRmSearchSql('r', 2);
       const rmSearchSqlTds = buildRmSearchSql('', 3);
 
-      // ── Level 2: Aggregate per catlinedesc ──────────────────────────────
-      const { rows: groupAgg } = await pool.query(`
+      // ── Get overridden item keys for this category (so Oracle pass excludes them) ──
+      let overriddenItemKeys = [];
+      if (customGroupNames.length) {
+        const { rows: overrideRows } = await pool.query(
+          'SELECT DISTINCT item_key FROM mes_item_group_overrides WHERE category_id = $1',
+          [catId]
+        );
+        overriddenItemKeys = overrideRows.map(r => r.item_key);
+      }
+      const hasOverrides = overriddenItemKeys.length > 0;
+      const overrideExcludeSql = hasOverrides ? 'AND LOWER(TRIM(mainitem)) <> ALL($3::text[])' : '';
+      const overrideExcludeSqlR = hasOverrides ? 'AND LOWER(TRIM(r.mainitem)) <> ALL($3::text[])' : '';
+
+      // ── PASS 1: Oracle groups — aggregate per catlinedesc, excluding overridden items ──
+      const oracleParams = hasOverrides
+        ? [oracleDescList, searchLike, overriddenItemKeys]
+        : [oracleDescList, searchLike];
+
+      const { rows: groupAgg } = oracleDescList.length ? await pool.query(`
         SELECT
           TRIM(catlinedesc) AS catlinedesc,
           COUNT(DISTINCT LOWER(TRIM(mainitem)))::INT AS item_count,
@@ -2661,12 +2713,13 @@ module.exports = function (router) {
         FROM fp_actualrmdata
         WHERE TRIM(catlinedesc) = ANY($1)
           AND ${rmSearchSql}
+          ${overrideExcludeSql}
         GROUP BY TRIM(catlinedesc)
         ORDER BY LOWER(TRIM(catlinedesc)) ASC
-      `, [catlinedescList, searchLike]);
+      `, oracleParams) : { rows: [] };
 
-      // ── Level 3: Item Groups per catlinedesc ────────────────────────────
-      const { rows: itemGroupAgg } = await pool.query(`
+      // ── Oracle item groups ──
+      const { rows: itemGroupAgg } = oracleDescList.length ? await pool.query(`
         SELECT
           TRIM(catlinedesc) AS catlinedesc,
           TRIM(itemgroup) AS itemgroup,
@@ -2679,14 +2732,13 @@ module.exports = function (router) {
         WHERE TRIM(catlinedesc) = ANY($1)
           AND ${rmSearchSql}
           AND COALESCE(TRIM(itemgroup), '') <> ''
+          ${overrideExcludeSql}
         GROUP BY TRIM(catlinedesc), TRIM(itemgroup)
         ORDER BY LOWER(TRIM(catlinedesc)) ASC, LOWER(TRIM(itemgroup)) ASC
-      `, [catlinedescList, searchLike]);
+      `, oracleParams) : { rows: [] };
 
-      // ── Market Price from mes_item_master — weighted by stock qty per item ──
-      // Key: LOWER(TRIM(oracle_cat_desc)) + '::' + LOWER(TRIM(itemgroup from rm))
-      // We join on oracle_cat_desc to get market_ref_price, then aggregate
-      const { rows: marketRows } = await pool.query(`
+      // ── Oracle market prices ──
+      const { rows: marketRows } = oracleDescList.length ? await pool.query(`
         SELECT
           TRIM(r.catlinedesc) AS catlinedesc,
           TRIM(r.itemgroup) AS itemgroup,
@@ -2701,15 +2753,91 @@ module.exports = function (router) {
         WHERE TRIM(r.catlinedesc) = ANY($1)
           AND ${rmSearchSqlR}
           AND COALESCE(TRIM(r.itemgroup), '') <> ''
+          ${overrideExcludeSqlR}
         GROUP BY TRIM(r.catlinedesc), TRIM(r.itemgroup)
-      `, [catlinedescList, searchLike]);
+      `, oracleParams) : { rows: [] };
 
-      const { rows: filteredItemRows } = await pool.query(`
+      // ── PASS 2: Custom groups — aggregate via overrides ──
+      let customGroupAgg = [];
+      let customItemGroupAgg = [];
+      let customMarketRows = [];
+
+      if (customGroupNames.length) {
+        const rmSearchSqlCustom = buildRmSearchSql('r', 3);
+
+        const { rows: cgAgg } = await pool.query(`
+          SELECT
+            o.override_group_name AS catlinedesc,
+            COUNT(DISTINCT o.item_key)::INT AS item_count,
+            COUNT(DISTINCT LOWER(TRIM(r.itemgroup)))::INT AS item_group_count,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0) AS stock_qty,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock * r.maincost ELSE 0 END), 0) AS stock_val,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty ELSE 0 END), 0) AS order_qty,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty * r.purchaseprice ELSE 0 END), 0) AS order_val
+          FROM mes_item_group_overrides o
+          JOIN fp_actualrmdata r ON LOWER(TRIM(r.mainitem)) = o.item_key
+          WHERE o.category_id = $1
+            AND o.override_group_name = ANY($2)
+            AND ${rmSearchSqlCustom}
+          GROUP BY o.override_group_name
+          ORDER BY LOWER(o.override_group_name) ASC
+        `, [catId, customGroupNames, searchLike]);
+        customGroupAgg = cgAgg;
+
+        const { rows: cigAgg } = await pool.query(`
+          SELECT
+            o.override_group_name AS catlinedesc,
+            TRIM(r.itemgroup) AS itemgroup,
+            COUNT(DISTINCT o.item_key)::INT AS item_count,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0) AS stock_qty,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock * r.maincost ELSE 0 END), 0) AS stock_val,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty ELSE 0 END), 0) AS order_qty,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty * r.purchaseprice ELSE 0 END), 0) AS order_val
+          FROM mes_item_group_overrides o
+          JOIN fp_actualrmdata r ON LOWER(TRIM(r.mainitem)) = o.item_key
+          WHERE o.category_id = $1
+            AND o.override_group_name = ANY($2)
+            AND ${rmSearchSqlCustom}
+            AND COALESCE(TRIM(r.itemgroup), '') <> ''
+          GROUP BY o.override_group_name, TRIM(r.itemgroup)
+          ORDER BY LOWER(o.override_group_name) ASC, LOWER(TRIM(r.itemgroup)) ASC
+        `, [catId, customGroupNames, searchLike]);
+        customItemGroupAgg = cigAgg;
+
+        const rmSearchSqlCM = buildRmSearchSql('r', 3);
+        const { rows: cmkt } = await pool.query(`
+          SELECT
+            o.override_group_name AS catlinedesc,
+            TRIM(r.itemgroup) AS itemgroup,
+            SUM(CASE WHEN r.mainitemstock > 0 AND m.market_ref_price IS NOT NULL AND m.market_ref_price > 0
+              THEN r.mainitemstock * m.market_ref_price ELSE 0 END) AS mkt_val,
+            SUM(CASE WHEN r.mainitemstock > 0 AND m.market_ref_price IS NOT NULL AND m.market_ref_price > 0
+              THEN r.mainitemstock ELSE 0 END) AS mkt_qty
+          FROM mes_item_group_overrides o
+          JOIN fp_actualrmdata r ON LOWER(TRIM(r.mainitem)) = o.item_key
+          LEFT JOIN mes_item_master m
+            ON LOWER(TRIM(m.item_code)) = o.item_key
+          WHERE o.category_id = $1
+            AND o.override_group_name = ANY($2)
+            AND ${rmSearchSqlCM}
+            AND COALESCE(TRIM(r.itemgroup), '') <> ''
+          GROUP BY o.override_group_name, TRIM(r.itemgroup)
+        `, [catId, customGroupNames, searchLike]);
+        customMarketRows = cmkt;
+      }
+
+      // Merge Oracle + custom aggregation results
+      const allGroupAgg = [...groupAgg, ...customGroupAgg];
+      const allItemGroupAgg = [...itemGroupAgg, ...customItemGroupAgg];
+      const allMarketRows = [...marketRows, ...customMarketRows];
+
+      // ── Filtered item keys (for TDS) — Oracle groups only ──
+      const { rows: filteredItemRows } = oracleDescList.length ? await pool.query(`
         SELECT DISTINCT LOWER(TRIM(mainitem)) AS item_key
         FROM fp_actualrmdata
         WHERE TRIM(catlinedesc) = ANY($1)
           AND ${rmSearchSql}
-      `, [catlinedescList, searchLike]);
+      `, [oracleDescList, searchLike]) : { rows: [] };
       const filteredItemKeys = filteredItemRows
         .map((row) => row.item_key)
         .filter(Boolean);
@@ -2718,7 +2846,7 @@ module.exports = function (router) {
       const mktByIG = {};
       const mktByDesc = {};
       let totalMktVal = 0, totalMktQty = 0;
-      for (const mr of marketRows) {
+      for (const mr of allMarketRows) {
         const key = `${mr.catlinedesc}::${mr.itemgroup}`;
         const mktVal = Number(mr.mkt_val) || 0;
         const mktQty = Number(mr.mkt_qty) || 0;
@@ -2741,9 +2869,9 @@ module.exports = function (router) {
         return { stock_price_wa: stockPriceWA, on_order_price_wa: onOrderPriceWA, avg_price_wa: avgPriceWA, market_price_wa: marketPriceWA };
       };
 
-      // Group item_groups by catlinedesc
+      // Group item_groups by catlinedesc (Oracle + custom merged)
       const itemGroupsByDesc = {};
-      itemGroupAgg.forEach(ig => {
+      allItemGroupAgg.forEach(ig => {
         if (!itemGroupsByDesc[ig.catlinedesc]) itemGroupsByDesc[ig.catlinedesc] = [];
         const stockQty = Number(ig.stock_qty) || 0;
         const stockVal = Number(ig.stock_val) || 0;
@@ -2762,9 +2890,9 @@ module.exports = function (router) {
         });
       });
 
-      // Build groups array with item_groups and % breakdown
+      // Build groups array with item_groups and % breakdown (Oracle + custom)
       let totalStockQty = 0, totalStockVal = 0, totalOrderQty = 0, totalOrderVal = 0;
-      const groups = groupAgg.map(g => {
+      const groups = allGroupAgg.map(g => {
         const stockQty = Number(g.stock_qty) || 0;
         const stockVal = Number(g.stock_val) || 0;
         const orderQty = Number(g.order_qty) || 0;
@@ -2797,6 +2925,29 @@ module.exports = function (router) {
           item_groups: igs,
         };
       });
+
+      // Add empty stubs for custom groups with no assigned items yet
+      const existingGroupNames = new Set(groups.map(g => g.catlinedesc));
+      for (const cg of customGroups) {
+        if (!existingGroupNames.has(cg.catlinedesc)) {
+          const meta = groupMeta[cg.catlinedesc] || {};
+          groups.push({
+            catlinedesc: cg.catlinedesc,
+            group_id: meta.group_id || cg.id,
+            is_custom: true,
+            display_name: meta.display_name || cg.display_name || null,
+            item_count: 0,
+            item_group_count: 0,
+            stock_qty: 0,
+            order_qty: 0,
+            stock_price_wa: null,
+            on_order_price_wa: null,
+            avg_price_wa: null,
+            market_price_wa: null,
+            item_groups: [],
+          });
+        }
+      }
 
       // ── Category-level totals (4-price model) ───────────────────────────
       const catPrices = computePrices(totalStockQty, totalStockVal, totalOrderQty, totalOrderVal, totalMktQty, totalMktVal);
@@ -3245,13 +3396,14 @@ module.exports = function (router) {
       const category = cat.rows[0];
 
       const { rows: selectedGroups } = await pool.query(
-        'SELECT catlinedesc FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true',
+        'SELECT catlinedesc, is_custom FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true',
         [catId]
       );
       const allowedGroups = new Set(selectedGroups.map((g) => String(g.catlinedesc || '').trim()));
       if (!allowedGroups.has(catlinedesc)) {
         return res.status(400).json({ success: false, error: 'catlinedesc is not mapped to this category' });
       }
+      const isCustomGroup = selectedGroups.some(g => String(g.catlinedesc || '').trim() === catlinedesc && g.is_custom);
 
       const { rows: rmColumnsRows } = await pool.query(`
         SELECT column_name
@@ -3269,24 +3421,60 @@ module.exports = function (router) {
         ? "MAX(NULLIF(TRIM(warehouse), '')) AS warehouse,"
         : 'NULL::text AS warehouse,';
 
-      const { rows: rmItems } = await pool.query(`
-        SELECT
-          LOWER(TRIM(mainitem)) AS item_key,
-          MAX(mainitem) AS mainitem,
-          MAX(maindescription) AS maindescription,
-          MAX(NULLIF(TRIM(mainunit), '')) AS mainunit,
-          MAX(NULLIF(TRIM(itemgroup), '')) AS itemgroup,
-          ${supplierSelectSql}
-          ${warehouseSelectSql}
-          COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
-          COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0)::numeric AS stock_val,
-          COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0)::numeric AS order_qty,
-          COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0)::numeric AS order_val
-        FROM fp_actualrmdata
-        WHERE TRIM(catlinedesc) = $1
-        GROUP BY LOWER(TRIM(mainitem))
-        ORDER BY mainitem ASC
-      `, [catlinedesc]);
+      const customSupplierSql = supplierColumn
+        ? `MAX(NULLIF(TRIM(r.${supplierColumn}), '')) AS supplier,`
+        : 'NULL::text AS supplier,';
+      const customWarehouseSql = rmColumns.has('warehouse')
+        ? "MAX(NULLIF(TRIM(r.warehouse), '')) AS warehouse,"
+        : 'NULL::text AS warehouse,';
+
+      let rmItems;
+      if (isCustomGroup) {
+        // Custom group: fetch items via override table
+        const { rows } = await pool.query(`
+          SELECT
+            o.item_key,
+            o.original_catlinedesc,
+            MAX(r.mainitem) AS mainitem,
+            MAX(r.maindescription) AS maindescription,
+            MAX(NULLIF(TRIM(r.mainunit), '')) AS mainunit,
+            MAX(NULLIF(TRIM(r.itemgroup), '')) AS itemgroup,
+            ${customSupplierSql}
+            ${customWarehouseSql}
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock * r.maincost ELSE 0 END), 0)::numeric AS stock_val,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty ELSE 0 END), 0)::numeric AS order_qty,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty * r.purchaseprice ELSE 0 END), 0)::numeric AS order_val
+          FROM mes_item_group_overrides o
+          JOIN fp_actualrmdata r ON LOWER(TRIM(r.mainitem)) = o.item_key
+          WHERE o.category_id = $1
+            AND o.override_group_name = $2
+          GROUP BY o.item_key, o.original_catlinedesc
+          ORDER BY MAX(r.mainitem) ASC
+        `, [catId, catlinedesc]);
+        rmItems = rows;
+      } else {
+        // Oracle group: existing query
+        const { rows } = await pool.query(`
+          SELECT
+            LOWER(TRIM(mainitem)) AS item_key,
+            MAX(mainitem) AS mainitem,
+            MAX(maindescription) AS maindescription,
+            MAX(NULLIF(TRIM(mainunit), '')) AS mainunit,
+            MAX(NULLIF(TRIM(itemgroup), '')) AS itemgroup,
+            ${supplierSelectSql}
+            ${warehouseSelectSql}
+            COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+            COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0)::numeric AS stock_val,
+            COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0)::numeric AS order_qty,
+            COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0)::numeric AS order_val
+          FROM fp_actualrmdata
+          WHERE TRIM(catlinedesc) = $1
+          GROUP BY LOWER(TRIM(mainitem))
+          ORDER BY mainitem ASC
+        `, [catlinedesc]);
+        rmItems = rows;
+      }
 
       const itemKeys = rmItems.map((r) => r.item_key);
 
@@ -3421,6 +3609,7 @@ module.exports = function (router) {
         return {
           item_key: rm.item_key,
           catlinedesc,
+          original_catlinedesc: isCustomGroup ? (rm.original_catlinedesc || null) : null,
           itemgroup: rm.itemgroup || null,
           mainitem: rm.mainitem,
           maindescription: rm.maindescription,
@@ -3782,6 +3971,146 @@ module.exports = function (router) {
 
   // ═══ CUSTOM GROUPS — create, assign items, delete ═══════════════════════════
 
+  // GET /items/custom-categories/:id/assignable-items — individual items for custom group assignment
+  router.get('/items/custom-categories/:id/assignable-items', authenticate, async (req, res) => {
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const currentGroupId = parseInt(req.query.current_group_id, 10);
+      const search = cleanText(req.query.search, 120);
+      const searchLike = search ? `%${search}%` : null;
+
+      const cat = await pool.query('SELECT material_class FROM mes_item_categories WHERE id=$1 AND is_active=true', [catId]);
+      if (!cat.rows.length) return res.status(404).json({ success: false, error: 'Category not found' });
+      const matClass = cat.rows[0].material_class;
+
+      // Get oracle_categories for this material_class
+      const { rows: mappings } = await pool.query(
+        'SELECT oracle_category FROM mes_category_mapping WHERE material_class=$1 AND is_active=true', [matClass]
+      );
+      const oracleCats = mappings.map(m => m.oracle_category);
+      if (!oracleCats.length) return res.json({ success: true, data: [] });
+
+      let currentGroupName = null;
+      if (Number.isFinite(currentGroupId) && currentGroupId > 0) {
+        const { rows: groupRows } = await pool.query(
+          'SELECT catlinedesc FROM mes_item_category_groups WHERE id = $1 AND category_id = $2 AND is_active = true',
+          [currentGroupId, catId]
+        );
+        if (!groupRows.length) {
+          return res.status(404).json({ success: false, error: 'Custom group not found' });
+        }
+        currentGroupName = String(groupRows[0].catlinedesc || '').trim() || null;
+      }
+
+      // Build search filter
+      const searchFilter = searchLike
+        ? `AND (
+            COALESCE(r.mainitem, '') ILIKE $5
+            OR COALESCE(r.maindescription, '') ILIKE $5
+            OR COALESCE(r.catlinedesc, '') ILIKE $5
+            OR COALESCE(r.itemgroup, '') ILIKE $5
+          )`
+        : '';
+      const params = searchLike
+        ? [catId, matClass, currentGroupName, oracleCats, searchLike]
+        : [catId, matClass, currentGroupName, oracleCats];
+
+      const { rows } = await pool.query(`
+        WITH selected_oracle_groups AS (
+          SELECT LOWER(TRIM(g.catlinedesc)) AS catlinedesc_key
+          FROM mes_item_category_groups g
+          WHERE g.category_id = $1
+            AND g.is_active = true
+            AND g.is_custom = false
+            AND COALESCE(TRIM(g.catlinedesc), '') <> ''
+          GROUP BY LOWER(TRIM(g.catlinedesc))
+        ),
+        bucket_items AS (
+          SELECT
+            LOWER(TRIM(r.mainitem)) AS item_key,
+            MIN(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
+            LOWER(TRIM(r.itemgroup)) AS appearance_key
+          FROM fp_actualrmdata r
+          JOIN selected_oracle_groups sg
+            ON LOWER(TRIM(r.catlinedesc)) = sg.catlinedesc_key
+          WHERE COALESCE(TRIM(r.mainitem), '') <> ''
+            AND COALESCE(TRIM(r.itemgroup), '') <> ''
+          GROUP BY LOWER(TRIM(r.mainitem)), LOWER(TRIM(r.itemgroup))
+        ),
+        unmapped_raw AS (
+          SELECT bi.item_key
+          FROM bucket_items bi
+          LEFT JOIN LATERAL (
+            SELECT
+              mp.id,
+              COALESCE(mp.mapped_material_keys, '{}'::text[]) AS mapped_material_keys
+            FROM mes_material_profile_configs mp
+            WHERE LOWER(TRIM(mp.material_class)) = LOWER(TRIM($2))
+              AND LOWER(TRIM(mp.cat_desc)) = LOWER(TRIM(COALESCE(bi.catlinedesc, '')))
+            ORDER BY
+              CASE
+                WHEN LOWER(TRIM(mp.appearance)) = bi.appearance_key THEN 0
+                WHEN COALESCE(TRIM(mp.appearance), '') = '' THEN 1
+                ELSE 2
+              END,
+              mp.updated_at DESC NULLS LAST,
+              mp.id DESC
+            LIMIT 1
+          ) cfg ON TRUE
+          WHERE cfg.id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1
+              FROM UNNEST(cfg.mapped_material_keys) AS mk
+              WHERE LOWER(TRIM(mk)) = bi.item_key
+            )
+        ),
+        unmapped_items AS (
+          SELECT DISTINCT item_key
+          FROM unmapped_raw
+        ),
+        current_group_items AS (
+          SELECT DISTINCT o.item_key
+          FROM mes_item_group_overrides o
+          WHERE o.category_id = $1
+            AND ($3::text IS NOT NULL AND o.override_group_name = $3)
+        ),
+        eligible_item_keys AS (
+          SELECT item_key FROM unmapped_items
+          UNION
+          SELECT item_key FROM current_group_items
+        )
+        SELECT
+          LOWER(TRIM(r.mainitem)) AS item_key,
+          MAX(r.mainitem) AS mainitem,
+          MAX(r.maindescription) AS maindescription,
+          MAX(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
+          MAX(TRIM(r.itemgroup)) AS itemgroup,
+          COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+          MAX(o.override_group_name) AS current_override,
+          BOOL_OR(o.override_group_name IS NOT NULL AND o.override_group_name = $3) AS is_selected,
+          BOOL_OR(u.item_key IS NOT NULL) AS is_unmapped
+        FROM fp_actualrmdata r
+        JOIN eligible_item_keys ek
+          ON ek.item_key = LOWER(TRIM(r.mainitem))
+        LEFT JOIN unmapped_items u
+          ON u.item_key = ek.item_key
+        LEFT JOIN mes_item_group_overrides o
+          ON o.category_id = $1
+          AND o.item_key = LOWER(TRIM(r.mainitem))
+        WHERE UPPER(TRIM(r.category)) = ANY($4)
+          ${searchFilter}
+        GROUP BY LOWER(TRIM(r.mainitem))
+        HAVING BOOL_OR(o.override_group_name IS NULL OR o.override_group_name = $3)
+        ORDER BY COALESCE(MAX(NULLIF(TRIM(r.catlinedesc), '')), 'Unmapped') ASC, MAX(r.mainitem) ASC
+      `, params);
+
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      logger.error('GET /custom-categories/:id/assignable-items error:', err);
+      res.status(500).json({ success: false, error: 'Failed to fetch assignable items' });
+    }
+  });
+
   // POST /items/custom-categories/:id/custom-group — create a custom group
   router.post('/items/custom-categories/:id/custom-group', authenticate, async (req, res) => {
     if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
@@ -3895,21 +4224,19 @@ module.exports = function (router) {
           [catId, groupName]
         );
 
-        // Insert new assignments
+        // Insert new assignments with auto-resolved original_catlinedesc
         if (itemKeys.length > 0) {
-          const values = itemKeys.map((key, i) => {
-            const offset = i * 4;
-            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`;
-          }).join(', ');
-          const params = itemKeys.flatMap((key) => [catId, groupName, key, null]);
-
           await client.query(
             `INSERT INTO mes_item_group_overrides (category_id, override_group_name, item_key, original_catlinedesc)
-             VALUES ${values}
+             SELECT $1, $2, u.key, MAX(TRIM(r.catlinedesc))
+             FROM unnest($3::text[]) AS u(key)
+             LEFT JOIN fp_actualrmdata r ON LOWER(TRIM(r.mainitem)) = u.key
+             GROUP BY u.key
              ON CONFLICT (category_id, item_key) DO UPDATE SET
                override_group_name = EXCLUDED.override_group_name,
+               original_catlinedesc = COALESCE(EXCLUDED.original_catlinedesc, mes_item_group_overrides.original_catlinedesc),
                updated_at = NOW()`,
-            params
+            [catId, groupName, itemKeys]
           );
         }
 

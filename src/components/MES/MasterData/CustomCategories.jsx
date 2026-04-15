@@ -282,6 +282,7 @@ export default function CustomCategories() {
   const [customGroupItems, setCustomGroupItems] = useState([]);
   const [customGroupSelectedKeys, setCustomGroupSelectedKeys] = useState(new Set());
   const [customGroupLoading, setCustomGroupLoading] = useState(false);
+  const [customGroupSearchText, setCustomGroupSearchText] = useState('');
 
   const currencySymbol = useMemo(() => (
     isUAEDirham()
@@ -1383,27 +1384,37 @@ export default function CustomCategories() {
     setCustomGroupTarget(group);
     setCustomGroupAssignOpen(true);
     setCustomGroupLoading(true);
+    setCustomGroupSearchText('');
     try {
+      // Load existing assignments
       const res = await axios.get(
         `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${group.group_id}/items`,
         { headers }
       );
       const existingKeys = new Set((res.data?.data || []).map((r) => r.item_key));
       setCustomGroupSelectedKeys(existingKeys);
-      // Load available items from the category
-      const profileRes = await axios.get(
-        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/profile?search=`,
-        { headers }
+      // Load individual items for assignment (item-level, not item-group level)
+      const itemsRes = await axios.get(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/assignable-items`,
+        {
+          headers,
+          params: { current_group_id: group.group_id },
+        }
       );
-      const allItems = (profileRes.data?.data?.item_groups || []).map((ig) => ({
-        key: normalizeKey(ig.itemgroup),
-        itemgroup: ig.itemgroup,
-        catlinedesc: ig.catlinedesc,
-        stock_qty: ig.stock_qty,
+      const allItems = (itemsRes.data?.data || []).map((item) => ({
+        key: item.item_key,
+        mainitem: item.mainitem,
+        maindescription: item.maindescription,
+        catlinedesc: item.catlinedesc,
+        itemgroup: item.itemgroup,
+        stock_qty: Number(item.stock_qty) || 0,
+        current_override: item.current_override,
+        is_selected: Boolean(item.is_selected),
+        is_unmapped: Boolean(item.is_unmapped),
       }));
       setCustomGroupItems(allItems);
     } catch (err) {
-      message.error('Failed to load custom group items');
+      message.error('Failed to load assignable items');
     } finally {
       setCustomGroupLoading(false);
     }
@@ -1420,13 +1431,16 @@ export default function CustomCategories() {
       );
       message.success('Custom group items saved');
       setCustomGroupAssignOpen(false);
-      fetchProfile(selectedCatId, searchText);
+      await Promise.all([
+        fetchProfile(selectedCatId, searchText),
+        fetchCategories(),
+      ]);
     } catch (err) {
       message.error(err.response?.data?.error || 'Failed to save custom group items');
     } finally {
       setCustomGroupLoading(false);
     }
-  }, [customGroupTarget, selectedCatId, customGroupSelectedKeys, headers, message, fetchProfile, searchText]);
+  }, [customGroupTarget, selectedCatId, customGroupSelectedKeys, headers, message, fetchProfile, fetchCategories, searchText]);
 
   const handleDeleteCustomGroup = useCallback(async (group) => {
     if (!selectedCatId) return;
@@ -1436,11 +1450,31 @@ export default function CustomCategories() {
         { headers }
       );
       message.success(`Custom group "${group.catlinedesc || group.display_name}" deleted`);
-      fetchProfile(selectedCatId, searchText);
+      await Promise.all([
+        fetchProfile(selectedCatId, searchText),
+        fetchCategories(),
+      ]);
     } catch (err) {
       message.error(err.response?.data?.error || 'Failed to delete custom group');
     }
-  }, [selectedCatId, headers, message, fetchProfile, searchText]);
+  }, [selectedCatId, headers, message, fetchProfile, fetchCategories, searchText]);
+
+  const customGroupVisibleItems = useMemo(() => {
+    const search = String(customGroupSearchText || '').trim().toLowerCase();
+    if (!search) return customGroupItems;
+
+    return customGroupItems.filter((item) => {
+      const haystack = [
+        item.mainitem,
+        item.maindescription,
+        item.catlinedesc || 'Unmapped',
+        item.itemgroup,
+      ]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ');
+      return haystack.includes(search);
+    });
+  }, [customGroupItems, customGroupSearchText]);
 
   const detailSupplierOptions = useMemo(() => {
     const values = Array.from(new Set(
@@ -1796,7 +1830,11 @@ export default function CustomCategories() {
                                     <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4', flexShrink: 0 }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                                    <Text type="secondary" style={{ fontSize: 11 }}>{Number(group.item_group_count) || 0} groups · {Number(group.item_count) || 0} items</Text>
+                                    <Text type="secondary" style={{ fontSize: 11 }}>
+                                      {group.is_custom
+                                        ? `${Number(group.item_count) || 0} assigned items`
+                                        : `${Number(group.item_group_count) || 0} groups · ${Number(group.item_count) || 0} items`}
+                                    </Text>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                       {group.is_custom && (
                                         <>
@@ -2089,25 +2127,46 @@ export default function CustomCategories() {
 
       {/* Custom Group Item Assignment Modal */}
       <Modal
-        title={`Assign Items — ${customGroupTarget?.catlinedesc || customGroupTarget?.display_name || ''}`}
+        title={`Assign Unmapped Items — ${customGroupTarget?.display_name || customGroupTarget?.catlinedesc || ''}`}
         open={customGroupAssignOpen}
-        onCancel={() => setCustomGroupAssignOpen(false)}
+        onCancel={() => {
+          setCustomGroupAssignOpen(false);
+          setCustomGroupSearchText('');
+        }}
         onOk={handleSaveCustomGroupItems}
         okText="Save Assignments"
-        width={600}
+        width="92vw"
         confirmLoading={customGroupLoading}
       >
         <Spin spinning={customGroupLoading}>
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="Unmapped items for this category"
+            description="Only unmapped items are shown. Items already assigned to this custom group stay visible so you can review or remove them."
+          />
+          <Input
+            placeholder="Search by item code, description, Oracle group, or item group"
+            prefix={<SearchOutlined />}
+            allowClear
+            size="small"
+            value={customGroupSearchText}
+            style={{ marginBottom: 8, maxWidth: 420 }}
+            onChange={(e) => setCustomGroupSearchText(e.target.value || '')}
+          />
           <Table
-            dataSource={customGroupItems}
+            dataSource={customGroupVisibleItems}
             rowKey="key"
             size="small"
             pagination={false}
-            scroll={{ y: 350 }}
+            scroll={{ y: 400 }}
+            tableLayout="fixed"
+            locale={{ emptyText: `No unmapped ${String(selectedCat?.name || 'category').toLowerCase()} items available` }}
             columns={[
               {
-                title: 'Assign',
-                width: 60,
+                title: 'Select',
+                width: 64,
                 align: 'center',
                 render: (_, row) => (
                   <Checkbox
@@ -2121,13 +2180,30 @@ export default function CustomCategories() {
                   />
                 ),
               },
-              { title: 'Item Group', dataIndex: 'itemgroup', width: 180 },
-              { title: 'Category Group', dataIndex: 'catlinedesc', width: 140 },
-              { title: 'Stock Qty', dataIndex: 'stock_qty', width: 100, align: 'right', render: fmtQty },
+              { title: 'Item Code', dataIndex: 'mainitem', width: 160, ellipsis: true },
+              { title: 'Description', dataIndex: 'maindescription', width: 250, ellipsis: true },
+              {
+                title: 'Oracle Group',
+                dataIndex: 'catlinedesc',
+                width: 140,
+                ellipsis: true,
+                render: (value) => value || <Text type="secondary">Unmapped</Text>,
+              },
+              { title: 'Stock Qty', dataIndex: 'stock_qty', width: 110, align: 'right', render: fmtQty },
+              {
+                title: 'State',
+                dataIndex: 'is_selected',
+                width: 120,
+                render: (value, row) => (value
+                  ? <Tag color="blue" style={{ fontSize: 10 }}>In This Group</Tag>
+                  : row?.is_unmapped
+                    ? <Tag color="orange" style={{ fontSize: 10 }}>Unmapped</Tag>
+                    : <Tag style={{ fontSize: 10 }}>Eligible</Tag>),
+              },
             ]}
           />
           <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
-            {customGroupSelectedKeys.size} items selected
+            {customGroupVisibleItems.length} items shown • {customGroupSelectedKeys.size} selected
           </div>
         </Spin>
       </Modal>
@@ -2293,6 +2369,13 @@ export default function CustomCategories() {
                               scroll={{ y: 520 }}
                               columns={[
                                 { title: 'Description', dataIndex: 'maindescription', width: 320, ellipsis: true },
+                                ...(selectedSidebarGroup?.is_custom ? [{
+                                  title: 'Source',
+                                  dataIndex: 'original_catlinedesc',
+                                  width: 140,
+                                  ellipsis: true,
+                                  render: (v) => v ? <Tag style={{ fontSize: 10 }}>{v}</Tag> : <Text type="secondary" style={{ fontSize: 10 }}>—</Text>,
+                                }] : []),
                                 { title: 'Stock Qty', dataIndex: 'stock_qty', width: 100, align: 'center', render: fmtQty },
                                 { title: 'Order Qty', dataIndex: 'order_qty', width: 100, align: 'center', render: fmtQty },
                                 { title: 'Stock', dataIndex: 'stock_price', width: 90, align: 'center', render: (v) => fmtCurrency(v, 2) },

@@ -65,7 +65,7 @@ export default function CreateJobModal({ open, onClose, onCreated, inquiryData }
       onOk={handleSubmit}
       confirmLoading={loading}
       okText="Create Job"
-      destroyOnClose
+      destroyOnHidden
       width={500}
     >
       <Form form={form} layout="vertical" initialValues={{ division: 'FP', priority: 'normal' }}>

@@ -32,7 +32,7 @@ const HelpPanel = ({ tooltip = 'Open workflow help', buttonClassName = 'help-pan
         width={1000}
         open={open}
         onClose={() => setOpen(false)}
-        destroyOnClose
+        destroyOnHidden
         className="help-panel-drawer"
       >
         <ProjectWorkflow />

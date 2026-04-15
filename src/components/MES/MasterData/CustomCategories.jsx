@@ -51,11 +51,6 @@ const MRP_TYPE_OPTIONS = [
 
 const MRP_TYPE_LEGEND = 'MRP codes: PD = Auto MRP, ND = No Planning, VB = Manual reorder point.';
 
-const PROCUREMENT_OPTIONS = [
-  { value: 'EXTERNAL', label: 'External' },
-  { value: 'INTERNAL', label: 'Internal' },
-];
-
 const LOT_SIZE_OPTIONS = [
   { value: 'EX', label: 'EX' },
   { value: 'FX', label: 'FX' },
@@ -93,6 +88,30 @@ const EMPTY_DETAIL_TOTALS = {
   avg_price_wa: null,
   market_price_wa: null,
 };
+
+const MATERIAL_PROFILE_NUMERIC_FIELD_META = {
+  density_g_cm3: { label: 'Density', min: 0, step: 0.0001, max: null },
+  solid_pct: { label: 'Solid %', min: 0, step: 0.1, max: 100 },
+  micron_thickness: { label: 'Thickness (mic)', min: 0, step: 0.1, max: null },
+  width_mm: { label: 'Width (mm)', min: 0, step: 1, max: null },
+  yield_m2_per_kg: { label: 'Yield (m²/kg)', min: 0, step: 0.01, max: null },
+  roll_length_m: { label: 'Roll Length (m)', min: 0, step: 1, max: null },
+  core_diameter_mm: { label: 'Core Dia (mm)', min: 0, step: 0.1, max: null },
+};
+
+function getMaterialProfileFieldKeys(materialClass) {
+  const cls = normalizeKey(materialClass);
+  if (cls === 'resins') return ['density_g_cm3'];
+  if (cls === 'substrates') {
+    return [
+      'density_g_cm3', 'solid_pct', 'micron_thickness',
+      'width_mm', 'yield_m2_per_kg', 'roll_length_m', 'core_diameter_mm',
+    ];
+  }
+  if (cls === 'mounting_tapes') return ['density_g_cm3', 'micron_thickness'];
+  if (['adhesives', 'coating', 'chemicals'].includes(cls)) return ['density_g_cm3', 'solid_pct'];
+  return ['density_g_cm3'];
+}
 
 const WEIGHTED_AVG_NOTE = 'Weighted price is calculated as: (Stock Price x Stock Qty + On Order Price x On Order Qty) / (Stock Qty + On Order Qty).';
 
@@ -254,6 +273,15 @@ export default function CustomCategories() {
   const [substrateSaving, setSubstrateSaving] = useState(false);
   const [substrateProfile, setSubstrateProfile] = useState(null);
   const [substrateProfileLoading, setSubstrateProfileLoading] = useState(false);
+
+  // Custom group state
+  const [customGroupName, setCustomGroupName] = useState('');
+  const [customGroupCreating, setCustomGroupCreating] = useState(false);
+  const [customGroupAssignOpen, setCustomGroupAssignOpen] = useState(false);
+  const [customGroupTarget, setCustomGroupTarget] = useState(null);
+  const [customGroupItems, setCustomGroupItems] = useState([]);
+  const [customGroupSelectedKeys, setCustomGroupSelectedKeys] = useState(new Set());
+  const [customGroupLoading, setCustomGroupLoading] = useState(false);
 
   const currencySymbol = useMemo(() => (
     isUAEDirham()
@@ -879,6 +907,41 @@ export default function CustomCategories() {
     [igDetail]
   );
 
+  const activeMaterialClass = useMemo(
+    () => normalizeKey(igDetail?.category?.material_class),
+    [igDetail]
+  );
+
+  const materialProfileFieldKeys = useMemo(
+    () => getMaterialProfileFieldKeys(activeMaterialClass),
+    [activeMaterialClass]
+  );
+
+  const materialProfileNumericFields = useMemo(
+    () => materialProfileFieldKeys
+      .map((key) => ({ key, ...(MATERIAL_PROFILE_NUMERIC_FIELD_META[key] || {}) }))
+      .filter((field) => field.label),
+    [materialProfileFieldKeys]
+  );
+
+  const materialProfileNumericFieldRows = useMemo(() => {
+    const rows = [];
+    for (let i = 0; i < materialProfileNumericFields.length; i += 6) {
+      rows.push(materialProfileNumericFields.slice(i, i + 6));
+    }
+    return rows;
+  }, [materialProfileNumericFields]);
+
+  const showResinTypeField = useMemo(
+    () => ['resins', 'substrates'].includes(activeMaterialClass),
+    [activeMaterialClass]
+  );
+
+  const showAlloyField = useMemo(
+    () => activeMaterialClass === 'substrates',
+    [activeMaterialClass]
+  );
+
   const substrateCandidateItems = useMemo(() => {
     const map = new Map();
 
@@ -1295,6 +1358,90 @@ export default function CustomCategories() {
     }
   }, [substrateDraft, isMaterialProfileDrawer, headers, message, fetchSubstrateProfile, selectedCatId, fetchProfile, searchText]);
 
+  // ── Custom Group Handlers ──────────────────────────────────────────────────
+  const handleCreateCustomGroup = useCallback(async () => {
+    const name = customGroupName.trim();
+    if (!name || !selectedCatId) return;
+    setCustomGroupCreating(true);
+    try {
+      await axios.post(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group`,
+        { group_name: name },
+        { headers }
+      );
+      message.success(`Custom group "${name}" created`);
+      setCustomGroupName('');
+      fetchProfile(selectedCatId, searchText);
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to create custom group');
+    } finally {
+      setCustomGroupCreating(false);
+    }
+  }, [customGroupName, selectedCatId, headers, message, fetchProfile, searchText]);
+
+  const openAssignCustomGroup = useCallback(async (group) => {
+    setCustomGroupTarget(group);
+    setCustomGroupAssignOpen(true);
+    setCustomGroupLoading(true);
+    try {
+      const res = await axios.get(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${group.group_id}/items`,
+        { headers }
+      );
+      const existingKeys = new Set((res.data?.data || []).map((r) => r.item_key));
+      setCustomGroupSelectedKeys(existingKeys);
+      // Load available items from the category
+      const profileRes = await axios.get(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/profile?search=`,
+        { headers }
+      );
+      const allItems = (profileRes.data?.data?.item_groups || []).map((ig) => ({
+        key: normalizeKey(ig.itemgroup),
+        itemgroup: ig.itemgroup,
+        catlinedesc: ig.catlinedesc,
+        stock_qty: ig.stock_qty,
+      }));
+      setCustomGroupItems(allItems);
+    } catch (err) {
+      message.error('Failed to load custom group items');
+    } finally {
+      setCustomGroupLoading(false);
+    }
+  }, [selectedCatId, headers, message]);
+
+  const handleSaveCustomGroupItems = useCallback(async () => {
+    if (!customGroupTarget || !selectedCatId) return;
+    setCustomGroupLoading(true);
+    try {
+      await axios.put(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${customGroupTarget.group_id}/items`,
+        { item_keys: Array.from(customGroupSelectedKeys) },
+        { headers }
+      );
+      message.success('Custom group items saved');
+      setCustomGroupAssignOpen(false);
+      fetchProfile(selectedCatId, searchText);
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to save custom group items');
+    } finally {
+      setCustomGroupLoading(false);
+    }
+  }, [customGroupTarget, selectedCatId, customGroupSelectedKeys, headers, message, fetchProfile, searchText]);
+
+  const handleDeleteCustomGroup = useCallback(async (group) => {
+    if (!selectedCatId) return;
+    try {
+      await axios.delete(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${group.group_id}`,
+        { headers }
+      );
+      message.success(`Custom group "${group.catlinedesc || group.display_name}" deleted`);
+      fetchProfile(selectedCatId, searchText);
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to delete custom group');
+    }
+  }, [selectedCatId, headers, message, fetchProfile, searchText]);
+
   const detailSupplierOptions = useMemo(() => {
     const values = Array.from(new Set(
       (igDetail?.items || [])
@@ -1630,24 +1777,62 @@ export default function CustomCategories() {
                                     }
                                   }}
                                   style={{
-                                    border: active ? '1px solid #0f766e' : '1px solid #e2e8f0',
+                                    border: active ? '1px solid #0f766e' : group.is_custom ? '1px dashed #d48806' : '1px solid #e2e8f0',
                                     borderRadius: 10,
                                     padding: '10px 12px',
                                     background: active
                                       ? 'linear-gradient(135deg, rgba(15,118,110,.10), rgba(8,145,178,.08))'
-                                      : '#fff',
+                                      : group.is_custom ? '#fffbe6' : '#fff',
                                     cursor: 'pointer',
                                   }}
                                 >
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                    <Text strong style={{ color: active ? '#0f766e' : '#0f172a' }}>{group.catlinedesc}</Text>
-                                    <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4' }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                                      <Text strong style={{ color: active ? '#0f766e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {group.display_name || group.catlinedesc}
+                                      </Text>
+                                      {group.is_custom && <Tag color="orange" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>Custom</Tag>}
+                                    </div>
+                                    <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4', flexShrink: 0 }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                                     <Text type="secondary" style={{ fontSize: 11 }}>{Number(group.item_group_count) || 0} groups · {Number(group.item_count) || 0} items</Text>
-                                    <Tooltip title="Weighted Average of Stock and On Order prices">
-                                      <Text type="secondary" style={{ fontSize: 10, cursor: 'help', borderBottom: '1px dotted #94a3b8' }}>W.A</Text>
-                                    </Tooltip>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      {group.is_custom && (
+                                        <>
+                                          <Tooltip title="Assign items to this custom group">
+                                            <Button
+                                              type="text"
+                                              size="small"
+                                              icon={<PlusOutlined />}
+                                              style={{ fontSize: 11, padding: '0 4px', height: 20, color: '#0f766e' }}
+                                              onClick={(e) => { e.stopPropagation(); openAssignCustomGroup(group); }}
+                                            />
+                                          </Tooltip>
+                                          <Popconfirm
+                                            title="Delete this custom group?"
+                                            description="This will remove the group and all item assignments."
+                                            onConfirm={(e) => { if (e) e.stopPropagation(); handleDeleteCustomGroup(group); }}
+                                            onCancel={(e) => { if (e) e.stopPropagation(); }}
+                                            okText="Delete"
+                                            cancelText="Cancel"
+                                            okButtonProps={{ danger: true }}
+                                          >
+                                            <Button
+                                              type="text"
+                                              size="small"
+                                              danger
+                                              icon={<DeleteOutlined />}
+                                              style={{ fontSize: 11, padding: '0 4px', height: 20 }}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
+                                          </Popconfirm>
+                                        </>
+                                      )}
+                                      <Tooltip title="Weighted Average of Stock and On Order prices">
+                                        <Text type="secondary" style={{ fontSize: 10, cursor: 'help', borderBottom: '1px dotted #94a3b8' }}>W.A</Text>
+                                      </Tooltip>
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -1877,6 +2062,72 @@ export default function CustomCategories() {
           />
           <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
             {selectedGroups.size} groups selected
+          </div>
+
+          <Divider style={{ margin: '12px 0 8px' }}>Create Custom Group</Divider>
+          <Space>
+            <Input
+              size="small"
+              placeholder="Custom group name"
+              value={customGroupName}
+              onChange={(e) => setCustomGroupName(e.target.value)}
+              style={{ width: 200 }}
+              maxLength={120}
+            />
+            <Button
+              size="small"
+              type="primary"
+              loading={customGroupCreating}
+              disabled={!customGroupName.trim()}
+              onClick={handleCreateCustomGroup}
+            >
+              Create
+            </Button>
+          </Space>
+        </Spin>
+      </Modal>
+
+      {/* Custom Group Item Assignment Modal */}
+      <Modal
+        title={`Assign Items — ${customGroupTarget?.catlinedesc || customGroupTarget?.display_name || ''}`}
+        open={customGroupAssignOpen}
+        onCancel={() => setCustomGroupAssignOpen(false)}
+        onOk={handleSaveCustomGroupItems}
+        okText="Save Assignments"
+        width={600}
+        confirmLoading={customGroupLoading}
+      >
+        <Spin spinning={customGroupLoading}>
+          <Table
+            dataSource={customGroupItems}
+            rowKey="key"
+            size="small"
+            pagination={false}
+            scroll={{ y: 350 }}
+            columns={[
+              {
+                title: 'Assign',
+                width: 60,
+                align: 'center',
+                render: (_, row) => (
+                  <Checkbox
+                    checked={customGroupSelectedKeys.has(row.key)}
+                    onChange={(e) => {
+                      const next = new Set(customGroupSelectedKeys);
+                      if (e.target.checked) next.add(row.key);
+                      else next.delete(row.key);
+                      setCustomGroupSelectedKeys(next);
+                    }}
+                  />
+                ),
+              },
+              { title: 'Item Group', dataIndex: 'itemgroup', width: 180 },
+              { title: 'Category Group', dataIndex: 'catlinedesc', width: 140 },
+              { title: 'Stock Qty', dataIndex: 'stock_qty', width: 100, align: 'right', render: fmtQty },
+            ]}
+          />
+          <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+            {customGroupSelectedKeys.size} items selected
           </div>
         </Spin>
       </Modal>
@@ -2296,9 +2547,9 @@ export default function CustomCategories() {
                           </Col>
                         </Row>
 
-                        {/* ── Supplier (universal) + non-resin identity fields ── */}
+                        {/* ── Supplier + identity fields (class-aware) ── */}
                         <Row gutter={12} style={{ marginBottom: 4 }}>
-                          <Col span={substrateDraft?.material_class === 'resins' ? 24 : 8}>
+                          <Col span={showResinTypeField ? 8 : 24}>
                             <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Supplier Name</div>
                             <Input
                               size="small"
@@ -2306,116 +2557,49 @@ export default function CustomCategories() {
                               onChange={(e) => updateSubstrateDraft('supplier_name', e.target.value || null)}
                             />
                           </Col>
-                          {substrateDraft?.material_class !== 'resins' && (
-                            <>
-                              <Col span={8}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Resin Type / Material</div>
-                                <Input
-                                  size="small"
-                                  value={substrateDraft?.resin_type || ''}
-                                  onChange={(e) => updateSubstrateDraft('resin_type', e.target.value || null)}
-                                />
-                              </Col>
-                              <Col span={8}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Alloy Code</div>
-                                <Input
-                                  size="small"
-                                  value={substrateDraft?.alloy_code || ''}
-                                  onChange={(e) => updateSubstrateDraft('alloy_code', e.target.value || null)}
-                                />
-                              </Col>
-                            </>
+                          {showResinTypeField && (
+                            <Col span={showAlloyField ? 8 : 16}>
+                              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>
+                                {activeMaterialClass === 'resins' ? 'Resin Type' : 'Resin Type / Material'}
+                              </div>
+                              <Input
+                                size="small"
+                                value={substrateDraft?.resin_type || ''}
+                                onChange={(e) => updateSubstrateDraft('resin_type', e.target.value || null)}
+                              />
+                            </Col>
+                          )}
+                          {showAlloyField && (
+                            <Col span={8}>
+                              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Alloy Code</div>
+                              <Input
+                                size="small"
+                                value={substrateDraft?.alloy_code || ''}
+                                onChange={(e) => updateSubstrateDraft('alloy_code', e.target.value || null)}
+                              />
+                            </Col>
                           )}
                         </Row>
 
-                        {/* ── Physical property overrides (non-resin only) ── */}
-                        {substrateDraft?.material_class !== 'resins' && (
-                          <>
-                            <Row gutter={12} style={{ marginBottom: 4 }}>
-                              <Col span={4}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Density</div>
+                        {/* ── Physical property fields (class-aware via getMaterialProfileFieldKeys) ── */}
+                        {materialProfileNumericFieldRows.map((fieldRow, rowIndex) => (
+                          <Row gutter={12} style={{ marginBottom: 4 }} key={`material-field-row-${rowIndex}`}>
+                            {fieldRow.map((field) => (
+                              <Col span={4} key={field.key}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>{field.label}</div>
                                 <InputNumber
                                   size="small"
-                                  min={0}
-                                  step={0.0001}
+                                  min={field.min}
+                                  max={field.max == null ? undefined : field.max}
+                                  step={field.step}
                                   style={{ width: '100%' }}
-                                  value={substrateDraft?.density_g_cm3}
-                                  onChange={(v) => updateSubstrateDraft('density_g_cm3', v)}
+                                  value={substrateDraft?.[field.key]}
+                                  onChange={(v) => updateSubstrateDraft(field.key, v)}
                                 />
                               </Col>
-                              <Col span={4}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Solid %</div>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  max={100}
-                                  step={0.1}
-                                  style={{ width: '100%' }}
-                                  value={substrateDraft?.solid_pct}
-                                  onChange={(v) => updateSubstrateDraft('solid_pct', v)}
-                                />
-                              </Col>
-                              <Col span={4}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Thickness (mic)</div>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  step={0.1}
-                                  style={{ width: '100%' }}
-                                  value={substrateDraft?.micron_thickness}
-                                  onChange={(v) => updateSubstrateDraft('micron_thickness', v)}
-                                />
-                              </Col>
-                              <Col span={4}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Width (mm)</div>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  step={1}
-                                  style={{ width: '100%' }}
-                                  value={substrateDraft?.width_mm}
-                                  onChange={(v) => updateSubstrateDraft('width_mm', v)}
-                                />
-                              </Col>
-                              <Col span={4}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Yield (m²/kg)</div>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  step={0.01}
-                                  style={{ width: '100%' }}
-                                  value={substrateDraft?.yield_m2_per_kg}
-                                  onChange={(v) => updateSubstrateDraft('yield_m2_per_kg', v)}
-                                />
-                              </Col>
-                              <Col span={4}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Roll Length (m)</div>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  step={1}
-                                  style={{ width: '100%' }}
-                                  value={substrateDraft?.roll_length_m}
-                                  onChange={(v) => updateSubstrateDraft('roll_length_m', v)}
-                                />
-                              </Col>
-                            </Row>
-
-                            <Row gutter={12} style={{ marginBottom: 10 }}>
-                              <Col span={4}>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Core Dia (mm)</div>
-                                <InputNumber
-                                  size="small"
-                                  min={0}
-                                  step={0.1}
-                                  style={{ width: '100%' }}
-                                  value={substrateDraft?.core_diameter_mm}
-                                  onChange={(v) => updateSubstrateDraft('core_diameter_mm', v)}
-                                />
-                              </Col>
-                            </Row>
-                          </>
-                        )}
+                            ))}
+                          </Row>
+                        ))}
 
                         {/* ── Pricing & MRP (universal — all categories) ── */}
                         <Row gutter={12} style={{ marginBottom: 6 }}>

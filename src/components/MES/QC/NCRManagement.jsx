@@ -274,7 +274,7 @@ export default function NCRManagement() {
         confirmLoading={createLoading}
         okText="Create NCR"
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
           <Row gutter={12}>

@@ -237,7 +237,7 @@ export default function ProspectPanel({ inquiry, prospect, isStrictAdmin, user, 
         okButtonProps={{ danger: true, loading: rejectLoading }}
         onOk={confirmReject}
         onCancel={() => setRejectModalOpen(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Input.TextArea
           value={rejectReason}

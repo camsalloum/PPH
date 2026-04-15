@@ -33,7 +33,6 @@ export default defineConfig({
   
   // Development server configuration
   server: {
-    host: '0.0.0.0',
     port: 3000,
     open: true,
     headers: {
@@ -45,14 +44,14 @@ export default defineConfig({
     // Proxy API requests to backend (replaces CRA's proxy in package.json)
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
         secure: false,
         timeout: 120000,
         proxyTimeout: 120000,
       },
       '/uploads': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
         secure: false,
         timeout: 120000,

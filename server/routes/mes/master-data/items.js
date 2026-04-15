@@ -2605,9 +2605,15 @@ module.exports = function (router) {
 
       // Get selected catlinedesc groups for this category
       const { rows: selectedGroups } = await pool.query(
-        'SELECT catlinedesc FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true ORDER BY catlinedesc',
+        'SELECT id, catlinedesc, is_custom, display_name FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true ORDER BY catlinedesc',
         [catId]
       );
+
+      // Build lookup for group metadata (is_custom, id, display_name)
+      const groupMeta = {};
+      for (const sg of selectedGroups) {
+        groupMeta[sg.catlinedesc] = { group_id: sg.id, is_custom: !!sg.is_custom, display_name: sg.display_name || null };
+      }
 
       if (!selectedGroups.length) {
         return res.json({ success: true, data: { category, groups: [], totals: {}, parameters: {} } });
@@ -2777,8 +2783,12 @@ module.exports = function (router) {
           order_pct_of_group: orderQty > 0 ? Math.round(ig.order_qty / orderQty * 1000) / 10 : 0,
         }));
 
+        const meta = groupMeta[g.catlinedesc] || {};
         return {
           catlinedesc: g.catlinedesc,
+          group_id: meta.group_id || null,
+          is_custom: !!meta.is_custom,
+          display_name: meta.display_name || null,
           item_count: Number(g.item_count) || 0,
           item_group_count: Number(g.item_group_count) || 0,
           stock_qty: stockQty,
@@ -3022,7 +3032,7 @@ module.exports = function (router) {
         WHERE TRIM(catlinedesc) = ANY($1)
           AND TRIM(itemgroup) = $2
         GROUP BY LOWER(TRIM(mainitem))
-        ORDER BY stock_qty DESC
+        ORDER BY mainitem ASC
       `, [scopedCatlinedescList, itemgroup]);
 
       // ── mes_item_master data for these items ───────────────────────────
@@ -3275,7 +3285,7 @@ module.exports = function (router) {
         FROM fp_actualrmdata
         WHERE TRIM(catlinedesc) = $1
         GROUP BY LOWER(TRIM(mainitem))
-        ORDER BY stock_qty DESC
+        ORDER BY mainitem ASC
       `, [catlinedesc]);
 
       const itemKeys = rmItems.map((r) => r.item_key);
@@ -3766,6 +3776,206 @@ module.exports = function (router) {
     } catch (err) {
       logger.error('PATCH /items/custom-categories/:id/item-group/:itemgroup/market-price error:', err);
       res.status(500).json({ success: false, error: 'Failed to update item group market price' });
+    }
+  });
+
+
+  // ═══ CUSTOM GROUPS — create, assign items, delete ═══════════════════════════
+
+  // POST /items/custom-categories/:id/custom-group — create a custom group
+  router.post('/items/custom-categories/:id/custom-group', authenticate, async (req, res) => {
+    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupName = String(req.body.group_name || '').trim();
+      if (!Number.isFinite(catId) || catId <= 0) {
+        return res.status(400).json({ success: false, error: 'Invalid category id' });
+      }
+      if (!groupName || groupName.length > 120) {
+        return res.status(400).json({ success: false, error: 'group_name is required (max 120 chars)' });
+      }
+
+      // Verify category exists
+      const { rows: catRows } = await pool.query(
+        'SELECT id FROM mes_item_categories WHERE id = $1 AND is_active = true', [catId]
+      );
+      if (!catRows.length) {
+        return res.status(404).json({ success: false, error: 'Category not found' });
+      }
+
+      // Check for duplicate name
+      const { rows: existing } = await pool.query(
+        `SELECT id FROM mes_item_category_groups
+         WHERE category_id = $1 AND LOWER(TRIM(catlinedesc)) = LOWER($2) AND is_active = true`,
+        [catId, groupName]
+      );
+      if (existing.length) {
+        return res.status(409).json({ success: false, error: 'A group with this name already exists' });
+      }
+
+      // Insert custom group
+      const { rows } = await pool.query(
+        `INSERT INTO mes_item_category_groups (category_id, catlinedesc, is_custom, display_name, is_active)
+         VALUES ($1, $2, true, $2, true)
+         RETURNING id, category_id, catlinedesc, is_custom, display_name`,
+        [catId, groupName]
+      );
+
+      res.json({ success: true, data: rows[0] });
+    } catch (err) {
+      logger.error('POST /custom-categories/:id/custom-group error:', err);
+      res.status(500).json({ success: false, error: 'Failed to create custom group' });
+    }
+  });
+
+  // GET /items/custom-categories/:id/custom-group/:groupId/items — list items in custom group
+  router.get('/items/custom-categories/:id/custom-group/:groupId/items', authenticate, async (req, res) => {
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+
+      // Get the group to know the override_group_name
+      const { rows: grpRows } = await pool.query(
+        'SELECT catlinedesc FROM mes_item_category_groups WHERE id = $1 AND category_id = $2 AND is_custom = true AND is_active = true',
+        [groupId, catId]
+      );
+      if (!grpRows.length) {
+        return res.status(404).json({ success: false, error: 'Custom group not found' });
+      }
+
+      const groupName = grpRows[0].catlinedesc;
+
+      const { rows } = await pool.query(
+        `SELECT o.id, o.item_key, o.original_catlinedesc, o.created_at
+         FROM mes_item_group_overrides o
+         WHERE o.category_id = $1 AND o.override_group_name = $2
+         ORDER BY o.item_key ASC`,
+        [catId, groupName]
+      );
+
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      logger.error('GET /custom-categories/:id/custom-group/:groupId/items error:', err);
+      res.status(500).json({ success: false, error: 'Failed to fetch custom group items' });
+    }
+  });
+
+  // PUT /items/custom-categories/:id/custom-group/:groupId/items — assign items to custom group
+  router.put('/items/custom-categories/:id/custom-group/:groupId/items', authenticate, async (req, res) => {
+    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+      const itemKeys = normalizeMaterialKeyArray(req.body.item_keys);
+
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+
+      const { rows: grpRows } = await pool.query(
+        'SELECT catlinedesc FROM mes_item_category_groups WHERE id = $1 AND category_id = $2 AND is_custom = true AND is_active = true',
+        [groupId, catId]
+      );
+      if (!grpRows.length) {
+        return res.status(404).json({ success: false, error: 'Custom group not found' });
+      }
+
+      const groupName = grpRows[0].catlinedesc;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Remove existing assignments for this group
+        await client.query(
+          'DELETE FROM mes_item_group_overrides WHERE category_id = $1 AND override_group_name = $2',
+          [catId, groupName]
+        );
+
+        // Insert new assignments
+        if (itemKeys.length > 0) {
+          const values = itemKeys.map((key, i) => {
+            const offset = i * 4;
+            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`;
+          }).join(', ');
+          const params = itemKeys.flatMap((key) => [catId, groupName, key, null]);
+
+          await client.query(
+            `INSERT INTO mes_item_group_overrides (category_id, override_group_name, item_key, original_catlinedesc)
+             VALUES ${values}
+             ON CONFLICT (category_id, item_key) DO UPDATE SET
+               override_group_name = EXCLUDED.override_group_name,
+               updated_at = NOW()`,
+            params
+          );
+        }
+
+        await client.query('COMMIT');
+
+        res.json({ success: true, data: { group_name: groupName, assigned_count: itemKeys.length } });
+      } catch (txnErr) {
+        await client.query('ROLLBACK');
+        throw txnErr;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      logger.error('PUT /custom-categories/:id/custom-group/:groupId/items error:', err);
+      res.status(500).json({ success: false, error: 'Failed to assign items to custom group' });
+    }
+  });
+
+  // DELETE /items/custom-categories/:id/custom-group/:groupId — delete custom group
+  router.delete('/items/custom-categories/:id/custom-group/:groupId', authenticate, async (req, res) => {
+    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+
+      const { rows: grpRows } = await pool.query(
+        'SELECT catlinedesc FROM mes_item_category_groups WHERE id = $1 AND category_id = $2 AND is_custom = true AND is_active = true',
+        [groupId, catId]
+      );
+      if (!grpRows.length) {
+        return res.status(404).json({ success: false, error: 'Custom group not found' });
+      }
+
+      const groupName = grpRows[0].catlinedesc;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Remove all item overrides for this group
+        await client.query(
+          'DELETE FROM mes_item_group_overrides WHERE category_id = $1 AND override_group_name = $2',
+          [catId, groupName]
+        );
+
+        // Soft-delete the group
+        await client.query(
+          'UPDATE mes_item_category_groups SET is_active = false WHERE id = $1',
+          [groupId]
+        );
+
+        await client.query('COMMIT');
+        res.json({ success: true, data: { deleted_group: groupName } });
+      } catch (txnErr) {
+        await client.query('ROLLBACK');
+        throw txnErr;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      logger.error('DELETE /custom-categories/:id/custom-group/:groupId error:', err);
+      res.status(500).json({ success: false, error: 'Failed to delete custom group' });
     }
   });
 

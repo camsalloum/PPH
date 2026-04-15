@@ -93,7 +93,7 @@ export default function MaterialSpecsAdmin({ visible, onClose }) {
       onCancel={onClose}
       width={1100}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: 16 }}>
         <Space>

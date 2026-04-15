@@ -401,12 +401,8 @@ export default function ParameterSchemaAdmin({ visible, onClose }) {
         open={previewVisible}
         onCancel={() => { setPreviewVisible(false); setPreviewSelectedField(null); }}
         width="100vw"
-        style={{ top: 0, margin: 0, maxWidth: '100vw', paddingBottom: 0 }}
-        styles={{
-          wrapper: { inset: 0, padding: 0, overflow: 'hidden' },
-          content: { height: '100vh', borderRadius: 0, display: 'flex', flexDirection: 'column' },
-          body: { flex: 1, minHeight: 0, overflow: 'hidden', padding: 0, display: 'flex', flexDirection: 'column' },
-        }}
+        style={{ top: 0, margin: 0, maxWidth: '100vw', height: '100vh' }}
+        styles={{ body: { height: 'calc(100vh - 55px)', overflow: 'hidden', padding: 0, display: 'flex', flexDirection: 'column' } }}
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text type="secondary" style={{ fontSize: 11 }}>All changes auto-save to database.</Text>
@@ -536,21 +532,12 @@ export default function ParameterSchemaAdmin({ visible, onClose }) {
         open={visible}
         onCancel={onClose}
         width={fullScreen ? '100vw' : '90vw'}
-        style={{ top: fullScreen ? 0 : 20, maxWidth: fullScreen ? '100vw' : undefined, paddingBottom: 0, ...(fullScreen ? { margin: 0 } : {}) }}
-        styles={{
-          wrapper: fullScreen ? { inset: 0, padding: 0, overflow: 'hidden' } : undefined,
-          content: fullScreen ? { height: '100vh', borderRadius: 0, display: 'flex', flexDirection: 'column' } : undefined,
-          body: {
-            padding: fullScreen ? '8px' : undefined,
-            flex: fullScreen ? 1 : undefined,
-            minHeight: fullScreen ? 0 : undefined,
-            overflow: 'hidden',
-          },
-        }}
+        style={{ top: fullScreen ? 0 : 20, maxWidth: fullScreen ? '100vw' : undefined, paddingBottom: 0, ...(fullScreen ? { margin: 0, maxHeight: '100vh', height: '100vh' } : {}) }}
+        styles={{ body: { padding: fullScreen ? '8px' : undefined, height: fullScreen ? 'calc(100vh - 55px)' : undefined, overflow: 'hidden' } }}
         footer={null}
         destroyOnHidden
       >
-        <div style={{ display: 'flex', gap: 8, height: fullScreen ? '100%' : 'calc(100vh - 160px)' }}>
+        <div style={{ display: 'flex', gap: 8, height: fullScreen ? 'calc(100vh - 80px)' : 'calc(100vh - 160px)' }}>
 
           {/* ── Left: Category/Profile selector ── */}
           <div style={{ width: 140, flexShrink: 0, borderRight: '1px solid #e2e8f0', paddingRight: 8, overflowY: 'auto' }}>

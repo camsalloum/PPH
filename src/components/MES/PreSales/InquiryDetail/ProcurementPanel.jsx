@@ -230,21 +230,21 @@ export default function ProcurementPanel({ inquiry, user, onReload }) {
 
       {/* PR Form Modal */}
       <Modal open={showPRForm} onCancel={() => setShowPRForm(false)} footer={null}
-        title="Raise Purchase Requisition" width={700} destroyOnClose>
+        title="Raise Purchase Requisition" width={700} destroyOnHidden>
         <PurchaseRequisitionForm jobCard={jobCard} inquiry={inquiry} user={user}
           onSuccess={() => { setShowPRForm(false); load(); if (onReload) onReload(); }} />
       </Modal>
 
       {/* SPO Form Modal */}
       <Modal open={showSPOForm} onCancel={() => { setShowSPOForm(false); setSelectedPR(null); }} footer={null}
-        title="Create Supplier Purchase Order" width={700} destroyOnClose>
+        title="Create Supplier Purchase Order" width={700} destroyOnHidden>
         <SupplierPurchaseOrderForm pr={selectedPR} user={user}
           onSuccess={() => { setShowSPOForm(false); setSelectedPR(null); load(); }} />
       </Modal>
 
       {/* Receipt Form Modal */}
       <Modal open={showReceiptForm} onCancel={() => { setShowReceiptForm(false); setSelectedSPO(null); }} footer={null}
-        title="Record Stock Receipt" width={700} destroyOnClose>
+        title="Record Stock Receipt" width={700} destroyOnHidden>
         <StockReceiptForm spo={selectedSPO} user={user}
           onSuccess={() => { setShowReceiptForm(false); setSelectedSPO(null); load(); if (onReload) onReload(); }} />
       </Modal>

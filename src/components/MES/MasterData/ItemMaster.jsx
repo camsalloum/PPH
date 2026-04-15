@@ -46,10 +46,19 @@ const ITEM_TYPES = [
   { value: 'fg_bag',        label: 'Finished - Bag' },
 ];
 
+const PRICE_CONTROLS = [
+  { value: 'MAP', label: 'MAP (Moving Average)' },
+  { value: 'STD', label: 'STD (Standard Price)' },
+];
+
 const PRICING_HELP = {
-  panel: 'Combined (WA) is a live reference from stock and on-order mix.',
+  panel: 'Combined (WA) is a live reference from stock and on-order mix. MAP and Standard are policy prices and can be different.',
+  priceControl: 'Use MAP for moving-average costing policy. Use STD for fixed standard-cost policy.',
   marketRef: 'Manual market benchmark used by commercial and purchasing teams.',
   marketDate: 'Date when Market Price was last confirmed with market/supplier inputs.',
+  map: 'Internal moving-average policy price. It is not required to match Combined (WA).',
+  standard: 'Fixed standard planning cost for budgeting and variance analysis. It is not required to match Stock Price (WA).',
+  lastPo: 'Latest confirmed supplier PO unit rate. Auto-fetch is not active in this screen yet, so maintain manually.',
 };
 
 const normalizeToken = normalizeMappingText;
@@ -78,8 +87,12 @@ const substrateDraftFromConfigRow = (row = {}) => {
     yield_m2_per_kg: row.yield_m2_per_kg ?? null,
     roll_length_m: row.roll_length_m ?? null,
     core_diameter_mm: row.core_diameter_mm ?? null,
+    price_control: row.price_control || 'MAP',
     market_ref_price: row.market_ref_price ?? null,
     market_price_date: row.market_price_date ?? null,
+    map_price: row.map_price ?? null,
+    standard_price: row.standard_price ?? null,
+    last_po_price: row.last_po_price ?? null,
     mrp_type: row.mrp_type || 'PD',
     reorder_point: row.reorder_point ?? null,
     safety_stock_kg: row.safety_stock_kg ?? null,
@@ -672,8 +685,12 @@ export default function ItemMaster() {
           yield_m2_per_kg: values.yield_m2_per_kg ?? null,
           roll_length_m: values.roll_length_m ?? null,
           core_diameter_mm: values.core_diameter_mm ?? null,
+          price_control: values.price_control || 'MAP',
           market_ref_price: values.market_ref_price ?? null,
           market_price_date: values.market_price_date ?? null,
+          map_price: values.map_price ?? null,
+          standard_price: values.standard_price ?? null,
+          last_po_price: values.last_po_price ?? null,
           mrp_type: values.mrp_type || 'PD',
           reorder_point: values.reorder_point ?? null,
           safety_stock_kg: values.safety_stock_kg ?? null,
@@ -1009,6 +1026,7 @@ export default function ItemMaster() {
       item_name: record.item_name || `${record.oracle_cat_desc || 'Substrate'}${record.appearance ? ` - ${record.appearance}` : ''}`,
       item_type: record.item_type || 'semi_laminated',
       base_uom: record.base_uom || 'KG',
+      price_control: draft.price_control || record?.price_control || 'MAP',
       supplier_name: isAluSubstrate
         ? ALU_DEFAULT_SUPPLIER
         : (draft.supplier_name ?? record.supplier_name ?? smartAluDefaults.supplier_name ?? null),
@@ -1027,6 +1045,9 @@ export default function ItemMaster() {
       core_diameter_mm: draft.core_diameter_mm ?? record.core_diameter_mm ?? smartAluDefaults.core_diameter_mm ?? null,
       market_ref_price: draft.market_ref_price ?? resolveMarketPrice(record) ?? null,
       market_price_date: draft.market_price_date ?? record.market_price_date ?? null,
+      map_price: draft.map_price ?? record.map_price ?? null,
+      standard_price: draft.standard_price ?? record.standard_price ?? null,
+      last_po_price: draft.last_po_price ?? record.last_po_price ?? null,
       mrp_type: draft.mrp_type ?? record.mrp_type ?? 'PD',
       reorder_point: draft.reorder_point ?? record.reorder_point ?? null,
       safety_stock_kg: draft.safety_stock_kg ?? record.safety_stock_kg ?? null,
@@ -1537,27 +1558,14 @@ export default function ItemMaster() {
       );
     }
 
-    const stockQty = Number(record.stock_qty) || 0;
-    const orderQty = Number(record.order_qty) || 0;
-    const stockPrice = Number(record.stock_price);
-    const orderPrice = Number(record.on_order_price);
-    const densityValue = Number(record.density_g_cm3);
-    const densityDisplay = Number.isFinite(densityValue) && densityValue > 0
-      ? `${densityValue.toFixed(4)} g/cm³`
-      : '—';
-    const combinedQty = stockQty + orderQty;
-    const combinedVal = (Number.isFinite(stockPrice) ? stockPrice * stockQty : 0)
-      + (Number.isFinite(orderPrice) ? orderPrice * orderQty : 0);
-    const combinedWa = combinedQty > 0 ? (combinedVal / combinedQty) : null;
-
     return (
       <Row gutter={24} style={{ padding: '8px 0' }}>
-        <Col span={4}><Text type="secondary">Stock WA:</Text> {renderCurrency(record.stock_price, 4)}</Col>
-        <Col span={4}><Text type="secondary">On Order WA:</Text> {renderCurrency(record.on_order_price, 4)}</Col>
-        <Col span={4}><Text type="secondary">Combined WA:</Text> {renderCurrency(combinedWa, 4)}</Col>
+        <Col span={4}><Text type="secondary">Price Control:</Text> {record.price_control}</Col>
+        <Col span={4}><Text type="secondary">MAP:</Text> {renderCurrency(record.map_price, 4)}</Col>
+        <Col span={4}><Text type="secondary">Standard:</Text> {renderCurrency(record.standard_price, 4)}</Col>
         <Col span={4}><Text type="secondary">Market Ref:</Text> {renderCurrency(resolveMarketPrice(record), 4)}</Col>
+        <Col span={4}><Text type="secondary">Last PO:</Text> {renderCurrency(record.last_po_price, 4)}</Col>
         <Col span={4}><Text type="secondary">Waste %:</Text> {record.waste_pct ?? 3}%</Col>
-        <Col span={4}><Text type="secondary">Density:</Text> {densityDisplay}</Col>
       </Row>
     );
   };
@@ -1786,6 +1794,7 @@ export default function ItemMaster() {
           supplier_name: isAluSubstrate ? ALU_DEFAULT_SUPPLIER : (draft.supplier_name ?? null),
           resin_type: isAluSubstrate ? ALU_DEFAULT_RESIN_TYPE : (draft.resin_type ?? null),
           alloy_code: isAluSubstrate ? ALU_DEFAULT_ALLOY : (draft.alloy_code ?? null),
+          price_control: draft.price_control || 'MAP',
           density_g_cm3: draft.density_g_cm3 ?? aluDefaults.density_g_cm3 ?? defaultDensity,
           solid_pct: draft.solid_pct ?? aluDefaults.solid_pct ?? 100,
           micron_thickness: draft.micron_thickness ?? aluDefaults.micron_thickness ?? null,
@@ -1795,6 +1804,9 @@ export default function ItemMaster() {
           core_diameter_mm: draft.core_diameter_mm ?? aluDefaults.core_diameter_mm ?? null,
           market_ref_price: draft.market_ref_price ?? null,
           market_price_date: draft.market_price_date ?? null,
+          map_price: draft.map_price ?? null,
+          standard_price: draft.standard_price ?? null,
+          last_po_price: draft.last_po_price ?? null,
           mrp_type: draft.mrp_type ?? 'PD',
           reorder_point: draft.reorder_point ?? null,
           safety_stock_kg: draft.safety_stock_kg ?? null,
@@ -1828,6 +1840,7 @@ export default function ItemMaster() {
         supplier_name: isAluSubstrate ? ALU_DEFAULT_SUPPLIER : (draft.supplier_name ?? null),
         resin_type: isAluSubstrate ? ALU_DEFAULT_RESIN_TYPE : (draft.resin_type ?? null),
         alloy_code: isAluSubstrate ? ALU_DEFAULT_ALLOY : (draft.alloy_code ?? null),
+        price_control: draft.price_control || 'MAP',
         density_g_cm3: draft.density_g_cm3 ?? aluDefaults.density_g_cm3 ?? defaultDensity,
         solid_pct: draft.solid_pct ?? aluDefaults.solid_pct ?? 100,
         micron_thickness: draft.micron_thickness ?? aluDefaults.micron_thickness ?? null,
@@ -1837,6 +1850,9 @@ export default function ItemMaster() {
         core_diameter_mm: draft.core_diameter_mm ?? aluDefaults.core_diameter_mm ?? null,
         market_ref_price: draft.market_ref_price ?? null,
         market_price_date: draft.market_price_date ?? null,
+        map_price: draft.map_price ?? null,
+        standard_price: draft.standard_price ?? null,
+        last_po_price: draft.last_po_price ?? null,
         mrp_type: draft.mrp_type ?? 'PD',
         reorder_point: draft.reorder_point ?? null,
         safety_stock_kg: draft.safety_stock_kg ?? null,
@@ -2906,6 +2922,13 @@ export default function ItemMaster() {
                       <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Pricing Helper</Text>
                       <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>{PRICING_HELP.panel}</Text>
                     </div>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="price_control" label="Price Control" initialValue="MAP" extra={PRICING_HELP.priceControl}>
+                          <Select options={PRICE_CONTROLS} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
 
                     <Row gutter={16} style={{ marginBottom: 4 }}>
                       <Col span={8}>
@@ -2943,6 +2966,24 @@ export default function ItemMaster() {
                       <Col span={8}>
                         <Form.Item name="market_price_date" label="Market Price Date" extra={PRICING_HELP.marketDate}>
                           <Input type="date" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                      <Col span={6}>
+                        <Form.Item name="map_price" label="MAP Price" extra={PRICING_HELP.map}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="standard_price" label="Standard Price" extra={PRICING_HELP.standard}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="last_po_price" label="Last PO Price" extra={PRICING_HELP.lastPo}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -3210,6 +3251,14 @@ export default function ItemMaster() {
 
                     <Row gutter={16}>
                       <Col span={8}>
+                        <Form.Item name="price_control" label="Price Control" initialValue="MAP" extra={PRICING_HELP.priceControl}>
+                          <Select options={PRICE_CONTROLS} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                      <Col span={8}>
                         <Form.Item name="market_ref_price" label="Market Price (user-set)" extra={PRICING_HELP.marketRef}>
                           <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
                         </Form.Item>
@@ -3217,6 +3266,24 @@ export default function ItemMaster() {
                       <Col span={8}>
                         <Form.Item name="market_price_date" label="Market Price Date" extra={PRICING_HELP.marketDate}>
                           <Input type="date" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                      <Col span={6}>
+                        <Form.Item name="map_price" label="MAP Price" extra={PRICING_HELP.map}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="standard_price" label="Standard Price" extra={PRICING_HELP.standard}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="last_po_price" label="Last PO Price" extra={PRICING_HELP.lastPo}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -3348,6 +3415,13 @@ export default function ItemMaster() {
                     </div>
                     <Row gutter={16}>
                       <Col span={8}>
+                        <Form.Item name="price_control" label="Price Control" initialValue="MAP" extra={PRICING_HELP.priceControl}>
+                          <Select options={PRICE_CONTROLS} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={8}>
                         <Form.Item name="stock_price" label="Stock Price (WA)">
                           <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
                         </Form.Item>
@@ -3359,6 +3433,23 @@ export default function ItemMaster() {
                       </Col>
                       <Col span={8}>
                         <Form.Item name="market_ref_price" label="Market Price (user-set)" extra={PRICING_HELP.marketRef}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={6}>
+                        <Form.Item name="map_price" label="MAP Price" extra={PRICING_HELP.map}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="standard_price" label="Standard Price" extra={PRICING_HELP.standard}>
+                          <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="last_po_price" label="Last PO Price" extra={PRICING_HELP.lastPo}>
                           <InputNumber min={0} step={0.01} prefix={<CurrencySymbol />} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>

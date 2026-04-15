@@ -215,7 +215,7 @@ export default function CrmActivityPanel({ inquiry, user, message, onReload }) {
         confirmLoading={saving}
         okText="Save Activity"
         width={520}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" size="small" initialValues={{ activity_type: 'call' }}>
           <Form.Item

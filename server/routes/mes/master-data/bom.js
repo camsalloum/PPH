@@ -433,7 +433,7 @@ module.exports = function (router) {
       let resolvedCost = cost_per_kg;
       if (item_id && (resolvedCost === null || resolvedCost === undefined)) {
         const itemRes = await pool.query('SELECT * FROM mes_item_master WHERE id = $1', [item_id]);
-        if (itemRes.rows.length) resolvedCost = resolvePrice(itemRes.rows[0], 'COMBINED_WA');
+        if (itemRes.rows.length) resolvedCost = resolvePrice(itemRes.rows[0], 'STANDARD');
       }
 
       // A2: Calculate cost per sqm from engine

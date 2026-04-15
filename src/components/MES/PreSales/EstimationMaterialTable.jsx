@@ -2,7 +2,7 @@
  * EstimationMaterialTable — Dynamic raw material rows.
  *
  * Each row: Type (Substrate/Ink/Adhesive), Material (from API), Solid%,
- *           Micron, Density, Total GSM (calc), Price Basis, Cost/Kg, Waste%,
+ *           Micron, Density, Total GSM (calc), Cost/Kg, Waste%,
  *           Cost/M² (calc), Est. Kg (calc), Layer% (calc).
  *
  * Formulas:
@@ -26,34 +26,6 @@ const TYPE_OPTIONS = [
   { value: 'adhesive', label: 'Adhesive', color: 'green' },
 ];
 
-const PRICE_SOURCE_OPTIONS = [
-  { value: 'combined_wa', label: 'Combined WA' },
-  { value: 'stock_wa', label: 'Stock WA' },
-  { value: 'market_price', label: 'Market Price' },
-];
-
-const DEFAULT_PRICE_SOURCE = 'combined_wa';
-
-const toFiniteNumber = (value) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-function resolvePriceBySource(source, stockPriceWa, combinedPriceWa, marketPrice, fallback = 0) {
-  const stock = toFiniteNumber(stockPriceWa);
-  const combined = toFiniteNumber(combinedPriceWa);
-  const market = toFiniteNumber(marketPrice);
-  const fb = toFiniteNumber(fallback) ?? 0;
-
-  if (source === 'stock_wa') {
-    return stock ?? combined ?? market ?? fb;
-  }
-  if (source === 'market_price') {
-    return market ?? combined ?? stock ?? fb;
-  }
-  return combined ?? stock ?? market ?? fb;
-}
-
 export default function EstimationMaterialTable({ rows, onChange, materials, summary, orderQty }) {
   const updateRow = useCallback((key, field, value) => {
     onChange(prev => prev.map(r => r.key === key ? { ...r, [field]: value } : r));
@@ -64,10 +36,6 @@ export default function EstimationMaterialTable({ rows, onChange, materials, sum
     onChange(prev => [...prev, {
       key, type: 'substrate', materialName: '', solidPct: null,
       micron: 0, density: null, costPerKg: 0, wastePct: 0,
-      priceSource: DEFAULT_PRICE_SOURCE,
-      stockPriceWa: null,
-      combinedPriceWa: null,
-      marketPrice: null,
     }]);
   }, [onChange]);
 
@@ -79,49 +47,19 @@ export default function EstimationMaterialTable({ rows, onChange, materials, sum
     // Find material in the master list and auto-fill
     const categoryMaterials = materials[type] || [];
     const mat = categoryMaterials.find(m => m.name === materialName);
-    const selectedRow = rows.find((row) => row.key === key) || {};
-    const priceSource = selectedRow.priceSource || DEFAULT_PRICE_SOURCE;
-
     if (mat) {
-      const stockPriceWa = toFiniteNumber(mat.stock_price_wa) ?? toFiniteNumber(selectedRow.stockPriceWa) ?? toFiniteNumber(selectedRow.costPerKg) ?? 0;
-      const combinedPriceWa = toFiniteNumber(mat.combined_price_wa) ?? toFiniteNumber(selectedRow.combinedPriceWa) ?? toFiniteNumber(selectedRow.costPerKg) ?? 0;
-      const marketPrice = toFiniteNumber(mat.market_price) ?? toFiniteNumber(selectedRow.marketPrice) ?? toFiniteNumber(selectedRow.costPerKg) ?? 0;
-      const costPerKg = resolvePriceBySource(priceSource, stockPriceWa, combinedPriceWa, marketPrice, selectedRow.costPerKg);
-
       onChange(prev => prev.map(r => r.key === key ? {
         ...r,
         materialName,
         solidPct: mat.solid_pct ?? r.solidPct,
         density: mat.density ?? r.density,
-        costPerKg,
+        costPerKg: mat.cost_per_kg ?? r.costPerKg,
         wastePct: mat.waste_pct ?? r.wastePct,
-        stockPriceWa,
-        combinedPriceWa,
-        marketPrice,
-        priceSource,
       } : r));
     } else {
       updateRow(key, 'materialName', materialName);
     }
-  }, [materials, onChange, rows, updateRow]);
-
-  const handlePriceSourceChange = useCallback((key, priceSource) => {
-    onChange((prev) => prev.map((row) => {
-      if (row.key !== key) return row;
-      const costPerKg = resolvePriceBySource(
-        priceSource,
-        row.stockPriceWa,
-        row.combinedPriceWa,
-        row.marketPrice,
-        row.costPerKg
-      );
-      return {
-        ...row,
-        priceSource,
-        costPerKg,
-      };
-    }));
-  }, [onChange]);
+  }, [materials, onChange, updateRow]);
 
   // Compute derived values per row
   const computedRows = rows.map(r => {
@@ -163,26 +101,7 @@ export default function EstimationMaterialTable({ rows, onChange, materials, sum
     {
       title: 'Type', dataIndex: 'type', width: 110,
       render: (v, r) => (
-        <Select
-          value={v}
-          onChange={(val) => {
-            onChange((prev) => prev.map((row) => {
-              if (row.key !== r.key) return row;
-              return {
-                ...row,
-                type: val,
-                materialName: '',
-                priceSource: DEFAULT_PRICE_SOURCE,
-                stockPriceWa: null,
-                combinedPriceWa: null,
-                marketPrice: null,
-                costPerKg: 0,
-              };
-            }));
-          }}
-          size="small"
-          style={{ width: 100 }}
-        >
+        <Select value={v} onChange={val => { updateRow(r.key, 'type', val); updateRow(r.key, 'materialName', ''); }} size="small" style={{ width: 100 }}>
           {TYPE_OPTIONS.map(t => <Option key={t.value} value={t.value}><Tag color={t.color} style={{ margin: 0 }}>{t.label}</Tag></Option>)}
         </Select>
       ),
@@ -236,21 +155,6 @@ export default function EstimationMaterialTable({ rows, onChange, materials, sum
       render: v => <span style={{ fontWeight: 600 }}>{v || '—'}</span>,
     },
     {
-      title: 'Price Basis', dataIndex: 'priceSource', width: 125,
-      render: (v, r) => (
-        <Select
-          value={v || DEFAULT_PRICE_SOURCE}
-          onChange={(val) => handlePriceSourceChange(r.key, val)}
-          size="small"
-          style={{ width: 115 }}
-        >
-          {PRICE_SOURCE_OPTIONS.map((opt) => (
-            <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-          ))}
-        </Select>
-      ),
-    },
-    {
       title: 'Cost/Kg', dataIndex: 'costPerKg', width: 80,
       render: (v, r) => <InputNumber value={v} onChange={val => updateRow(r.key, 'costPerKg', val || 0)} min={0} step={0.1} size="small" style={{ width: 70 }} />,
     },
@@ -289,7 +193,7 @@ export default function EstimationMaterialTable({ rows, onChange, materials, sum
         rowKey="key"
         size="small"
         pagination={false}
-        scroll={{ x: 1220 }}
+        scroll={{ x: 1100 }}
         locale={{ emptyText: 'No material layers. Click "Add Layer" to start.' }}
         summary={() => computedRows.length > 0 ? (
           <Table.Summary.Row>

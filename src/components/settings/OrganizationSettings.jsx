@@ -471,7 +471,7 @@ const OrganizationSettings = () => {
                 open={modalVisible}
                 onCancel={() => { setModalVisible(false); form.resetFields(); setEditingItem(null); }}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Form 
                     form={form} 

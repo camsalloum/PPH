@@ -1,6 +1,6 @@
 # TECH DEBT — ProPackHub / PEBI
 > **Check this file before starting any task. Fix debt items when you touch the relevant file.**
-> **Last Updated:** 2026-03-23
+> **Last Updated:** 2026-04-15
 >
 > **See also:** `docs/_backup/PPH-26.2_Data_Performance_Review.md` — earlier audit covering **dashboard data query** slowness (12 SQL full-table scans per slicer change, missing indexes, no MV). Partially implemented (`sales_rep_group_id` backfilled, one basic index added). Remaining items tracked below as TD-026 through TD-032.
 > **Implementation plan:** `docs/DASHBOARD_PERF_IMPLEMENTATION_PLAN.md` — step-by-step guide for the next agent session.
@@ -37,6 +37,7 @@
 | TD-030 | ~~No client-side data caching~~ **RESOLVED** | `SalesCockpit.jsx`, dashboard components | **Done:** `@tanstack/react-query` installed, `QueryClientProvider` in App.jsx (5min staleTime), `useSalesCube` hook created for progressive adoption. |
 | TD-031 | ~~Cache TTL too short (45s) and per-worker only (no Redis)~~ **RESOLVED** — tiered TTL implemented | `server/services/crmCacheService.js` | **Done:** `getCacheTTL(year)` — 30min for historical years, 5min for current year. `cacheSet` now accepts optional `ttl` param. Dashboard routes pass `getCacheTTL(currentYear)`. Future: Redis for cross-worker sharing. |
 | TD-032 | ~~`/customers/map` has no server-side hard cap on `limit` param~~ **RESOLVED** | `server/routes/crm/customers.js` | **Done:** `safeLimit()` helper in `server/utils/pagination.js`, hard cap 500 rows. `?limit=99999` → capped to 500. |
+| TD-034 | Custom group detail view has no direct unassign action | `src/components/MES/MasterData/CustomCategories.jsx`, `server/routes/mes/master-data/items.js` | Add explicit unassign control inside custom-group detail (row-level remove), with immediate category/profile counter refresh and confirmation UX. |
 
 ---
 

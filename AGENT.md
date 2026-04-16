@@ -103,6 +103,17 @@ if (score > CHURN_RISK_THRESHOLD) { ... }
 ### D6 — One Truth, One Place
 Shared logic must be extracted. Never duplicate business logic across admin/non-admin views, across routes, or across components.
 
+### D7 — No Avoidable Horizontal Scroll
+Desktop UIs must fit available width without horizontal scrolling by default.
+
+Before adding `scroll.x` or any horizontal scrollbar in tables/cards:
+1. Leave at least one low-priority text column flexible (no fixed width)
+2. Tighten numeric/action column widths first
+3. Use ellipsis or wrapping for long labels/tags
+4. Hide non-critical columns on smaller breakpoints
+
+Only keep horizontal scroll when the data is genuinely wide and no reasonable responsive layout exists.
+
 ---
 
 ## 5. REACT COMPONENT RULES

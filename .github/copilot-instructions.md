@@ -38,6 +38,7 @@
 - **API URLs**: Frontend → `src/config/api.js`. Never hardcode `http://localhost:3001`
 - **Ant Design**: Use `App.useApp()` for `message`/`modal`/`notification` — never static imports
 - **Tables**: Set `rowKey` on every `<Table>` — never `key={index}`
+- **UI fit**: Avoid horizontal scrollbars by default; keep one flexible text column, tighten numeric/action widths, and only use `scroll.x` when genuinely unavoidable
 - **Currency**: AED Dirham uses SVG component `UAEDirhamSymbol.jsx` — never render as text
 - **Cleanup**: Remove ALL unused imports and dead state before finishing any file
 - **File limits**: Components 300 lines, services 250, routes 350

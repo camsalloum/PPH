@@ -1,13 +1,13 @@
 {
   "status": "completed",
   "phase": "RM Sync complete!",
-  "startTime": "2026-04-09T11:16:52.811Z",
-  "completedAt": "2026-04-09T11:16:57.770Z",
+  "startTime": "2026-04-16T10:26:08.437Z",
+  "completedAt": "2026-04-16T10:26:13.295Z",
   "elapsedSeconds": 5,
   "totalMinutes": 0.1,
-  "rows": 439,
+  "rows": 448,
   "columns": 17,
-  "oracleFetchTime": 2.9,
-  "pgCopyTime": 0.3,
-  "updatedAt": "2026-04-09T11:16:57.770Z"
+  "oracleFetchTime": 3.2,
+  "pgCopyTime": 0.2,
+  "updatedAt": "2026-04-16T10:26:13.295Z"
 }

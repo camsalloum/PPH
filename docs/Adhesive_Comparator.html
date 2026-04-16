@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adhesive Comparator Cost Calculator</title>
+<style>
+  :root{
+    --bg:#ffffff; --text:#0f172a; --muted:#475569; --border:#e5e7eb; --panel:#ffffff; --th:#f8fafc;
+    --accent:#0ea5e9; --accent2:#10b981; --danger:#dc2626; --warn:#b45309;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{position:sticky;top:0;background:#ffffffcc;backdrop-filter:blur(4px);border-bottom:1px solid var(--border);padding:14px 16px;z-index:10}
+  h1{margin:0;font-size:20px}
+  .sub{font-size:12px;color:var(--muted)}
+  main{max-width:1400px;margin:18px auto;padding:0 12px 80px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .field{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--panel);padding:8px 10px;gap:6px}
+  .field input,.field select{border:none;outline:none;background:transparent;color:var(--text)}
+  .btn{appearance:none;border:1px solid var(--border);background:var(--panel);padding:9px 12px;border-radius:10px;cursor:pointer;font-size:13px}
+  .btn:hover{background:#f1f5f9}
+  .btn.acc{border-color:#86efac;background:#f0fdf4}
+  .btn.warn{border-color:#fed7aa;background:#fffbeb}
+  .btn.danger{border-color:#fecaca;background:#fff1f2;color:#7f1d1d}
+  .tabs{display:flex;gap:8px;margin:10px 0 16px}
+  .tab{padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--panel);cursor:pointer}
+  .tab.active{background:#eef6ff;border-color:#93c5fd}
+  .colgrid{display:grid;gap:14px;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr))}
+  .card{border:1px solid var(--border);border-radius:12px;background:var(--panel)}
+  .card h2{margin:0;padding:10px 12px;background:var(--th);border-bottom:1px solid var(--border);font-size:16px;display:flex;align-items:center;gap:10px}
+  .wrap{padding:12px}
+  .line{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  label.small{font-size:12px;color:var(--muted)}
+  .sel{display:flex;gap:8px;align-items:center}
+  .sel select{border:1px solid var(--border);border-radius:8px;padding:8px;background:#fff;min-width:220px}
+  .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+  .metric{border:1px dashed var(--border);border-radius:10px;padding:10px}
+  .metric h4{margin:0 0 6px;font-size:12px;color:var(--muted)}
+  .metric .v{font-variant-numeric:tabular-nums;font-weight:700}
+  table{border-collapse:collapse;width:100%}
+  th,td{border:1px solid var(--border);padding:8px;text-align:right;font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  thead th{background:var(--th)}
+  .pos{color:#166534}.neg{color:var(--danger)}
+  .components{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:8px}
+  .row{display:grid;grid-template-columns:1.2fr .6fr .6fr .6fr .4fr;gap:8px;border-top:1px solid var(--border);padding:8px}
+  .row.header{background:var(--th);font-weight:600}
+  .row input{width:100%}
+  .row .del{border:1px solid #fecaca;background:#fff1f2;color:#7f1d1d;border-radius:8px;padding:5px 8px;cursor:pointer}
+  .inline-note{font-size:12px;color:var(--muted)}
+  .hidden{display:none !important}
+  .lib-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+  .search{border:1px solid var(--border);border-radius:10px;padding:8px 10px;min-width:260px}
+  .pill{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:4px 8px;font-size:12px}
+  @media (max-width:1100px){ .metrics{grid-template-columns:1fr} .colgrid{grid-template-columns:1fr 1fr} }
+  @media (max-width:800px){ .colgrid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Adhesive Comparator Cost Calculator</h1>
+  <div class="sub">Compare adhesives with utilization fixed at 100%. Manage your adhesive Library on a separate page. “Save” embeds Library & selections into this single HTML (no localStorage).</div>
+</header>
+
+<main>
+  <div class="controls">
+    <label class="field">Currency
+      <select id="currency">
+        <option value="$">USD ($)</option>
+        <option value="AED">AED (د.إ)</option>
+      </select>
+    </label>
+    <label class="field">Decimals
+      <input id="decimals" type="number" min="0" max="6" step="1" value="2">
+    </label>
+    <label class="field">Compare columns
+      <select id="compareCount">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+    </label>
+    <button id="btnSave" class="btn acc">Save as self-contained HTML</button>
+    <div class="tabs">
+      <button class="tab active" data-tab="compare">Compare</button>
+      <button class="tab" data-tab="library">Library</button>
+    </div>
+  </div>
+
+  <!-- Compare TAB -->
+  <section id="tab-compare">
+    <section id="cols" class="colgrid" style="--cols:2"></section>
+    <section class="card" style="margin-top:14px">
+      <h2>Head-to-Head Differences</h2>
+      <div class="wrap">
+        <div class="inline-note">Comparing visible columns left-to-right. Percent Δ = (Left − Right) / Right. Uses Cost / 1000 m² and $/kg metrics.</div>
+        <div id="compareTable"></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- Library TAB -->
+  <section id="tab-library" class="hidden">
+    <div class="wrap card">
+      <h2>Library</h2>
+      <div class="wrap">
+        <div class="lib-toolbar">
+          <input id="libSearch" class="search" placeholder="Search by name or category">
+          <span class="pill" id="libCount"></span>
+          <button id="btnNew" class="btn">➕ Add New Adhesive</button>
+          <button id="btnSendToCompare" class="btn acc">➡️ Send Selected to Compare</button>
+          <button id="btnDeleteSelected" class="btn danger">🗑️ Delete Selected</button>
+        </div>
+        <div id="libTable"></div>
+      </div>
+    </div>
+
+    <div id="editor" class="card hidden" style="margin-top:14px">
+      <h2 id="edTitle">New Adhesive</h2>
+      <div class="wrap">
+        <div class="line">
+          <label class="small">Name</label><input id="e_name" type="text" placeholder="Adhesive name" style="border:1px solid var(--border);border-radius:8px;padding:8px;min-width:320px">
+          <label class="small">Category</label>
+          <select id="e_cat" style="border:1px solid var(--border);border-radius:8px;padding:8px">
+            <option>Solvent Based (SB)</option>
+            <option>Solvent Free (SF)</option>
+            <option>Mono Component</option>
+            <option>Water Based (WB)</option>
+            <option>UV/EB</option>
+            <option>Other</option>
+          </select>
+          <label class="small">Deposit (g/m²)</label><input id="e_deposit" type="number" step="0.01" value="3" style="border:1px solid var(--border);border-radius:8px;padding:8px;width:140px">
+          <span class="inline-note">Utilization: 100%</span>
+        </div>
+        <div class="components" id="e_rows">
+          <div class="row header"><div>Component</div><div>Parts</div><div>Solids %</div><div>Unit Price</div><div>Act</div></div>
+        </div>
+        <div class="line">
+          <button id="e_addRow" class="btn">➕ Add component</button>
+          <button id="e_save" class="btn acc">💾 Save</button>
+          <button id="e_cancel" class="btn warn">Cancel</button>
+        </div>
+        <div class="inline-note">Empty rows are ignored. Name + ≥1 non-empty component required. Changes are embedded on “Save as self-contained HTML”.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// ===== Embedded data to be persisted on Save =====
+window.__LIBRARY = window.__LIBRARY || [
+  { id:"SB_655_CT85_EA", name:"MORBOND 655 / CT85 / EA", category:"Solvent Based (SB)", deposit:3,
+    rows:[
+      {name:"MORBOND 655",parts:100,solidsPct:70,unitPrice:3.63},
+      {name:"CT 85",parts:3,solidsPct:100,unitPrice:14.61},
+      {name:"Ethyl Acetate",parts:106,solidsPct:0,unitPrice:1.50}
+    ]},
+  { id:"SF_S621_S110", name:"S621 / S110", category:"Solvent Free (SF)", deposit:3,
+    rows:[
+      {name:"S621 Resin",parts:100,solidsPct:100,unitPrice:4.15},
+      {name:"S110 Catalyst",parts:65,solidsPct:100,unitPrice:3.20}
+    ]}
+];
+
+window.__SELECTION = window.__SELECTION || {
+  currency:"$",
+  decimals:2,
+  compareCount:2,
+  chosenIds:["SB_655_CT85_EA","SF_S621_S110"]
+};
+
+(function(){
+  "use strict";
+  const $ = (s)=>document.querySelector(s);
+  const $$ = (s)=>Array.from(document.querySelectorAll(s));
+  const clamp=(v,min,max)=>Math.min(Math.max(v,min),max);
+  function fmtNum(v){ const dp = clamp(parseInt($('#decimals').value||'2',10),0,6); if(!Number.isFinite(v)) v=0; return v.toLocaleString(undefined,{minimumFractionDigits:dp, maximumFractionDigits:dp}); }
+  function cur(){ return $('#currency').value==='AED' ? 'AED' : '$'; }
+  function money(v){ return (cur()==='AED'?'د.إ ':'$ ')+fmtNum(v); }
+  function parseNum(s){ if(!s) return 0; s=s.replace(/[^\d\.\-\,]/g,''); return parseFloat(s.replace(/,/g,''))||0; }
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  function slug(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,60); }
+
+  // ===== Core calc =====
+  function calc(rows){
+    let totalParts=0,totalSolids=0,totalCost=0;
+    for(const r of rows||[]){
+      const parts = parseFloat(r.parts)||0;
+      const solids = parseFloat(r.solidsPct)||0;
+      const price = parseFloat(r.unitPrice)||0;
+      if(!r.name && parts===0 && solids===0 && price===0) continue;
+      totalParts += parts;
+      totalSolids += parts*(solids/100);
+      totalCost += parts*price;
+    }
+    const wet = totalParts>0 ? totalCost/totalParts : 0;
+    const solidIncl = totalSolids>0 ? totalCost/totalSolids : 0;
+    const share = totalParts>0 ? (totalSolids/totalParts*100) : 0;
+    return {totalParts,totalSolids,totalCost,wet,solidIncl,share};
+  }
+  function costPer1000m2(wetPrice, sharePct, depositG){ const solidsKg_m2=depositG/1000; const wetKg_m2 = sharePct>0 ? solidsKg_m2/(sharePct/100)/1.0 : 0; return wetPrice*wetKg_m2*1000; }
+
+  // ===== Tabs =====
+  function showTab(name){
+    $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+    $('#tab-compare').classList.toggle('hidden', name!=='compare');
+    $('#tab-library').classList.toggle('hidden', name!=='library');
+  }
+  $$('.tab').forEach(t=>t.addEventListener('click', ()=>showTab(t.dataset.tab)));
+  showTab('compare');
+
+  // ===== Compare view =====
+  function renderCompare(){
+    const count = parseInt($('#compareCount').value,10);
+    const wrap = $('#cols'); wrap.style.setProperty('--cols', count); wrap.innerHTML='';
+    const ids = (window.__SELECTION.chosenIds||[]).slice(0,count);
+    while(ids.length<count) ids.push(null);
+
+    for(let i=0;i<count;i++){
+      const card = document.createElement('section');
+      card.className='card';
+      card.innerHTML = `
+        <h2>Adhesive ${String.fromCharCode(65+i)}</h2>
+        <div class="wrap">
+          <div class="line sel">
+            <label class="small">Select</label>
+            <select class="pick"><option value="">— choose adhesive —</option></select>
+            <button class="btn" data-open-lib>Open Library</button>
+          </div>
+          <div class="line">
+            <label class="small">Name</label><input class="nm" type="text" disabled style="border:1px solid var(--border);border-radius:8px;padding:8px;min-width:260px">
+            <label class="small">Category</label><input class="ct" type="text" disabled style="border:1px solid var(--border);border-radius:8px;padding:8px;width:220px">
+            <label class="small">Deposit (g/m²)</label><input class="dp" type="number" step="0.01" disabled style="border:1px solid var(--border);border-radius:8px;padding:8px;width:120px">
+            <span class="inline-note">Utilization: 100%</span>
+          </div>
+          <div class="components cmp">
+            <div class="row header"><div>Component</div><div>Parts</div><div>Solids %</div><div>Unit Price</div><div>Act</div></div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><h4>Total Parts</h4><div class="v tp">0</div></div>
+            <div class="metric"><h4>Total Solids (kg eq.)</h4><div class="v ts">0</div></div>
+            <div class="metric"><h4>Total Cost</h4><div class="v tc">0</div></div>
+            <div class="metric"><h4>$/kg (wet)</h4><div class="v wet">0</div></div>
+            <div class="metric"><h4>$/kg-solids</h4><div class="v solidI">0</div></div>
+            <div class="metric"><h4>Solids share (%)</h4><div class="v share">0</div></div>
+            <div class="metric"><h4>Cost / 1000 m²</h4><div class="v m2k">0</div></div>
+          </div>
+        </div>`;
+      wrap.appendChild(card);
+
+      // populate picker
+      const pick = card.querySelector('.pick');
+      for(const ad of window.__LIBRARY){
+        const opt = document.createElement('option');
+        opt.value=ad.id; opt.textContent=`${ad.name} — ${ad.category}`; pick.appendChild(opt);
+      }
+      if(ids[i]) pick.value = ids[i];
+      pick.addEventListener('change', ()=>{
+        ids[i] = pick.value || null;
+        window.__SELECTION.chosenIds = ids;
+        loadCard(card, pick.value);
+        computeAll();
+      });
+      card.querySelector('[data-open-lib]').addEventListener('click', ()=>{ showTab('library'); });
+
+      loadCard(card, pick.value);
+    }
+    computeAll();
+  }
+
+  function loadCard(card,id){
+    const nm=card.querySelector('.nm'), ct=card.querySelector('.ct'), dp=card.querySelector('.dp'), cmp=card.querySelector('.cmp');
+    cmp.innerHTML='<div class="row header"><div>Component</div><div>Parts</div><div>Solids %</div><div>Unit Price</div><div>Act</div></div>';
+    if(!id){ nm.value=''; ct.value=''; dp.value=''; computeCard(card,null); return; }
+    const ad = window.__LIBRARY.find(x=>x.id===id); if(!ad){ computeCard(card,null); return; }
+    nm.value=ad.name; ct.value=ad.category; dp.value=ad.deposit??3;
+    for(const r of (ad.rows||[])){
+      const row=document.createElement('div'); row.className='row';
+      row.innerHTML = `<input type="text" value="${r.name||''}" disabled>
+                       <input type="number" step="0.01" value="${r.parts??0}" disabled>
+                       <input type="number" step="0.01" value="${r.solidsPct??0}" disabled>
+                       <input type="number" step="0.0001" value="${r.unitPrice??0}" disabled>
+                       <button class="del" disabled>Del</button>`;
+      cmp.appendChild(row);
+    }
+    computeCard(card, ad);
+  }
+
+  function computeCard(card, ad){
+    const tp=card.querySelector('.tp'), ts=card.querySelector('.ts'), tc=card.querySelector('.tc'),
+          wet=card.querySelector('.wet'), soli=card.querySelector('.solidI'), sh=card.querySelector('.share'), m2k=card.querySelector('.m2k');
+    if(!ad){ tp.textContent=fmtNum(0); ts.textContent=fmtNum(0); tc.textContent=money(0); wet.textContent=money(0); soli.textContent=money(0); sh.textContent=fmtNum(0); m2k.textContent=money(0); return; }
+    const s=calc(ad.rows); tp.textContent=fmtNum(s.totalParts); ts.textContent=fmtNum(s.totalSolids); tc.textContent=money(s.totalCost);
+    wet.textContent=money(s.wet); soli.textContent=money(s.solidIncl); sh.textContent=fmtNum(s.share);
+    m2k.textContent=money(costPer1000m2(s.wet,s.share, parseFloat(ad.deposit)||0));
+  }
+
+  function computeAll(){
+    const cols = $$('#cols > .card');
+    const rows = cols.map(c=>{
+      const name = c.querySelector('.nm').value || '—';
+      const wet = parseNum(c.querySelector('.wet').textContent);
+      const soli = parseNum(c.querySelector('.solidI').textContent);
+      const share = parseFloat(c.querySelector('.share').textContent.replace(/,/g,''))||0;
+      const m2k = parseNum(c.querySelector('.m2k').textContent);
+      return {name, wet, soli, share, m2k};
+    });
+    // build table
+    const container = $('#compareTable');
+    let html = '<table><thead><tr><th>Metric</th>';
+    rows.forEach((r,i)=>{ html += `<th>${String.fromCharCode(65+i)} — ${escapeHtml(r.name)}</th>`; });
+    html += '<th>A−B (pairwise)</th><th>% Δ vs Right</th></tr></thead><tbody>';
+    const pair = (metric,isPct=false)=>{
+      let out='';
+      for(let i=0;i<rows.length-1;i++){
+        const a=rows[i][metric], b=rows[i+1][metric]; const d=a-b; const p=(b!==0)? d/b*100 : 0;
+        out += `<td class="${d<0?'neg':(d>0?'pos':'')}">${isPct? fmtNum(d) : money(d)}</td>`;
+        out += `<td class="${p<0?'neg':(p>0?'pos':'')}">${fmtNum(p)}%</td>`;
+      }
+      if(rows.length<2) out+='<td></td><td></td>';
+      return out;
+    };
+    html += `<tr><td>$/kg (wet)</td>${rows.map(r=>`<td>${money(r.wet)}</td>`).join('')}${pair('wet')}</tr>`;
+    html += `<tr><td>$/kg-solids</td>${rows.map(r=>`<td>${money(r.soli)}</td>`).join('')}${pair('soli')}</tr>`;
+    html += `<tr><td>Cost / 1000 m²</td>${rows.map(r=>`<td>${money(r.m2k)}</td>`).join('')}${pair('m2k')}</tr>`;
+    html += `<tr><td>Solids share (%)</td>${rows.map(r=>`<td>${fmtNum(r.share)}</td>`).join('')}${pair('share',true)}</tr>`;
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  // ===== Library view =====
+  function renderLibrary(){
+    const q = ($('#libSearch').value||'').toLowerCase().trim();
+    const data = window.__LIBRARY.filter(ad => !q || (ad.name.toLowerCase().includes(q) || ad.category.toLowerCase().includes(q)));
+    $('#libCount').textContent = data.length + ' item(s)';
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr>
+      <th style="width:36px"><input type="checkbox" id="libCheckAll"></th>
+      <th>Name</th><th>Category</th><th>Deposit (g/m²)</th><th>Components</th><th style="width:210px">Actions</th>
+    </tr></thead><tbody></tbody>`;
+    const tb = table.querySelector('tbody');
+    for(const ad of data){
+      const tr = document.createElement('tr');
+      const compText = (ad.rows||[]).map(r=>`${r.name} (${r.parts}p, ${r.solidsPct}%, ${r.unitPrice})`).join(' • ');
+      tr.innerHTML = `
+        <td><input type="checkbox" class="libRow" data-id="${ad.id}"></td>
+        <td>${escapeHtml(ad.name)}</td>
+        <td>${escapeHtml(ad.category)}</td>
+        <td style="text-align:right">${fmtNum(ad.deposit||0)}</td>
+        <td>${escapeHtml(compText)}</td>
+        <td style="text-align:right">
+          <button class="btn" data-edit="${ad.id}">Edit</button>
+          <button class="btn" data-dup="${ad.id}">Duplicate</button>
+          <button class="btn danger" data-del="${ad.id}">Delete</button>
+        </td>`;
+      tb.appendChild(tr);
+    }
+    const host = $('#libTable'); host.innerHTML=''; host.appendChild(table);
+
+    // Handlers
+    const chkAll = $('#libCheckAll');
+    if(chkAll){ chkAll.addEventListener('change', ()=>{ $$('.libRow').forEach(c=>c.checked = chkAll.checked); }); }
+    $$('.libRow').forEach(c=>c.addEventListener('change', ()=>{ if(!c.checked && chkAll) chkAll.checked=false; }));
+    $$('button[data-edit]').forEach(b=>b.addEventListener('click', ()=>openEditor(b.dataset.edit)));
+    $$('button[data-dup]').forEach(b=>b.addEventListener('click', ()=>duplicateAdhesive(b.dataset.dup)));
+    $$('button[data-del]').forEach(b=>b.addEventListener('click', ()=>deleteAdhesive(b.dataset.del)));
+  }
+
+  function openEditor(id){
+    $('#editor').classList.remove('hidden');
+    const isNew = !id;
+    $('#edTitle').textContent = isNew ? 'New Adhesive' : 'Edit Adhesive';
+    $('#e_rows').innerHTML = '<div class="row header"><div>Component</div><div>Parts</div><div>Solids %</div><div>Unit Price</div><div>Act</div></div>';
+    let ad = {id:'', name:'', category:'Solvent Based (SB)', deposit:3, rows:[]};
+    if(id){ ad = window.__LIBRARY.find(x=>x.id===id) || ad; }
+    $('#e_name').value = ad.name || '';
+    $('#e_cat').value = ad.category || 'Solvent Based (SB)';
+    $('#e_deposit').value = ad.deposit ?? 3;
+    $('#e_save').dataset.id = id || '';
+    (ad.rows||[]).forEach(r=>addEditorRow(r));
+    // Add two empty rows by default for quick entry
+    if((ad.rows||[]).length===0){ addEditorRow(); addEditorRow(); }
+  }
+
+  function addEditorRow(data){
+    const row = document.createElement('div');
+    row.className='row';
+    row.innerHTML = `
+      <input type="text" placeholder="Name" value="${data?.name??''}">
+      <input type="number" step="0.01" value="${data?.parts??0}">
+      <input type="number" step="0.01" value="${data?.solidsPct??0}">
+      <input type="number" step="0.0001" value="${data?.unitPrice??0}">
+      <button class="del">Del</button>`;
+    $('#e_rows').appendChild(row);
+    row.querySelector('.del').addEventListener('click', ()=>row.remove());
+  }
+
+  function gatherEditor(){
+    const rows = Array.from($('#e_rows').querySelectorAll('.row')).slice(1).map(r=>{
+      const [n,p,s,u]=r.querySelectorAll('input');
+      return { name:n.value.trim(), parts:parseFloat(p.value)||0, solidsPct:parseFloat(s.value)||0, unitPrice:parseFloat(u.value)||0 };
+    }).filter(r => r.name || r.parts || r.solidsPct || r.unitPrice);
+    return {
+      id: slug($('#e_name').value.trim()) || ('adh_'+Date.now()),
+      name: $('#e_name').value.trim(),
+      category: $('#e_cat').value,
+      deposit: parseFloat($('#e_deposit').value)||0,
+      rows
+    };
+  }
+
+  function saveEditor(){
+    const id = $('#e_save').dataset.id;
+    const ad = gatherEditor();
+    if(!ad.name){ alert('Name is required.'); return; }
+    if(!ad.rows.length){ alert('Add at least one component row with data.'); return; }
+    if(id){
+      // update existing (preserve id)
+      const idx = window.__LIBRARY.findIndex(x=>x.id===id);
+      if(idx>=0){ ad.id = id; window.__LIBRARY[idx]=ad; }
+    }else{
+      // ensure unique id
+      if(window.__LIBRARY.some(x=>x.id===ad.id)){ ad.id = ad.id+'_'+Date.now(); }
+      window.__LIBRARY.push(ad);
+    }
+    $('#editor').classList.add('hidden');
+    renderLibrary();
+    // also refresh compare picklists
+    refreshComparePicklists();
+    alert('Saved.');
+  }
+
+  function duplicateAdhesive(id){
+    const src = window.__LIBRARY.find(x=>x.id===id); if(!src) return;
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.id = src.id + '_copy_' + Date.now();
+    copy.name = src.name + ' (Copy)';
+    window.__LIBRARY.push(copy);
+    renderLibrary(); refreshComparePicklists();
+  }
+
+  function deleteAdhesive(id){
+    if(!confirm('Delete this adhesive?')) return;
+    const idx = window.__LIBRARY.findIndex(x=>x.id===id);
+    if(idx>=0) window.__LIBRARY.splice(idx,1);
+    // clear from selection if used
+    window.__SELECTION.chosenIds = (window.__SELECTION.chosenIds||[]).map(x=>x===id?null:x);
+    renderLibrary(); renderCompare();
+  }
+
+  function refreshComparePicklists(){
+    $$('#cols .card .pick').forEach(sel=>{
+      const current=sel.value;
+      sel.innerHTML='<option value="">— choose adhesive —</option>';
+      for(const ad of window.__LIBRARY){
+        const opt=document.createElement('option'); opt.value=ad.id; opt.textContent=`${ad.name} — ${ad.category}`;
+        sel.appendChild(opt);
+      }
+      if(window.__LIBRARY.some(x=>x.id===current)) sel.value=current;
+      sel.dispatchEvent(new Event('change'));
+    });
+  }
+
+  // Library actions
+  $('#btnNew').addEventListener('click', ()=>{ openEditor(null); });
+  $('#e_addRow').addEventListener('click', ()=> addEditorRow() );
+  $('#e_save').addEventListener('click', saveEditor);
+  $('#e_cancel').addEventListener('click', ()=> $('#editor').classList.add('hidden'));
+  $('#libSearch').addEventListener('input', renderLibrary);
+  $('#btnDeleteSelected').addEventListener('click', ()=>{
+    const ids = $$('.libRow:checked').map(x=>x.dataset.id);
+    if(!ids.length){ alert('Select rows first.'); return; }
+    if(!confirm('Delete selected adhesives?')) return;
+    window.__LIBRARY = window.__LIBRARY.filter(x=>!ids.includes(x.id));
+    // remove from compare selection too
+    window.__SELECTION.chosenIds = (window.__SELECTION.chosenIds||[]).map(x=>ids.includes(x)?null:x);
+    renderLibrary(); renderCompare();
+  });
+  $('#btnSendToCompare').addEventListener('click', ()=>{
+    const ids = $$('.libRow:checked').map(x=>x.dataset.id);
+    if(!ids.length){ alert('Select at least one adhesive.'); return; }
+    const count = parseInt($('#compareCount').value,10);
+    const chosen = (window.__SELECTION.chosenIds||[]).slice(0,count);
+    let idx=0;
+    for(let i=0;i<count && idx<ids.length;i++){
+      if(!chosen[i]){ chosen[i]=ids[idx++]; }
+    }
+    window.__SELECTION.chosenIds = chosen;
+    renderCompare();
+    showTab('compare');
+  });
+
+  // ===== Save self-contained =====
+  function saveSelfContained(){
+    const data = {
+      __LIBRARY: window.__LIBRARY,
+      __SELECTION: {
+        currency: $('#currency').value,
+        decimals: parseInt($('#decimals').value||'2',10),
+        compareCount: parseInt($('#compareCount').value,10),
+        chosenIds: Array.from($$('#cols .card .pick')).map(s=>s.value||null)
+      }
+    };
+    let src = document.documentElement.outerHTML;
+    src = src.replace(/window\.__LIBRARY\s*=\s*window\.__LIBRARY\s*\|\|\s*\[[\s\S]*?\];/, 'window.__LIBRARY = '+JSON.stringify(data.__LIBRARY)+';');
+    src = src.replace(/window\.__SELECTION\s*=\s*window\.__SELECTION\s*\|\|\s*\{[\s\S]*?\};/, 'window.__SELECTION = '+JSON.stringify(data.__SELECTION)+';');
+    const blob = new Blob([src], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'Adhesive_Comparator_SAVED.html'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ===== Init =====
+  (function init(){
+    // seed controls
+    $('#currency').value = window.__SELECTION.currency || '$';
+    $('#decimals').value = window.__SELECTION.decimals ?? 2;
+    $('#compareCount').value = window.__SELECTION.compareCount ?? 2;
+    // events
+    $('#currency').addEventListener('input', computeAll);
+    $('#decimals').addEventListener('input', computeAll);
+    $('#compareCount').addEventListener('change', renderCompare);
+    $('#btnSave').addEventListener('click', saveSelfContained);
+    // initial renders
+    renderCompare();
+    renderLibrary();
+    // restore chosen IDs after render
+    (function restore(){
+      const sel = window.__SELECTION||{};
+      if(sel.chosenIds && sel.chosenIds.length){
+        const picks = $$('#cols .card .pick');
+        picks.forEach((p,i)=>{
+          if(sel.chosenIds[i]){ p.value = sel.chosenIds[i]; p.dispatchEvent(new Event('change')); }
+        });
+      }
+    })();
+  })();
+})();</script>
+</body>
+</html>

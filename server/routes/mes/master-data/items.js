@@ -478,6 +478,400 @@ function buildDetailAggregates(items, materialClass, parameterDefinitionsMap = {
   };
 }
 
+const ADHESIVE_COMPONENT_ROLES = new Set(['resin', 'hardener', 'catalyst', 'solvent', 'other']);
+const ADHESIVE_CANDIDATE_ALL_CACHE_TTL_MS = 5000;
+const ADHESIVE_CANDIDATE_ALL_CACHE_MAX_KEYS = 40;
+const adhesiveCandidateAllCache = new Map();
+
+function pruneAdhesiveCandidateAllCache(nowTs = Date.now()) {
+  for (const [cacheKey, entry] of adhesiveCandidateAllCache.entries()) {
+    if (!entry || entry.expiresAt <= nowTs) {
+      adhesiveCandidateAllCache.delete(cacheKey);
+    }
+  }
+
+  if (adhesiveCandidateAllCache.size <= ADHESIVE_CANDIDATE_ALL_CACHE_MAX_KEYS) return;
+
+  const keysByExpiry = Array.from(adhesiveCandidateAllCache.entries())
+    .sort((a, b) => (a[1]?.expiresAt || 0) - (b[1]?.expiresAt || 0))
+    .map(([cacheKey]) => cacheKey);
+
+  while (adhesiveCandidateAllCache.size > ADHESIVE_CANDIDATE_ALL_CACHE_MAX_KEYS && keysByExpiry.length) {
+    adhesiveCandidateAllCache.delete(keysByExpiry.shift());
+  }
+}
+
+function readAdhesiveCandidateAllCache(searchText) {
+  const nowTs = Date.now();
+  const cacheKey = normalizeMaterialKey(searchText || '');
+  const cached = adhesiveCandidateAllCache.get(cacheKey);
+  if (!cached || cached.expiresAt <= nowTs) {
+    if (cached) adhesiveCandidateAllCache.delete(cacheKey);
+    return null;
+  }
+
+  return Array.isArray(cached.rows) ? cached.rows : null;
+}
+
+function writeAdhesiveCandidateAllCache(searchText, rows) {
+  pruneAdhesiveCandidateAllCache();
+  const cacheKey = normalizeMaterialKey(searchText || '');
+  adhesiveCandidateAllCache.set(cacheKey, {
+    expiresAt: Date.now() + ADHESIVE_CANDIDATE_ALL_CACHE_TTL_MS,
+    rows: Array.isArray(rows) ? rows : [],
+  });
+}
+
+function roundToDigits(value, digits = 4) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const factor = 10 ** digits;
+  return Math.round(n * factor) / factor;
+}
+
+function extractSolidPctFromParams(params) {
+  if (!isPlainObject(params)) return null;
+
+  const normalizedMap = {};
+  Object.entries(params).forEach(([key, value]) => {
+    const normalizedKey = String(key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (normalizedKey) normalizedMap[normalizedKey] = value;
+  });
+
+  const candidateKeys = ['solidspct', 'solidpct', 'solidspercent', 'solidpercent', 'solids'];
+  for (const candidateKey of candidateKeys) {
+    if (!Object.prototype.hasOwnProperty.call(normalizedMap, candidateKey)) continue;
+    const parsed = toFiniteNumber(normalizedMap[candidateKey]);
+    if (parsed == null) continue;
+    if (parsed < 0 || parsed > 100) continue;
+    return parsed;
+  }
+
+  return null;
+}
+
+function computeAdhesiveFormulationTotals(components) {
+  const source = Array.isArray(components) ? components : [];
+  let totalParts = 0;
+  let totalSolids = 0;
+  let totalCost = 0;
+
+  source.forEach((row) => {
+    const parts = Number(row?.parts) || 0;
+    const solidsPct = Number(row?.solids_pct) || 0;
+    const unitPrice = Number(row?.unit_price) || 0;
+    if (parts <= 0) return;
+
+    totalParts += parts;
+    totalSolids += parts * (solidsPct / 100);
+    totalCost += parts * unitPrice;
+  });
+
+  const pricePerKgWet = totalParts > 0 ? totalCost / totalParts : 0;
+  const pricePerKgSolids = totalSolids > 0 ? totalCost / totalSolids : 0;
+  const solidsSharePct = totalParts > 0 ? (totalSolids / totalParts) * 100 : 0;
+
+  return {
+    total_parts: roundToDigits(totalParts, 4) ?? 0,
+    total_solids: roundToDigits(totalSolids, 4) ?? 0,
+    total_cost: roundToDigits(totalCost, 4) ?? 0,
+    price_per_kg_wet: roundToDigits(pricePerKgWet, 4) ?? 0,
+    price_per_kg_solids: roundToDigits(pricePerKgSolids, 4) ?? 0,
+    solids_share_pct: roundToDigits(solidsSharePct, 4) ?? 0,
+  };
+}
+
+async function getAdhesiveFormulationContext(catId, groupId) {
+  const { rows } = await pool.query(
+    `SELECT
+      g.id,
+      g.category_id,
+      g.catlinedesc,
+      g.display_name,
+      g.is_custom,
+      g.is_active,
+      c.material_class,
+      c.name AS category_name
+     FROM mes_item_category_groups g
+     JOIN mes_item_categories c ON c.id = g.category_id
+     WHERE g.id = $1
+       AND g.category_id = $2
+       AND g.is_active = true
+     LIMIT 1`,
+    [groupId, catId]
+  );
+
+  if (!rows.length) {
+    return { status: 404, error: 'Custom group not found' };
+  }
+
+  const ctx = rows[0];
+  if (!ctx.is_custom) {
+    return { status: 400, error: 'Formulation is available only for custom groups' };
+  }
+
+  if (normalizeMaterialKey(ctx.material_class) !== 'adhesives') {
+    return { status: 400, error: 'Formulation is available only for adhesive categories' };
+  }
+
+  return { status: 200, data: ctx };
+}
+
+async function loadAdhesiveRmMap(itemKeys) {
+  const keys = normalizeMaterialKeyArray(itemKeys);
+  if (!keys.length) return {};
+
+  const { rows } = await pool.query(`
+    SELECT
+      LOWER(TRIM(mainitem)) AS item_key,
+      MAX(mainitem) AS mainitem,
+      MAX(NULLIF(TRIM(maindescription), '')) AS maindescription,
+      MAX(NULLIF(TRIM(catlinedesc), '')) AS catlinedesc,
+      MAX(NULLIF(TRIM(category), '')) AS category,
+      MAX(NULLIF(TRIM(itemgroup), '')) AS itemgroup,
+      COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+      COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0)::numeric AS stock_val,
+      COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0)::numeric AS order_qty,
+      COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0)::numeric AS order_val
+    FROM fp_actualrmdata
+    WHERE LOWER(TRIM(mainitem)) = ANY($1)
+    GROUP BY LOWER(TRIM(mainitem))
+  `, [keys]);
+
+  const rmMap = {};
+  rows.forEach((row) => {
+    const key = normalizeMaterialKey(row.item_key);
+    if (!key) return;
+
+    const stockQty = Number(row.stock_qty) || 0;
+    const stockVal = Number(row.stock_val) || 0;
+    const orderQty = Number(row.order_qty) || 0;
+    const orderVal = Number(row.order_val) || 0;
+
+    const stockPrice = stockQty > 0 ? stockVal / stockQty : null;
+    const onOrderPrice = orderQty > 0 ? orderVal / orderQty : null;
+    const totalQty = stockQty + orderQty;
+    const avgPrice = totalQty > 0 ? (stockVal + orderVal) / totalQty : null;
+
+    rmMap[key] = {
+      item_key: key,
+      mainitem: row.mainitem || null,
+      maindescription: row.maindescription || null,
+      catlinedesc: row.catlinedesc || null,
+      category: row.category || null,
+      itemgroup: row.itemgroup || null,
+      stock_price_wa: roundToDigits(stockPrice, 4),
+      on_order_price_wa: roundToDigits(onOrderPrice, 4),
+      avg_price_wa: roundToDigits(avgPrice, 4),
+    };
+  });
+
+  return rmMap;
+}
+
+async function loadAdhesiveMasterMap(itemKeys) {
+  const keys = normalizeMaterialKeyArray(itemKeys);
+  if (!keys.length) return {};
+
+  const { rows } = await pool.query(`
+    SELECT item_code, item_name, oracle_category, oracle_cat_desc, market_ref_price
+    FROM mes_item_master
+    WHERE LOWER(TRIM(item_code)) = ANY($1)
+      AND is_active = true
+  `, [keys]);
+
+  const masterMap = {};
+  rows.forEach((row) => {
+    const key = normalizeMaterialKey(row.item_code);
+    if (!key) return;
+    masterMap[key] = row;
+  });
+
+  return masterMap;
+}
+
+async function loadAdhesiveSolidPctMap(itemKeys) {
+  const keys = normalizeMaterialKeyArray(itemKeys);
+  if (!keys.length) return {};
+
+  const solidsMap = {};
+
+  try {
+    const { rows: adhesiveSpecRows } = await pool.query(`
+      SELECT
+        COALESCE(NULLIF(LOWER(TRIM(mainitem)), ''), LOWER(TRIM(material_key))) AS item_key,
+        solids_pct
+      FROM mes_spec_adhesives
+      WHERE COALESCE(NULLIF(LOWER(TRIM(mainitem)), ''), LOWER(TRIM(material_key))) = ANY($1)
+    `, [keys]);
+
+    adhesiveSpecRows.forEach((row) => {
+      const key = normalizeMaterialKey(row.item_key);
+      const solidsPct = toFiniteNumber(row.solids_pct);
+      if (!key || solidsPct == null) return;
+      if (solidsPct < 0 || solidsPct > 100) return;
+      solidsMap[key] = solidsPct;
+    });
+  } catch (err) {
+    if (err.code !== '42P01') throw err;
+  }
+
+  try {
+    const { rows: nonResinRows } = await pool.query(`
+      SELECT
+        COALESCE(NULLIF(LOWER(TRIM(mainitem)), ''), LOWER(TRIM(material_key))) AS item_key,
+        parameters_json
+      FROM mes_non_resin_material_specs
+      WHERE COALESCE(NULLIF(LOWER(TRIM(mainitem)), ''), LOWER(TRIM(material_key))) = ANY($1)
+    `, [keys]);
+
+    nonResinRows.forEach((row) => {
+      const key = normalizeMaterialKey(row.item_key);
+      if (!key || Object.prototype.hasOwnProperty.call(solidsMap, key)) return;
+      const solidsPct = extractSolidPctFromParams(row.parameters_json);
+      if (solidsPct == null) return;
+      solidsMap[key] = solidsPct;
+    });
+  } catch (err) {
+    if (err.code !== '42P01') throw err;
+  }
+
+  return solidsMap;
+}
+
+function resolveAdhesiveUnitPrice({ overridePrice, rmInfo, masterInfo }) {
+  const override = toFiniteNumber(overridePrice);
+  if (override != null) return { value: override, source: 'override' };
+
+  const avg = toFiniteNumber(rmInfo?.avg_price_wa);
+  if (avg != null) return { value: avg, source: 'oracle_avg' };
+
+  const onOrder = toFiniteNumber(rmInfo?.on_order_price_wa);
+  if (onOrder != null) return { value: onOrder, source: 'oracle_on_order' };
+
+  const stock = toFiniteNumber(rmInfo?.stock_price_wa);
+  if (stock != null) return { value: stock, source: 'oracle_stock' };
+
+  const marketRef = toFiniteNumber(masterInfo?.market_ref_price);
+  if (marketRef != null) return { value: marketRef, source: 'market_ref' };
+
+  return { value: null, source: null };
+}
+
+async function getAdhesiveFormulationData(catId, groupId) {
+  const ctxResult = await getAdhesiveFormulationContext(catId, groupId);
+  if (ctxResult.error) return ctxResult;
+  const ctx = ctxResult.data;
+
+  let componentRows = [];
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        id,
+        item_key,
+        component_role,
+        parts,
+        solids_pct,
+        unit_price_override,
+        sort_order,
+        notes,
+        created_at,
+        updated_at
+      FROM mes_adhesive_formulation_components
+      WHERE group_id = $1
+      ORDER BY sort_order ASC, id ASC
+    `, [groupId]);
+    componentRows = rows;
+  } catch (err) {
+    if (err.code === '42P01') {
+      return {
+        status: 200,
+        data: {
+          group_id: ctx.id,
+          group_name: ctx.display_name || ctx.catlinedesc,
+          category_id: ctx.category_id,
+          category_name: ctx.category_name,
+          material_class: ctx.material_class,
+          has_formulation: false,
+          components: [],
+          totals: computeAdhesiveFormulationTotals([]),
+        },
+      };
+    }
+    throw err;
+  }
+
+  const itemKeys = componentRows.map((row) => row.item_key);
+  const [rmMap, masterMap, solidPctMap] = await Promise.all([
+    loadAdhesiveRmMap(itemKeys),
+    loadAdhesiveMasterMap(itemKeys),
+    loadAdhesiveSolidPctMap(itemKeys),
+  ]);
+
+  const components = componentRows.map((row) => {
+    const itemKey = normalizeMaterialKey(row.item_key);
+    const rmInfo = rmMap[itemKey] || {};
+    const masterInfo = masterMap[itemKey] || {};
+    const overrideSolidPct = toFiniteNumber(row.solids_pct);
+    const tdsSolidPct = toFiniteNumber(solidPctMap[itemKey]);
+
+    const solidsPct = overrideSolidPct != null ? overrideSolidPct : (tdsSolidPct != null ? tdsSolidPct : null);
+    const solidsSource = overrideSolidPct != null ? 'override' : (tdsSolidPct != null ? 'tds' : null);
+
+    const priceResolution = resolveAdhesiveUnitPrice({
+      overridePrice: row.unit_price_override,
+      rmInfo,
+      masterInfo,
+    });
+
+    const parts = toFiniteNumber(row.parts) ?? 0;
+    const unitPrice = toFiniteNumber(priceResolution.value);
+    const componentCost = unitPrice != null ? roundToDigits(parts * unitPrice, 4) : null;
+
+    return {
+      id: row.id,
+      item_key: itemKey,
+      mainitem: rmInfo.mainitem || masterInfo.item_code || row.item_key,
+      maindescription: rmInfo.maindescription || masterInfo.item_name || null,
+      catlinedesc: rmInfo.catlinedesc || null,
+      category: rmInfo.category || masterInfo.oracle_category || null,
+      itemgroup: rmInfo.itemgroup || null,
+      component_role: row.component_role || 'other',
+      parts,
+      solids_pct: solidsPct,
+      solids_pct_source: solidsSource,
+      solids_pct_override: overrideSolidPct,
+      tds_solids_pct: tdsSolidPct,
+      unit_price: unitPrice,
+      unit_price_source: priceResolution.source,
+      unit_price_override: toFiniteNumber(row.unit_price_override),
+      oracle_stock_price: toFiniteNumber(rmInfo.stock_price_wa),
+      oracle_on_order_price: toFiniteNumber(rmInfo.on_order_price_wa),
+      oracle_avg_price: toFiniteNumber(rmInfo.avg_price_wa),
+      market_ref_price: toFiniteNumber(masterInfo.market_ref_price),
+      component_cost: componentCost,
+      sort_order: parseOptionalInteger(row.sort_order) ?? 0,
+      notes: row.notes || null,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  });
+
+  return {
+    status: 200,
+    data: {
+      group_id: ctx.id,
+      group_name: ctx.display_name || ctx.catlinedesc,
+      category_id: ctx.category_id,
+      category_name: ctx.category_name,
+      material_class: ctx.material_class,
+      has_formulation: components.length > 0,
+      components,
+      totals: computeAdhesiveFormulationTotals(components),
+    },
+  };
+}
+
 module.exports = function (router) {
 
   // ─── GET /items — List with filters ───────────────────────────────────────
@@ -2634,15 +3028,9 @@ module.exports = function (router) {
 
       // Get selected catlinedesc groups for this category
       const { rows: selectedGroups } = await pool.query(
-        'SELECT id, catlinedesc, is_custom, display_name FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true ORDER BY catlinedesc',
+        'SELECT id, catlinedesc, is_custom, display_name, parent_catlinedesc FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true ORDER BY catlinedesc',
         [catId]
       );
-
-      // Build lookup for group metadata (is_custom, id, display_name)
-      const groupMeta = {};
-      for (const sg of selectedGroups) {
-        groupMeta[sg.catlinedesc] = { group_id: sg.id, is_custom: !!sg.is_custom, display_name: sg.display_name || null };
-      }
 
       if (!selectedGroups.length) {
         return res.json({ success: true, data: { category, groups: [], totals: {}, parameters: {} } });
@@ -2651,6 +3039,43 @@ module.exports = function (router) {
       // Separate Oracle vs custom groups
       const oracleGroups = selectedGroups.filter(g => !g.is_custom);
       const customGroups = selectedGroups.filter(g => !!g.is_custom);
+      const customGroupIds = customGroups
+        .map((group) => Number(group.id))
+        .filter((groupId) => Number.isFinite(groupId));
+
+      let customGroupHasFormulation = new Set();
+      if (normalizeMaterialKey(category.material_class) === 'adhesives' && customGroupIds.length) {
+        try {
+          const { rows: formulationRows } = await pool.query(`
+            SELECT group_id
+            FROM mes_adhesive_formulation_components
+            WHERE group_id = ANY($1)
+            GROUP BY group_id
+          `, [customGroupIds]);
+
+          customGroupHasFormulation = new Set(
+            formulationRows
+              .map((row) => Number(row.group_id))
+              .filter((groupId) => Number.isFinite(groupId))
+          );
+        } catch (formulationErr) {
+          if (formulationErr.code !== '42P01') throw formulationErr;
+        }
+      }
+
+      // Build lookup for group metadata (is_custom, id, display_name, parent_catlinedesc, has_formulation)
+      const groupMeta = {};
+      for (const sg of selectedGroups) {
+        const groupId = Number(sg.id);
+        groupMeta[sg.catlinedesc] = {
+          group_id: sg.id,
+          is_custom: !!sg.is_custom,
+          display_name: sg.display_name || null,
+          parent_catlinedesc: sg.parent_catlinedesc || null,
+          has_formulation: !!sg.is_custom && customGroupHasFormulation.has(groupId),
+        };
+      }
+
       const oracleDescList = oracleGroups.map(g => g.catlinedesc);
       const customGroupNames = customGroups.map(g => g.catlinedesc);
       // catlinedescList used for TDS/non-resin parameter queries (includes Oracle only)
@@ -2917,6 +3342,8 @@ module.exports = function (router) {
           group_id: meta.group_id || null,
           is_custom: !!meta.is_custom,
           display_name: meta.display_name || null,
+          parent_catlinedesc: meta.parent_catlinedesc || null,
+          has_formulation: !!meta.has_formulation,
           item_count: Number(g.item_count) || 0,
           item_group_count: Number(g.item_group_count) || 0,
           stock_qty: stockQty,
@@ -2936,8 +3363,10 @@ module.exports = function (router) {
             group_id: meta.group_id || cg.id,
             is_custom: true,
             display_name: meta.display_name || cg.display_name || null,
+            parent_catlinedesc: meta.parent_catlinedesc || cg.parent_catlinedesc || null,
             item_count: 0,
             item_group_count: 0,
+            has_formulation: !!meta.has_formulation,
             stock_qty: 0,
             order_qty: 0,
             stock_price_wa: null,
@@ -3396,14 +3825,36 @@ module.exports = function (router) {
       const category = cat.rows[0];
 
       const { rows: selectedGroups } = await pool.query(
-        'SELECT catlinedesc, is_custom FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true',
+        'SELECT id, catlinedesc, is_custom FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true',
         [catId]
       );
       const allowedGroups = new Set(selectedGroups.map((g) => String(g.catlinedesc || '').trim()));
       if (!allowedGroups.has(catlinedesc)) {
         return res.status(400).json({ success: false, error: 'catlinedesc is not mapped to this category' });
       }
-      const isCustomGroup = selectedGroups.some(g => String(g.catlinedesc || '').trim() === catlinedesc && g.is_custom);
+      const matchedGroup = selectedGroups.find((g) => String(g.catlinedesc || '').trim() === catlinedesc) || null;
+      const isCustomGroup = Boolean(matchedGroup?.is_custom);
+      const groupId = matchedGroup?.id ? Number(matchedGroup.id) : null;
+
+      let formulationByItemKey = {};
+      let formulationTotals = null;
+      let hasFormulation = false;
+
+      if (isCustomGroup && normalizeMaterialKey(category.material_class) === 'adhesives' && groupId) {
+        const formulationResult = await getAdhesiveFormulationData(catId, groupId);
+        if (!formulationResult.error) {
+          const components = Array.isArray(formulationResult.data?.components)
+            ? formulationResult.data.components
+            : [];
+          hasFormulation = components.length > 0;
+          formulationTotals = formulationResult.data?.totals || null;
+          formulationByItemKey = components.reduce((acc, component) => {
+            const key = normalizeMaterialKey(component?.item_key);
+            if (key) acc[key] = component;
+            return acc;
+          }, {});
+        }
+      }
 
       const { rows: rmColumnsRows } = await pool.query(`
         SELECT column_name
@@ -3574,6 +4025,7 @@ module.exports = function (router) {
         const master = masterMap[rm.item_key] || {};
         const tds = tdsMap[rm.item_key] || {};
         const nonResinSpec = nonResinSpecMap[rm.item_key] || {};
+        const formulationComponent = formulationByItemKey[rm.item_key] || null;
 
         const tdsParams = tds.id
           ? Object.fromEntries(
@@ -3633,6 +4085,11 @@ module.exports = function (router) {
           assembly_scrap_pct: master.assembly_scrap_pct ? Number(master.assembly_scrap_pct) : null,
           tds_id: tds.id || (Object.keys(nonResinSpec).length ? `NR-${rm.item_key}` : null),
           tds_params: resolvedParams,
+          formulation_component_role: formulationComponent?.component_role || null,
+          formulation_parts: toFiniteNumber(formulationComponent?.parts),
+          formulation_solids_pct: toFiniteNumber(formulationComponent?.solids_pct),
+          formulation_unit_price: toFiniteNumber(formulationComponent?.unit_price),
+          formulation_component_cost: toFiniteNumber(formulationComponent?.component_cost),
         };
       });
 
@@ -3658,6 +4115,10 @@ module.exports = function (router) {
         data: {
           category,
           catlinedesc,
+          group_id: groupId,
+          is_custom_group: isCustomGroup,
+          has_formulation: hasFormulation,
+          formulation_totals: formulationTotals,
           itemgroup: catlinedesc,
           totals,
           items,
@@ -3976,6 +4437,7 @@ module.exports = function (router) {
     try {
       const catId = parseInt(req.params.id, 10);
       const currentGroupId = parseInt(req.query.current_group_id, 10);
+      const parentCatlinedesc = cleanText(req.query.parent_catlinedesc, 255) || null;
       const search = cleanText(req.query.search, 120);
       const searchLike = search ? `%${search}%` : null;
 
@@ -4002,107 +4464,167 @@ module.exports = function (router) {
         currentGroupName = String(groupRows[0].catlinedesc || '').trim() || null;
       }
 
-      // Build search filter
-      const searchFilter = searchLike
-        ? `AND (
-            COALESCE(r.mainitem, '') ILIKE $5
-            OR COALESCE(r.maindescription, '') ILIKE $5
-            OR COALESCE(r.catlinedesc, '') ILIKE $5
-            OR COALESCE(r.itemgroup, '') ILIKE $5
-          )`
-        : '';
-      const params = searchLike
-        ? [catId, matClass, currentGroupName, oracleCats, searchLike]
-        : [catId, matClass, currentGroupName, oracleCats];
+      // When parent_catlinedesc is provided: show all items from that Oracle group.
+      // When not provided: legacy behaviour — show unmapped items across the whole category.
+      let rows;
+      if (parentCatlinedesc) {
+        // ── Scoped mode: items from a specific Oracle parent group ──────────
+        const searchFilter = searchLike
+          ? `AND (
+              COALESCE(r.mainitem, '') ILIKE $4
+              OR COALESCE(r.maindescription, '') ILIKE $4
+              OR COALESCE(r.itemgroup, '') ILIKE $4
+            )`
+          : '';
+        const params = searchLike
+          ? [catId, parentCatlinedesc, currentGroupName, searchLike, oracleCats]
+          : [catId, parentCatlinedesc, currentGroupName, oracleCats];
+        const oracleCatsParam = searchLike ? '$5' : '$4';
 
-      const { rows } = await pool.query(`
-        WITH selected_oracle_groups AS (
-          SELECT LOWER(TRIM(g.catlinedesc)) AS catlinedesc_key
-          FROM mes_item_category_groups g
-          WHERE g.category_id = $1
-            AND g.is_active = true
-            AND g.is_custom = false
-            AND COALESCE(TRIM(g.catlinedesc), '') <> ''
-          GROUP BY LOWER(TRIM(g.catlinedesc))
-        ),
-        bucket_items AS (
+        ({ rows } = await pool.query(`
+          WITH parent_items AS (
+            SELECT DISTINCT LOWER(TRIM(r.mainitem)) AS item_key
+            FROM fp_actualrmdata r
+            WHERE UPPER(TRIM(r.category)) = ANY(${oracleCatsParam})
+              AND TRIM(r.catlinedesc) = $2
+              AND COALESCE(TRIM(r.mainitem), '') <> ''
+          ),
+          current_group_items AS (
+            SELECT DISTINCT o.item_key
+            FROM mes_item_group_overrides o
+            WHERE o.category_id = $1
+              AND ($3::text IS NOT NULL AND o.override_group_name = $3)
+          ),
+          eligible_item_keys AS (
+            SELECT item_key FROM parent_items
+            UNION
+            SELECT item_key FROM current_group_items
+          )
           SELECT
             LOWER(TRIM(r.mainitem)) AS item_key,
-            MIN(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
-            LOWER(TRIM(r.itemgroup)) AS appearance_key
+            MAX(r.mainitem) AS mainitem,
+            MAX(r.maindescription) AS maindescription,
+            MAX(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
+            MAX(TRIM(r.itemgroup)) AS itemgroup,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+            MAX(o.override_group_name) AS current_override,
+            BOOL_OR(o.override_group_name IS NOT NULL AND o.override_group_name = $3) AS is_selected,
+            false AS is_unmapped
           FROM fp_actualrmdata r
-          JOIN selected_oracle_groups sg
-            ON LOWER(TRIM(r.catlinedesc)) = sg.catlinedesc_key
-          WHERE COALESCE(TRIM(r.mainitem), '') <> ''
-            AND COALESCE(TRIM(r.itemgroup), '') <> ''
-          GROUP BY LOWER(TRIM(r.mainitem)), LOWER(TRIM(r.itemgroup))
-        ),
-        unmapped_raw AS (
-          SELECT bi.item_key
-          FROM bucket_items bi
-          LEFT JOIN LATERAL (
+          JOIN eligible_item_keys ek
+            ON ek.item_key = LOWER(TRIM(r.mainitem))
+          LEFT JOIN mes_item_group_overrides o
+            ON o.category_id = $1
+            AND o.item_key = LOWER(TRIM(r.mainitem))
+          WHERE UPPER(TRIM(r.category)) = ANY(${oracleCatsParam})
+            ${searchFilter}
+          GROUP BY LOWER(TRIM(r.mainitem))
+          HAVING BOOL_OR(o.override_group_name IS NULL OR o.override_group_name = $3)
+          ORDER BY COALESCE(MAX(NULLIF(TRIM(r.catlinedesc), '')), 'Unmapped') ASC, MAX(r.mainitem) ASC
+        `, params));
+      } else {
+        // ── Legacy mode: unmapped items across entire category ───────────────
+        const searchFilter = searchLike
+          ? `AND (
+              COALESCE(r.mainitem, '') ILIKE $5
+              OR COALESCE(r.maindescription, '') ILIKE $5
+              OR COALESCE(r.catlinedesc, '') ILIKE $5
+              OR COALESCE(r.itemgroup, '') ILIKE $5
+            )`
+          : '';
+        const params = searchLike
+          ? [catId, matClass, currentGroupName, oracleCats, searchLike]
+          : [catId, matClass, currentGroupName, oracleCats];
+
+        ({ rows } = await pool.query(`
+          WITH selected_oracle_groups AS (
+            SELECT LOWER(TRIM(g.catlinedesc)) AS catlinedesc_key
+            FROM mes_item_category_groups g
+            WHERE g.category_id = $1
+              AND g.is_active = true
+              AND g.is_custom = false
+              AND COALESCE(TRIM(g.catlinedesc), '') <> ''
+            GROUP BY LOWER(TRIM(g.catlinedesc))
+          ),
+          bucket_items AS (
             SELECT
-              mp.id,
-              COALESCE(mp.mapped_material_keys, '{}'::text[]) AS mapped_material_keys
-            FROM mes_material_profile_configs mp
-            WHERE LOWER(TRIM(mp.material_class)) = LOWER(TRIM($2))
-              AND LOWER(TRIM(mp.cat_desc)) = LOWER(TRIM(COALESCE(bi.catlinedesc, '')))
-            ORDER BY
-              CASE
-                WHEN LOWER(TRIM(mp.appearance)) = bi.appearance_key THEN 0
-                WHEN COALESCE(TRIM(mp.appearance), '') = '' THEN 1
-                ELSE 2
-              END,
-              mp.updated_at DESC NULLS LAST,
-              mp.id DESC
-            LIMIT 1
-          ) cfg ON TRUE
-          WHERE cfg.id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1
-              FROM UNNEST(cfg.mapped_material_keys) AS mk
-              WHERE LOWER(TRIM(mk)) = bi.item_key
-            )
-        ),
-        unmapped_items AS (
-          SELECT DISTINCT item_key
-          FROM unmapped_raw
-        ),
-        current_group_items AS (
-          SELECT DISTINCT o.item_key
-          FROM mes_item_group_overrides o
-          WHERE o.category_id = $1
-            AND ($3::text IS NOT NULL AND o.override_group_name = $3)
-        ),
-        eligible_item_keys AS (
-          SELECT item_key FROM unmapped_items
-          UNION
-          SELECT item_key FROM current_group_items
-        )
-        SELECT
-          LOWER(TRIM(r.mainitem)) AS item_key,
-          MAX(r.mainitem) AS mainitem,
-          MAX(r.maindescription) AS maindescription,
-          MAX(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
-          MAX(TRIM(r.itemgroup)) AS itemgroup,
-          COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
-          MAX(o.override_group_name) AS current_override,
-          BOOL_OR(o.override_group_name IS NOT NULL AND o.override_group_name = $3) AS is_selected,
-          BOOL_OR(u.item_key IS NOT NULL) AS is_unmapped
-        FROM fp_actualrmdata r
-        JOIN eligible_item_keys ek
-          ON ek.item_key = LOWER(TRIM(r.mainitem))
-        LEFT JOIN unmapped_items u
-          ON u.item_key = ek.item_key
-        LEFT JOIN mes_item_group_overrides o
-          ON o.category_id = $1
-          AND o.item_key = LOWER(TRIM(r.mainitem))
-        WHERE UPPER(TRIM(r.category)) = ANY($4)
-          ${searchFilter}
-        GROUP BY LOWER(TRIM(r.mainitem))
-        HAVING BOOL_OR(o.override_group_name IS NULL OR o.override_group_name = $3)
-        ORDER BY COALESCE(MAX(NULLIF(TRIM(r.catlinedesc), '')), 'Unmapped') ASC, MAX(r.mainitem) ASC
-      `, params);
+              LOWER(TRIM(r.mainitem)) AS item_key,
+              MIN(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
+              LOWER(TRIM(r.itemgroup)) AS appearance_key
+            FROM fp_actualrmdata r
+            JOIN selected_oracle_groups sg
+              ON LOWER(TRIM(r.catlinedesc)) = sg.catlinedesc_key
+            WHERE COALESCE(TRIM(r.mainitem), '') <> ''
+              AND COALESCE(TRIM(r.itemgroup), '') <> ''
+            GROUP BY LOWER(TRIM(r.mainitem)), LOWER(TRIM(r.itemgroup))
+          ),
+          unmapped_raw AS (
+            SELECT bi.item_key
+            FROM bucket_items bi
+            LEFT JOIN LATERAL (
+              SELECT
+                mp.id,
+                COALESCE(mp.mapped_material_keys, '{}'::text[]) AS mapped_material_keys
+              FROM mes_material_profile_configs mp
+              WHERE LOWER(TRIM(mp.material_class)) = LOWER(TRIM($2))
+                AND LOWER(TRIM(mp.cat_desc)) = LOWER(TRIM(COALESCE(bi.catlinedesc, '')))
+              ORDER BY
+                CASE
+                  WHEN LOWER(TRIM(mp.appearance)) = bi.appearance_key THEN 0
+                  WHEN COALESCE(TRIM(mp.appearance), '') = '' THEN 1
+                  ELSE 2
+                END,
+                mp.updated_at DESC NULLS LAST,
+                mp.id DESC
+              LIMIT 1
+            ) cfg ON TRUE
+            WHERE cfg.id IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1
+                FROM UNNEST(cfg.mapped_material_keys) AS mk
+                WHERE LOWER(TRIM(mk)) = bi.item_key
+              )
+          ),
+          unmapped_items AS (
+            SELECT DISTINCT item_key
+            FROM unmapped_raw
+          ),
+          current_group_items AS (
+            SELECT DISTINCT o.item_key
+            FROM mes_item_group_overrides o
+            WHERE o.category_id = $1
+              AND ($3::text IS NOT NULL AND o.override_group_name = $3)
+          ),
+          eligible_item_keys AS (
+            SELECT item_key FROM unmapped_items
+            UNION
+            SELECT item_key FROM current_group_items
+          )
+          SELECT
+            LOWER(TRIM(r.mainitem)) AS item_key,
+            MAX(r.mainitem) AS mainitem,
+            MAX(r.maindescription) AS maindescription,
+            MAX(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
+            MAX(TRIM(r.itemgroup)) AS itemgroup,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+            MAX(o.override_group_name) AS current_override,
+            BOOL_OR(o.override_group_name IS NOT NULL AND o.override_group_name = $3) AS is_selected,
+            BOOL_OR(u.item_key IS NOT NULL) AS is_unmapped
+          FROM fp_actualrmdata r
+          JOIN eligible_item_keys ek
+            ON ek.item_key = LOWER(TRIM(r.mainitem))
+          LEFT JOIN unmapped_items u
+            ON u.item_key = ek.item_key
+          LEFT JOIN mes_item_group_overrides o
+            ON o.category_id = $1
+            AND o.item_key = LOWER(TRIM(r.mainitem))
+          WHERE UPPER(TRIM(r.category)) = ANY($4)
+            ${searchFilter}
+          GROUP BY LOWER(TRIM(r.mainitem))
+          HAVING BOOL_OR(o.override_group_name IS NULL OR o.override_group_name = $3)
+          ORDER BY COALESCE(MAX(NULLIF(TRIM(r.catlinedesc), '')), 'Unmapped') ASC, MAX(r.mainitem) ASC
+        `, params));
+      }
 
       res.json({ success: true, data: rows });
     } catch (err) {
@@ -4132,6 +4654,19 @@ module.exports = function (router) {
         return res.status(404).json({ success: false, error: 'Category not found' });
       }
 
+      const parentDesc = String(req.body.parent_catlinedesc || '').trim() || null;
+
+      // Validate parent Oracle group if provided
+      if (parentDesc) {
+        const { rows: parentRows } = await pool.query(
+          'SELECT catlinedesc FROM mes_item_category_groups WHERE category_id=$1 AND catlinedesc=$2 AND is_custom=false AND is_active=true',
+          [catId, parentDesc]
+        );
+        if (!parentRows.length) {
+          return res.status(400).json({ success: false, error: 'Parent group not found' });
+        }
+      }
+
       // Check for duplicate name
       const { rows: existing } = await pool.query(
         `SELECT id FROM mes_item_category_groups
@@ -4144,16 +4679,80 @@ module.exports = function (router) {
 
       // Insert custom group
       const { rows } = await pool.query(
-        `INSERT INTO mes_item_category_groups (category_id, catlinedesc, is_custom, display_name, is_active)
-         VALUES ($1, $2, true, $2, true)
-         RETURNING id, category_id, catlinedesc, is_custom, display_name`,
-        [catId, groupName]
+        `INSERT INTO mes_item_category_groups (category_id, catlinedesc, is_custom, display_name, is_active, parent_catlinedesc)
+         VALUES ($1, $2, true, $2, true, $3)
+         RETURNING id, category_id, catlinedesc, is_custom, display_name, parent_catlinedesc`,
+        [catId, groupName, parentDesc]
       );
 
       res.json({ success: true, data: rows[0] });
     } catch (err) {
       logger.error('POST /custom-categories/:id/custom-group error:', err);
       res.status(500).json({ success: false, error: 'Failed to create custom group' });
+    }
+  });
+
+  // PATCH /items/custom-categories/:id/custom-group/:groupId — rename custom group
+  router.patch('/items/custom-categories/:id/custom-group/:groupId', authenticate, async (req, res) => {
+    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+      const newName = String(req.body.group_name || '').trim();
+
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+      if (!newName || newName.length > 120) {
+        return res.status(400).json({ success: false, error: 'group_name is required (max 120 chars)' });
+      }
+
+      const { rows: grpRows } = await pool.query(
+        'SELECT catlinedesc FROM mes_item_category_groups WHERE id = $1 AND category_id = $2 AND is_custom = true AND is_active = true',
+        [groupId, catId]
+      );
+      if (!grpRows.length) {
+        return res.status(404).json({ success: false, error: 'Custom group not found' });
+      }
+      const oldName = grpRows[0].catlinedesc;
+
+      if (oldName === newName) {
+        return res.json({ success: true, data: { id: groupId, catlinedesc: newName, display_name: newName } });
+      }
+
+      const { rows: dup } = await pool.query(
+        'SELECT id FROM mes_item_category_groups WHERE category_id = $1 AND LOWER(TRIM(catlinedesc)) = LOWER($2) AND is_active = true AND id <> $3',
+        [catId, newName, groupId]
+      );
+      if (dup.length) {
+        return res.status(409).json({ success: false, error: 'A group with this name already exists' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        await client.query(
+          'UPDATE mes_item_category_groups SET catlinedesc = $1, display_name = $1 WHERE id = $2',
+          [newName, groupId]
+        );
+
+        await client.query(
+          'UPDATE mes_item_group_overrides SET override_group_name = $1 WHERE category_id = $2 AND override_group_name = $3',
+          [newName, catId, oldName]
+        );
+
+        await client.query('COMMIT');
+        res.json({ success: true, data: { id: groupId, catlinedesc: newName, display_name: newName, old_name: oldName } });
+      } catch (txnErr) {
+        await client.query('ROLLBACK');
+        throw txnErr;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      logger.error('PATCH /custom-categories/:id/custom-group/:groupId error:', err);
+      res.status(500).json({ success: false, error: 'Failed to rename custom group' });
     }
   });
 
@@ -4189,6 +4788,373 @@ module.exports = function (router) {
     } catch (err) {
       logger.error('GET /custom-categories/:id/custom-group/:groupId/items error:', err);
       res.status(500).json({ success: false, error: 'Failed to fetch custom group items' });
+    }
+  });
+
+  // GET /items/custom-categories/:id/custom-group/:groupId/formulation
+  router.get('/items/custom-categories/:id/custom-group/:groupId/formulation', authenticate, async (req, res) => {
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+
+      const result = await getAdhesiveFormulationData(catId, groupId);
+      if (result.error) {
+        return res.status(result.status || 400).json({ success: false, error: result.error });
+      }
+
+      return res.json({ success: true, data: result.data });
+    } catch (err) {
+      logger.error('GET /custom-categories/:id/custom-group/:groupId/formulation error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to fetch adhesive formulation' });
+    }
+  });
+
+  // GET /items/custom-categories/:id/custom-group/:groupId/formulation/candidates
+  router.get('/items/custom-categories/:id/custom-group/:groupId/formulation/candidates', authenticate, async (req, res) => {
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+      const source = normalizeMaterialKey(req.query.source || 'group');
+      const search = cleanText(req.query.search, 120);
+      const searchLike = search ? `%${search}%` : null;
+
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+      if (!['group', 'all'].includes(source)) {
+        return res.status(400).json({ success: false, error: 'source must be "group" or "all"' });
+      }
+
+      const ctxResult = await getAdhesiveFormulationContext(catId, groupId);
+      if (ctxResult.error) {
+        return res.status(ctxResult.status || 400).json({ success: false, error: ctxResult.error });
+      }
+      const ctx = ctxResult.data;
+
+      const existingRows = await pool.query(
+        'SELECT item_key FROM mes_adhesive_formulation_components WHERE group_id = $1',
+        [groupId]
+      ).catch((err) => {
+        if (err.code === '42P01') return { rows: [] };
+        throw err;
+      });
+
+      const existingKeys = new Set((existingRows.rows || []).map((row) => normalizeMaterialKey(row.item_key)).filter(Boolean));
+
+      let rows = [];
+
+      if (source === 'group') {
+        const params = [catId, ctx.catlinedesc, searchLike];
+        const { rows: groupRows } = await pool.query(`
+          SELECT
+            o.item_key,
+            MAX(r.mainitem) AS mainitem,
+            MAX(NULLIF(TRIM(r.maindescription), '')) AS maindescription,
+            MAX(NULLIF(TRIM(r.catlinedesc), '')) AS catlinedesc,
+            MAX(NULLIF(TRIM(r.category), '')) AS category,
+            MAX(NULLIF(TRIM(r.itemgroup), '')) AS itemgroup,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+            COALESCE(SUM(CASE WHEN r.mainitemstock > 0 THEN r.mainitemstock * r.maincost ELSE 0 END), 0)::numeric AS stock_val,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty ELSE 0 END), 0)::numeric AS order_qty,
+            COALESCE(SUM(CASE WHEN r.pendingorderqty > 0 THEN r.pendingorderqty * r.purchaseprice ELSE 0 END), 0)::numeric AS order_val
+          FROM mes_item_group_overrides o
+          LEFT JOIN fp_actualrmdata r ON LOWER(TRIM(r.mainitem)) = o.item_key
+          WHERE o.category_id = $1
+            AND o.override_group_name = $2
+            AND (
+              $3::text IS NULL OR
+              o.item_key ILIKE $3 OR
+              COALESCE(r.mainitem, '') ILIKE $3 OR
+              COALESCE(r.maindescription, '') ILIKE $3 OR
+              COALESCE(r.catlinedesc, '') ILIKE $3 OR
+              COALESCE(r.category, '') ILIKE $3 OR
+              COALESCE(r.itemgroup, '') ILIKE $3
+            )
+          GROUP BY o.item_key
+          ORDER BY MAX(r.mainitem) ASC NULLS LAST, o.item_key ASC
+          LIMIT 300
+        `, params);
+        rows = groupRows;
+      } else {
+        const cachedRows = readAdhesiveCandidateAllCache(search || '');
+        if (cachedRows) {
+          rows = cachedRows;
+        } else {
+          const { rows: allRows } = await pool.query(`
+            SELECT
+              LOWER(TRIM(mainitem)) AS item_key,
+              MAX(mainitem) AS mainitem,
+              MAX(NULLIF(TRIM(maindescription), '')) AS maindescription,
+              MAX(NULLIF(TRIM(catlinedesc), '')) AS catlinedesc,
+              MAX(NULLIF(TRIM(category), '')) AS category,
+              MAX(NULLIF(TRIM(itemgroup), '')) AS itemgroup,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock ELSE 0 END), 0)::numeric AS stock_qty,
+              COALESCE(SUM(CASE WHEN mainitemstock > 0 THEN mainitemstock * maincost ELSE 0 END), 0)::numeric AS stock_val,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty ELSE 0 END), 0)::numeric AS order_qty,
+              COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0)::numeric AS order_val
+            FROM fp_actualrmdata
+            WHERE COALESCE(TRIM(mainitem), '') <> ''
+              AND (
+                $1::text IS NULL OR
+                COALESCE(mainitem, '') ILIKE $1 OR
+                COALESCE(maindescription, '') ILIKE $1 OR
+                COALESCE(catlinedesc, '') ILIKE $1 OR
+                COALESCE(category, '') ILIKE $1 OR
+                COALESCE(itemgroup, '') ILIKE $1
+              )
+            GROUP BY LOWER(TRIM(mainitem))
+            ORDER BY MAX(mainitem) ASC
+            LIMIT 300
+          `, [searchLike]);
+          rows = allRows;
+          writeAdhesiveCandidateAllCache(search || '', rows);
+        }
+      }
+
+      const filteredRows = rows.filter((row) => !existingKeys.has(normalizeMaterialKey(row.item_key)));
+      const itemKeys = filteredRows.map((row) => normalizeMaterialKey(row.item_key)).filter(Boolean);
+
+      const [solidPctMap, masterMap] = await Promise.all([
+        loadAdhesiveSolidPctMap(itemKeys),
+        loadAdhesiveMasterMap(itemKeys),
+      ]);
+
+      const candidates = filteredRows.map((row) => {
+        const itemKey = normalizeMaterialKey(row.item_key);
+        const stockQty = Number(row.stock_qty) || 0;
+        const stockVal = Number(row.stock_val) || 0;
+        const orderQty = Number(row.order_qty) || 0;
+        const orderVal = Number(row.order_val) || 0;
+        const stockPrice = stockQty > 0 ? stockVal / stockQty : null;
+        const onOrderPrice = orderQty > 0 ? orderVal / orderQty : null;
+        const totalQty = stockQty + orderQty;
+        const avgPrice = totalQty > 0 ? (stockVal + orderVal) / totalQty : null;
+        const master = masterMap[itemKey] || {};
+
+        const defaultPriceResolution = resolveAdhesiveUnitPrice({
+          overridePrice: null,
+          rmInfo: {
+            avg_price_wa: avgPrice,
+            on_order_price_wa: onOrderPrice,
+            stock_price_wa: stockPrice,
+          },
+          masterInfo: master,
+        });
+
+        const categoryText = String(row.category || '').toLowerCase();
+        const roleSuggestion = categoryText.includes('chem')
+          ? 'solvent'
+          : (categoryText.includes('adh') ? 'resin' : 'other');
+
+        return {
+          item_key: itemKey,
+          mainitem: row.mainitem || itemKey,
+          maindescription: row.maindescription || null,
+          catlinedesc: row.catlinedesc || null,
+          category: row.category || master.oracle_category || null,
+          itemgroup: row.itemgroup || null,
+          stock_price: roundToDigits(stockPrice, 4),
+          on_order_price: roundToDigits(onOrderPrice, 4),
+          avg_price: roundToDigits(avgPrice, 4),
+          market_ref_price: toFiniteNumber(master.market_ref_price),
+          default_price: toFiniteNumber(defaultPriceResolution.value),
+          default_price_source: defaultPriceResolution.source,
+          tds_solids_pct: toFiniteNumber(solidPctMap[itemKey]),
+          default_component_role: roleSuggestion,
+        };
+      });
+
+      return res.json({ success: true, data: candidates });
+    } catch (err) {
+      logger.error('GET /custom-categories/:id/custom-group/:groupId/formulation/candidates error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to fetch formulation candidates' });
+    }
+  });
+
+  // PUT /items/custom-categories/:id/custom-group/:groupId/formulation
+  router.put('/items/custom-categories/:id/custom-group/:groupId/formulation', authenticate, async (req, res) => {
+    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+      const rawComponents = Array.isArray(req.body?.components) ? req.body.components : null;
+
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId)) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+      if (!Array.isArray(rawComponents)) {
+        return res.status(400).json({ success: false, error: 'components must be an array' });
+      }
+
+      const ctxResult = await getAdhesiveFormulationContext(catId, groupId);
+      if (ctxResult.error) {
+        return res.status(ctxResult.status || 400).json({ success: false, error: ctxResult.error });
+      }
+
+      const deduped = [];
+      const seen = new Set();
+
+      for (let i = 0; i < rawComponents.length; i += 1) {
+        const component = rawComponents[i];
+        if (!isPlainObject(component)) continue;
+
+        const itemKey = normalizeMaterialKey(component.item_key);
+        if (!itemKey) continue;
+        if (seen.has(itemKey)) continue;
+        seen.add(itemKey);
+
+        const role = normalizeMaterialKey(component.component_role || 'other') || 'other';
+        if (!ADHESIVE_COMPONENT_ROLES.has(role)) {
+          return res.status(400).json({ success: false, error: `Invalid component_role for item ${itemKey}` });
+        }
+
+        const parts = parseOptionalNumber(component.parts);
+        if (parts === undefined || parts == null || parts < 0) {
+          return res.status(400).json({ success: false, error: `Invalid parts for item ${itemKey}` });
+        }
+
+        const solidsPct = parseOptionalNumber(component.solids_pct);
+        if (solidsPct === undefined || (solidsPct != null && (solidsPct < 0 || solidsPct > 100))) {
+          return res.status(400).json({ success: false, error: `Invalid solids_pct for item ${itemKey}` });
+        }
+
+        const unitPriceOverride = parseOptionalNumber(component.unit_price_override);
+        if (unitPriceOverride === undefined || (unitPriceOverride != null && unitPriceOverride < 0)) {
+          return res.status(400).json({ success: false, error: `Invalid unit_price_override for item ${itemKey}` });
+        }
+
+        const sortOrder = parseOptionalInteger(component.sort_order);
+        const notes = cleanText(component.notes, 500);
+
+        deduped.push({
+          item_key: itemKey,
+          component_role: role,
+          parts,
+          solids_pct: solidsPct,
+          unit_price_override: unitPriceOverride,
+          sort_order: sortOrder == null ? i : sortOrder,
+          notes,
+        });
+      }
+
+      const itemKeys = deduped.map((row) => row.item_key);
+      if (itemKeys.length) {
+        const { rows: existingRmRows } = await pool.query(
+          `SELECT DISTINCT LOWER(TRIM(mainitem)) AS item_key
+           FROM fp_actualrmdata
+           WHERE LOWER(TRIM(mainitem)) = ANY($1)`,
+          [itemKeys]
+        );
+        const existingRmKeys = new Set(existingRmRows.map((row) => normalizeMaterialKey(row.item_key)).filter(Boolean));
+        const missing = itemKeys.filter((key) => !existingRmKeys.has(key));
+        if (missing.length) {
+          return res.status(400).json({
+            success: false,
+            error: `Unknown Oracle item(s): ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ' ...' : ''}`,
+          });
+        }
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Keep formulation exactly in sync with submitted component rows.
+        await client.query('DELETE FROM mes_adhesive_formulation_components WHERE group_id = $1', [groupId]);
+
+        for (const row of deduped) {
+          await client.query(`
+            INSERT INTO mes_adhesive_formulation_components (
+              group_id,
+              item_key,
+              component_role,
+              parts,
+              solids_pct,
+              unit_price_override,
+              sort_order,
+              notes,
+              updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            ON CONFLICT (group_id, item_key)
+            DO UPDATE SET
+              component_role = EXCLUDED.component_role,
+              parts = EXCLUDED.parts,
+              solids_pct = EXCLUDED.solids_pct,
+              unit_price_override = EXCLUDED.unit_price_override,
+              sort_order = EXCLUDED.sort_order,
+              notes = EXCLUDED.notes,
+              updated_at = NOW()
+          `, [
+            groupId,
+            row.item_key,
+            row.component_role,
+            row.parts,
+            row.solids_pct,
+            row.unit_price_override,
+            row.sort_order,
+            row.notes,
+          ]);
+        }
+
+        await client.query('COMMIT');
+      } catch (txnErr) {
+        await client.query('ROLLBACK');
+        throw txnErr;
+      } finally {
+        client.release();
+      }
+
+      const result = await getAdhesiveFormulationData(catId, groupId);
+      if (result.error) {
+        return res.status(result.status || 400).json({ success: false, error: result.error });
+      }
+
+      return res.json({ success: true, data: result.data });
+    } catch (err) {
+      logger.error('PUT /custom-categories/:id/custom-group/:groupId/formulation error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to save adhesive formulation' });
+    }
+  });
+
+  // DELETE /items/custom-categories/:id/custom-group/:groupId/formulation/component/:itemKey
+  router.delete('/items/custom-categories/:id/custom-group/:groupId/formulation/component/:itemKey', authenticate, async (req, res) => {
+    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+    try {
+      const catId = parseInt(req.params.id, 10);
+      const groupId = parseInt(req.params.groupId, 10);
+      const itemKey = normalizeMaterialKey(req.params.itemKey);
+
+      if (!Number.isFinite(catId) || !Number.isFinite(groupId) || !itemKey) {
+        return res.status(400).json({ success: false, error: 'Invalid ids' });
+      }
+
+      const ctxResult = await getAdhesiveFormulationContext(catId, groupId);
+      if (ctxResult.error) {
+        return res.status(ctxResult.status || 400).json({ success: false, error: ctxResult.error });
+      }
+
+      try {
+        await pool.query(
+          'DELETE FROM mes_adhesive_formulation_components WHERE group_id = $1 AND item_key = $2',
+          [groupId, itemKey]
+        );
+      } catch (err) {
+        if (err.code !== '42P01') throw err;
+      }
+
+      const result = await getAdhesiveFormulationData(catId, groupId);
+      if (result.error) {
+        return res.status(result.status || 400).json({ success: false, error: result.error });
+      }
+
+      return res.json({ success: true, data: result.data });
+    } catch (err) {
+      logger.error('DELETE /custom-categories/:id/custom-group/:groupId/formulation/component/:itemKey error:', err);
+      return res.status(500).json({ success: false, error: 'Failed to remove adhesive formulation component' });
     }
   });
 
@@ -4285,6 +5251,14 @@ module.exports = function (router) {
           'DELETE FROM mes_item_group_overrides WHERE category_id = $1 AND override_group_name = $2',
           [catId, groupName]
         );
+
+        // Remove adhesive formulation rows linked to this group (group is soft-deleted, so no FK cascade).
+        await client.query(
+          'DELETE FROM mes_adhesive_formulation_components WHERE group_id = $1',
+          [groupId]
+        ).catch((err) => {
+          if (err.code !== '42P01') throw err;
+        });
 
         // Soft-delete the group
         await client.query(

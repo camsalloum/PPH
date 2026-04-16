@@ -35,6 +35,11 @@ import {
   ReloadOutlined,
   SearchOutlined,
   InfoCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  MenuOutlined,
+  CheckOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useCurrency } from '../../../contexts/CurrencyContext';
@@ -57,6 +62,21 @@ const LOT_SIZE_OPTIONS = [
   { value: 'HB', label: 'HB' },
   { value: 'WB', label: 'WB' },
 ];
+
+const ADHESIVE_COMPONENT_ROLE_OPTIONS = [
+  { value: 'resin', label: 'Resin' },
+  { value: 'hardener', label: 'Hardener' },
+  { value: 'catalyst', label: 'Catalyst' },
+  { value: 'solvent', label: 'Solvent' },
+  { value: 'other', label: 'Other' },
+];
+
+const ADHESIVE_PICKER_SOURCE_OPTIONS = [
+  { value: 'group', label: 'This Group' },
+  { value: 'all', label: 'All Items' },
+];
+
+const ADHESIVE_DEFAULT_DEPOSIT_GSM = 3;
 
 const PROFILE_CONFIG_DEFAULTS = {
   supplier_name: null,
@@ -211,6 +231,89 @@ function toMaterialClassLabel(value) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function roundToDigits(value, digits = 4) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const factor = 10 ** digits;
+  return Math.round(n * factor) / factor;
+}
+
+function computeAdhesiveFormulationTotals(components) {
+  const source = Array.isArray(components) ? components : [];
+  let totalParts = 0;
+  let totalSolids = 0;
+  let totalCost = 0;
+
+  source.forEach((row) => {
+    const parts = Number(row?.parts) || 0;
+    const solidsPct = Number(row?.solids_pct) || 0;
+    const unitPrice = Number(row?.unit_price) || 0;
+    if (parts <= 0) return;
+
+    totalParts += parts;
+    totalSolids += parts * (solidsPct / 100);
+    totalCost += parts * unitPrice;
+  });
+
+  const pricePerKgWet = totalParts > 0 ? totalCost / totalParts : 0;
+  const pricePerKgSolids = totalSolids > 0 ? totalCost / totalSolids : 0;
+  const solidsSharePct = totalParts > 0 ? (totalSolids / totalParts) * 100 : 0;
+
+  return {
+    total_parts: roundToDigits(totalParts, 4) ?? 0,
+    total_solids: roundToDigits(totalSolids, 4) ?? 0,
+    total_cost: roundToDigits(totalCost, 4) ?? 0,
+    price_per_kg_wet: roundToDigits(pricePerKgWet, 4) ?? 0,
+    price_per_kg_solids: roundToDigits(pricePerKgSolids, 4) ?? 0,
+    solids_share_pct: roundToDigits(solidsSharePct, 4) ?? 0,
+  };
+}
+
+function sortAdhesiveComponentsByOrder(components) {
+  const source = Array.isArray(components) ? components : [];
+  return [...source].sort((a, b) => {
+    const aOrder = Number.isFinite(Number(a?.sort_order)) ? Number(a.sort_order) : Number.MAX_SAFE_INTEGER;
+    const bOrder = Number.isFinite(Number(b?.sort_order)) ? Number(b.sort_order) : Number.MAX_SAFE_INTEGER;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return String(a?.mainitem || a?.item_key || '').localeCompare(String(b?.mainitem || b?.item_key || ''), undefined, { sensitivity: 'base' });
+  });
+}
+
+function withAdhesiveSortOrder(components) {
+  return (Array.isArray(components) ? components : []).map((component, index) => ({
+    ...component,
+    sort_order: index,
+  }));
+}
+
+function sanitizeAdhesiveNotes(value) {
+  const text = String(value || '').trim();
+  return text ? text.slice(0, 500) : null;
+}
+
+function buildAdhesiveFormulationSignature(components) {
+  const normalizedRows = withAdhesiveSortOrder(components).map((component) => ({
+    item_key: normalizeKey(component?.item_key || component?.mainitem),
+    component_role: normalizeKey(component?.component_role || 'other') || 'other',
+    parts: toOptionalNumber(component?.parts),
+    solids_pct_source: normalizeKey(component?.solids_pct_source || ''),
+    solids_pct: toOptionalNumber(component?.solids_pct),
+    unit_price_source: normalizeKey(component?.unit_price_source || ''),
+    unit_price: toOptionalNumber(component?.unit_price),
+    notes: sanitizeAdhesiveNotes(component?.notes) || '',
+  }));
+
+  return JSON.stringify(normalizedRows);
+}
+
+function inferAdhesiveRoleFromCategory(categoryText) {
+  const value = normalizeKey(categoryText);
+  if (!value) return 'other';
+  if (value.includes('chem')) return 'solvent';
+  if (value.includes('adh')) return 'resin';
+  return 'other';
+}
+
 export default function CustomCategories() {
   const { companyCurrency, isUAEDirham } = useCurrency();
   const { message } = App.useApp();
@@ -267,6 +370,7 @@ export default function CustomCategories() {
   });
   const [groupPricingSaving, setGroupPricingSaving] = useState(false);
   const [groupPricingSavedAt, setGroupPricingSavedAt] = useState(null);
+  const [unassigningItemKey, setUnassigningItemKey] = useState(null);
 
   const [substrateDraft, setSubstrateDraft] = useState(null);
   const [substrateLoading, setSubstrateLoading] = useState(false);
@@ -276,13 +380,28 @@ export default function CustomCategories() {
 
   // Custom group state
   const [customGroupName, setCustomGroupName] = useState('');
+  const [renamingGroupId, setRenamingGroupId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
   const [customGroupCreating, setCustomGroupCreating] = useState(false);
+  const [creatingSubGroupFor, setCreatingSubGroupFor] = useState(null); // Oracle catlinedesc
   const [customGroupAssignOpen, setCustomGroupAssignOpen] = useState(false);
   const [customGroupTarget, setCustomGroupTarget] = useState(null);
   const [customGroupItems, setCustomGroupItems] = useState([]);
   const [customGroupSelectedKeys, setCustomGroupSelectedKeys] = useState(new Set());
   const [customGroupLoading, setCustomGroupLoading] = useState(false);
   const [customGroupSearchText, setCustomGroupSearchText] = useState('');
+
+  const [adhesiveFormulation, setAdhesiveFormulation] = useState(null);
+  const [adhesiveFormulationLoading, setAdhesiveFormulationLoading] = useState(false);
+  const [adhesiveFormulationSaving, setAdhesiveFormulationSaving] = useState(false);
+  const [adhesiveQuickDepositGsm, setAdhesiveQuickDepositGsm] = useState(ADHESIVE_DEFAULT_DEPOSIT_GSM);
+  const [adhesivePickerOpen, setAdhesivePickerOpen] = useState(false);
+  const [adhesivePickerSource, setAdhesivePickerSource] = useState('group');
+  const [adhesivePickerSearch, setAdhesivePickerSearch] = useState('');
+  const [adhesivePickerRows, setAdhesivePickerRows] = useState([]);
+  const [adhesivePickerLoading, setAdhesivePickerLoading] = useState(false);
+  const [adhesiveFormulationBaselineSignature, setAdhesiveFormulationBaselineSignature] = useState(null);
+  const adhesiveDragItemKeyRef = useRef(null);
 
   const currencySymbol = useMemo(() => (
     isUAEDirham()
@@ -482,6 +601,28 @@ export default function CustomCategories() {
       (a, b) => String(a?.catlinedesc || '').localeCompare(String(b?.catlinedesc || ''), undefined, { sensitivity: 'base' })
     )),
     [profile]
+  );
+
+  const oracleSidebarGroups = useMemo(
+    () => sidebarGroups.filter((g) => !g.is_custom),
+    [sidebarGroups]
+  );
+
+  // Map: parent_catlinedesc → custom sub-groups. Null-parent groups keyed to '__orphan__'.
+  const customGroupsByParent = useMemo(() => {
+    const map = {};
+    sidebarGroups.forEach((g) => {
+      if (!g.is_custom) return;
+      const key = g.parent_catlinedesc || '__orphan__';
+      if (!map[key]) map[key] = [];
+      map[key].push(g);
+    });
+    return map;
+  }, [sidebarGroups]);
+
+  const orphanCustomGroups = useMemo(
+    () => customGroupsByParent['__orphan__'] || [],
+    [customGroupsByParent]
   );
 
   const selectedSidebarGroup = useMemo(() => {
@@ -1380,6 +1521,27 @@ export default function CustomCategories() {
     }
   }, [customGroupName, selectedCatId, headers, message, fetchProfile, searchText]);
 
+  const handleCreateSubGroup = useCallback(async (parentCatlinedesc) => {
+    const name = customGroupName.trim();
+    if (!name || !selectedCatId) return;
+    setCustomGroupCreating(true);
+    try {
+      await axios.post(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group`,
+        { group_name: name, parent_catlinedesc: parentCatlinedesc },
+        { headers }
+      );
+      message.success(`Sub-group "${name}" created under ${parentCatlinedesc}`);
+      setCustomGroupName('');
+      setCreatingSubGroupFor(null);
+      fetchProfile(selectedCatId, searchText);
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to create sub-group');
+    } finally {
+      setCustomGroupCreating(false);
+    }
+  }, [customGroupName, selectedCatId, headers, message, fetchProfile, searchText]);
+
   const openAssignCustomGroup = useCallback(async (group) => {
     setCustomGroupTarget(group);
     setCustomGroupAssignOpen(true);
@@ -1393,12 +1555,15 @@ export default function CustomCategories() {
       );
       const existingKeys = new Set((res.data?.data || []).map((r) => r.item_key));
       setCustomGroupSelectedKeys(existingKeys);
-      // Load individual items for assignment (item-level, not item-group level)
+      // Load individual items for assignment — scoped to parent Oracle group if set
       const itemsRes = await axios.get(
         `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/assignable-items`,
         {
           headers,
-          params: { current_group_id: group.group_id },
+          params: {
+            current_group_id: group.group_id,
+            parent_catlinedesc: group.parent_catlinedesc || undefined,
+          },
         }
       );
       const allItems = (itemsRes.data?.data || []).map((item) => ({
@@ -1458,6 +1623,445 @@ export default function CustomCategories() {
       message.error(err.response?.data?.error || 'Failed to delete custom group');
     }
   }, [selectedCatId, headers, message, fetchProfile, fetchCategories, searchText]);
+
+  const handleRenameCustomGroup = useCallback(async (group) => {
+    if (!selectedCatId) return;
+    const newName = renameValue.trim();
+    if (!newName || newName === (group.display_name || group.catlinedesc)) {
+      setRenamingGroupId(null);
+      return;
+    }
+    try {
+      await axios.patch(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${group.group_id}`,
+        { group_name: newName },
+        { headers }
+      );
+      message.success(`Renamed to "${newName}"`);
+      setRenamingGroupId(null);
+      await Promise.all([
+        fetchProfile(selectedCatId, searchText),
+        fetchCategories(),
+      ]);
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to rename custom group');
+    }
+  }, [renameValue, selectedCatId, headers, message, fetchProfile, fetchCategories, searchText]);
+
+  const isCustomGroupDetail = useMemo(() => (
+    igDetail?.scope_type === 'category_group'
+    && (Boolean(igDetail?.is_custom_group) || Boolean(selectedSidebarGroup?.is_custom))
+  ), [igDetail, selectedSidebarGroup]);
+
+  const activeCustomGroupId = useMemo(() => {
+    if (!isCustomGroupDetail) return null;
+    const detailGroupId = Number(igDetail?.group_id);
+    if (Number.isFinite(detailGroupId) && detailGroupId > 0) return detailGroupId;
+
+    const sidebarGroupId = Number(selectedSidebarGroup?.group_id);
+    if (Number.isFinite(sidebarGroupId) && sidebarGroupId > 0) return sidebarGroupId;
+
+    return null;
+  }, [isCustomGroupDetail, igDetail, selectedSidebarGroup]);
+
+  const isAdhesiveFormulationDetail = useMemo(() => (
+    isCustomGroupDetail
+    && normalizeKey(igDetail?.category?.material_class) === 'adhesives'
+    && Number.isFinite(activeCustomGroupId)
+    && activeCustomGroupId > 0
+  ), [isCustomGroupDetail, igDetail, activeCustomGroupId]);
+
+  const mapAdhesiveFormulationPayload = useCallback((payload) => {
+    const components = sortAdhesiveComponentsByOrder(payload?.components || []).map((component, index) => ({
+      ...component,
+      item_key: normalizeKey(component?.item_key || component?.mainitem),
+      component_role: normalizeKey(component?.component_role || 'other') || 'other',
+      parts: toOptionalNumber(component?.parts),
+      solids_pct: toOptionalNumber(component?.solids_pct),
+      unit_price: toOptionalNumber(component?.unit_price),
+      unit_price_override: toOptionalNumber(component?.unit_price_override),
+      sort_order: index,
+      notes: sanitizeAdhesiveNotes(component?.notes),
+    }));
+
+    return {
+      ...(payload || {}),
+      components,
+    };
+  }, []);
+
+  const fetchAdhesiveFormulation = useCallback(async () => {
+    if (!selectedCatId || !activeCustomGroupId || !isAdhesiveFormulationDetail) {
+      setAdhesiveFormulation(null);
+      setAdhesiveFormulationBaselineSignature(null);
+      return;
+    }
+
+    setAdhesiveFormulationLoading(true);
+    try {
+      const res = await axios.get(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${activeCustomGroupId}/formulation`,
+        { headers }
+      );
+      const mapped = mapAdhesiveFormulationPayload(res.data?.data || { components: [] });
+      setAdhesiveFormulation(mapped);
+      setAdhesiveFormulationBaselineSignature(buildAdhesiveFormulationSignature(mapped.components || []));
+    } catch (err) {
+      const fallback = { components: [] };
+      setAdhesiveFormulation(fallback);
+      setAdhesiveFormulationBaselineSignature(buildAdhesiveFormulationSignature(fallback.components));
+      message.error(err.response?.data?.error || 'Failed to load adhesive formulation');
+    } finally {
+      setAdhesiveFormulationLoading(false);
+    }
+  }, [
+    selectedCatId,
+    activeCustomGroupId,
+    isAdhesiveFormulationDetail,
+    headers,
+    mapAdhesiveFormulationPayload,
+    message,
+  ]);
+
+  useEffect(() => {
+    if (!isAdhesiveFormulationDetail) {
+      setAdhesiveFormulation(null);
+      setAdhesiveFormulationBaselineSignature(null);
+      setAdhesiveQuickDepositGsm(ADHESIVE_DEFAULT_DEPOSIT_GSM);
+      setAdhesivePickerOpen(false);
+      setAdhesivePickerRows([]);
+      setAdhesivePickerSearch('');
+      setAdhesivePickerSource('group');
+      adhesiveDragItemKeyRef.current = null;
+      return;
+    }
+
+    fetchAdhesiveFormulation();
+  }, [isAdhesiveFormulationDetail, fetchAdhesiveFormulation]);
+
+  const adhesiveExistingItemKeys = useMemo(
+    () => new Set((adhesiveFormulation?.components || []).map((component) => normalizeKey(component.item_key)).filter(Boolean)),
+    [adhesiveFormulation]
+  );
+
+  const adhesiveFormulationTotals = useMemo(
+    () => computeAdhesiveFormulationTotals(adhesiveFormulation?.components || []),
+    [adhesiveFormulation]
+  );
+
+  const adhesiveFormulationSignature = useMemo(
+    () => buildAdhesiveFormulationSignature(adhesiveFormulation?.components || []),
+    [adhesiveFormulation]
+  );
+
+  const adhesiveFormulationDirty = useMemo(() => (
+    isAdhesiveFormulationDetail
+    && adhesiveFormulationBaselineSignature != null
+    && adhesiveFormulationSignature !== adhesiveFormulationBaselineSignature
+  ), [isAdhesiveFormulationDetail, adhesiveFormulationSignature, adhesiveFormulationBaselineSignature]);
+
+  const adhesiveQuickEstimate = useMemo(() => {
+    const depositGsm = Math.max(0, Number(adhesiveQuickDepositGsm) || 0);
+    const solidsSharePct = Number(adhesiveFormulationTotals?.solids_share_pct) || 0;
+    const wetPrice = Number(adhesiveFormulationTotals?.price_per_kg_wet) || 0;
+
+    const wetGsm = solidsSharePct > 0 ? depositGsm / (solidsSharePct / 100) : 0;
+    const costPerSqm = wetGsm * wetPrice / 1000;
+    const costPer1000Sqm = costPerSqm * 1000;
+
+    return {
+      deposit_gsm: depositGsm,
+      wet_gsm: roundToDigits(wetGsm, 4) ?? 0,
+      cost_per_sqm: roundToDigits(costPerSqm, 6) ?? 0,
+      cost_per_1000_sqm: roundToDigits(costPer1000Sqm, 4) ?? 0,
+    };
+  }, [adhesiveQuickDepositGsm, adhesiveFormulationTotals]);
+
+  const updateAdhesiveComponent = useCallback((itemKey, updater) => {
+    const normalizedItemKey = normalizeKey(itemKey);
+    if (!normalizedItemKey) return;
+
+    setAdhesiveFormulation((prev) => {
+      if (!prev) return prev;
+      const nextComponents = (prev.components || []).map((component) => {
+        if (normalizeKey(component.item_key) !== normalizedItemKey) return component;
+        if (typeof updater === 'function') return updater(component);
+        return { ...component, ...(updater || {}) };
+      });
+      return { ...prev, components: withAdhesiveSortOrder(nextComponents) };
+    });
+  }, []);
+
+  const handleRemoveAdhesiveComponent = useCallback((itemKey) => {
+    const normalizedItemKey = normalizeKey(itemKey);
+    if (!normalizedItemKey) return;
+
+    setAdhesiveFormulation((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        components: withAdhesiveSortOrder(
+          (prev.components || []).filter((component) => normalizeKey(component.item_key) !== normalizedItemKey)
+        ),
+      };
+    });
+  }, []);
+
+  const moveAdhesiveComponentByDirection = useCallback((itemKey, direction) => {
+    const normalizedItemKey = normalizeKey(itemKey);
+    if (!normalizedItemKey) return;
+
+    setAdhesiveFormulation((prev) => {
+      if (!prev) return prev;
+      const nextComponents = [...(prev.components || [])];
+      const fromIndex = nextComponents.findIndex((component) => normalizeKey(component.item_key) === normalizedItemKey);
+      if (fromIndex < 0) return prev;
+
+      const toIndex = fromIndex + direction;
+      if (toIndex < 0 || toIndex >= nextComponents.length) return prev;
+
+      const [moved] = nextComponents.splice(fromIndex, 1);
+      nextComponents.splice(toIndex, 0, moved);
+      return { ...prev, components: withAdhesiveSortOrder(nextComponents) };
+    });
+  }, []);
+
+  const handleAdhesiveDragStart = useCallback((event, itemKey) => {
+    const normalizedItemKey = normalizeKey(itemKey);
+    if (!normalizedItemKey) return;
+
+    adhesiveDragItemKeyRef.current = normalizedItemKey;
+    if (event?.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', normalizedItemKey);
+    }
+  }, []);
+
+  const handleAdhesiveDrop = useCallback((targetItemKey) => {
+    const dragItemKey = normalizeKey(adhesiveDragItemKeyRef.current);
+    const normalizedTargetKey = normalizeKey(targetItemKey);
+    adhesiveDragItemKeyRef.current = null;
+    if (!dragItemKey || !normalizedTargetKey || dragItemKey === normalizedTargetKey) return;
+
+    setAdhesiveFormulation((prev) => {
+      if (!prev) return prev;
+      const nextComponents = [...(prev.components || [])];
+      const fromIndex = nextComponents.findIndex((component) => normalizeKey(component.item_key) === dragItemKey);
+      const toIndex = nextComponents.findIndex((component) => normalizeKey(component.item_key) === normalizedTargetKey);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return prev;
+
+      const [moved] = nextComponents.splice(fromIndex, 1);
+      nextComponents.splice(toIndex, 0, moved);
+      return { ...prev, components: withAdhesiveSortOrder(nextComponents) };
+    });
+  }, []);
+
+  const fetchAdhesivePickerRows = useCallback(async () => {
+    if (!adhesivePickerOpen || !isAdhesiveFormulationDetail || !selectedCatId || !activeCustomGroupId) return;
+
+    setAdhesivePickerLoading(true);
+    try {
+      const res = await axios.get(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${activeCustomGroupId}/formulation/candidates`,
+        {
+          headers,
+          params: {
+            source: adhesivePickerSource,
+            search: adhesivePickerSearch || undefined,
+          },
+        }
+      );
+      setAdhesivePickerRows(res.data?.data || []);
+    } catch (err) {
+      setAdhesivePickerRows([]);
+      message.error(err.response?.data?.error || 'Failed to load formulation candidates');
+    } finally {
+      setAdhesivePickerLoading(false);
+    }
+  }, [
+    adhesivePickerOpen,
+    isAdhesiveFormulationDetail,
+    selectedCatId,
+    activeCustomGroupId,
+    headers,
+    adhesivePickerSource,
+    adhesivePickerSearch,
+    message,
+  ]);
+
+  useEffect(() => {
+    if (!adhesivePickerOpen) return undefined;
+    const timer = setTimeout(() => {
+      fetchAdhesivePickerRows();
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [adhesivePickerOpen, adhesivePickerSource, adhesivePickerSearch, fetchAdhesivePickerRows]);
+
+  const handleAddAdhesiveComponentFromPicker = useCallback((row) => {
+    const itemKey = normalizeKey(row?.item_key || row?.mainitem);
+    if (!itemKey) return;
+
+    if (adhesiveExistingItemKeys.has(itemKey)) {
+      message.info('Item already exists in this formulation');
+      return;
+    }
+
+    const defaultPrice = toOptionalNumber(row?.default_price);
+    const defaultSolidPct = toOptionalNumber(row?.tds_solids_pct);
+
+    setAdhesiveFormulation((prev) => {
+      const base = prev || { components: [] };
+      const nextComponents = withAdhesiveSortOrder([...(base.components || []), {
+        item_key: itemKey,
+        mainitem: row?.mainitem || itemKey,
+        maindescription: row?.maindescription || null,
+        catlinedesc: row?.catlinedesc || null,
+        category: row?.category || null,
+        itemgroup: row?.itemgroup || null,
+        component_role: normalizeKey(row?.default_component_role) || inferAdhesiveRoleFromCategory(row?.category),
+        parts: null,
+        solids_pct: defaultSolidPct,
+        solids_pct_source: defaultSolidPct != null ? 'tds' : null,
+        solids_pct_override: null,
+        tds_solids_pct: defaultSolidPct,
+        unit_price: defaultPrice,
+        unit_price_source: row?.default_price_source || null,
+        unit_price_override: defaultPrice,
+        oracle_stock_price: toOptionalNumber(row?.stock_price),
+        oracle_on_order_price: toOptionalNumber(row?.on_order_price),
+        oracle_avg_price: toOptionalNumber(row?.avg_price),
+        market_ref_price: toOptionalNumber(row?.market_ref_price),
+        sort_order: (base.components || []).length,
+        notes: null,
+      }]);
+
+      return { ...base, components: nextComponents };
+    });
+
+    setAdhesivePickerRows((prev) => prev.filter((candidate) => normalizeKey(candidate.item_key) !== itemKey));
+    message.success(`${row?.mainitem || itemKey} added to formulation`);
+  }, [adhesiveExistingItemKeys, message]);
+
+  const handleSaveAdhesiveFormulation = useCallback(async () => {
+    if (!isAdhesiveFormulationDetail || !selectedCatId || !activeCustomGroupId) return;
+
+    const payloadComponents = [];
+    const invalidRows = [];
+
+    (adhesiveFormulation?.components || []).forEach((component, index) => {
+      const itemKey = normalizeKey(component?.item_key || component?.mainitem);
+      if (!itemKey) return;
+
+      const parts = toOptionalNumber(component?.parts);
+      if (parts == null || parts < 0) {
+        invalidRows.push(itemKey);
+        return;
+      }
+
+      const solidsOverride = normalizeKey(component?.solids_pct_source) === 'override'
+        ? toOptionalNumber(component?.solids_pct)
+        : null;
+      if (normalizeKey(component?.solids_pct_source) === 'override' && solidsOverride == null) {
+        invalidRows.push(itemKey);
+        return;
+      }
+
+      const priceOverride = normalizeKey(component?.unit_price_source) === 'override'
+        ? toOptionalNumber(component?.unit_price)
+        : null;
+      if (normalizeKey(component?.unit_price_source) === 'override' && priceOverride == null) {
+        invalidRows.push(itemKey);
+        return;
+      }
+
+      payloadComponents.push({
+        item_key: itemKey,
+        component_role: normalizeKey(component?.component_role) || 'other',
+        parts,
+        solids_pct: solidsOverride,
+        unit_price_override: priceOverride,
+        sort_order: Number.isFinite(Number(component?.sort_order)) ? Number(component.sort_order) : index,
+        notes: sanitizeAdhesiveNotes(component?.notes),
+      });
+    });
+
+    if (invalidRows.length) {
+      message.warning(`Please enter valid Parts/Solids/Price values before saving (${invalidRows.slice(0, 3).join(', ')}${invalidRows.length > 3 ? ' ...' : ''}).`);
+      return;
+    }
+
+    setAdhesiveFormulationSaving(true);
+    try {
+      const res = await axios.put(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${activeCustomGroupId}/formulation`,
+        { components: payloadComponents },
+        { headers }
+      );
+
+      const mapped = mapAdhesiveFormulationPayload(res.data?.data || { components: [] });
+      setAdhesiveFormulation(mapped);
+      setAdhesiveFormulationBaselineSignature(buildAdhesiveFormulationSignature(mapped.components || []));
+      message.success('Adhesive formulation saved');
+
+      await refreshDetail();
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to save adhesive formulation');
+    } finally {
+      setAdhesiveFormulationSaving(false);
+    }
+  }, [
+    isAdhesiveFormulationDetail,
+    selectedCatId,
+    activeCustomGroupId,
+    adhesiveFormulation,
+    headers,
+    message,
+    mapAdhesiveFormulationPayload,
+    refreshDetail,
+  ]);
+
+  const handleUnassignCustomGroupItem = useCallback(async (itemKey) => {
+    if (!selectedCatId || !activeCustomGroupId || !isCustomGroupDetail) return;
+
+    const normalizedItemKey = normalizeKey(itemKey);
+    if (!normalizedItemKey) return;
+
+    const remainingKeys = (igDetail?.items || [])
+      .map((item) => normalizeKey(item.item_key || item.mainitem))
+      .filter(Boolean)
+      .filter((key) => key !== normalizedItemKey);
+
+    setUnassigningItemKey(normalizedItemKey);
+    try {
+      await axios.put(
+        `${API}/api/mes/master-data/items/custom-categories/${selectedCatId}/custom-group/${activeCustomGroupId}/items`,
+        { item_keys: remainingKeys },
+        { headers }
+      );
+
+      message.success('Item unassigned from custom group');
+      await Promise.all([
+        refreshDetail(),
+        fetchProfile(selectedCatId, searchText),
+        fetchCategories(),
+      ]);
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to unassign item');
+    } finally {
+      setUnassigningItemKey(null);
+    }
+  }, [
+    selectedCatId,
+    activeCustomGroupId,
+    isCustomGroupDetail,
+    igDetail,
+    headers,
+    message,
+    refreshDetail,
+    fetchProfile,
+    fetchCategories,
+    searchText,
+  ]);
 
   const customGroupVisibleItems = useMemo(() => {
     const search = String(customGroupSearchText || '').trim().toLowerCase();
@@ -1796,87 +2400,276 @@ export default function CustomCategories() {
                       <Col xs={24} xl={6} xxl={5}>
                         <Card size="small" title="Category Groups" styles={{ body: { padding: 10 } }}>
                           <div style={{ maxHeight: 560, overflowY: 'auto', display: 'grid', gap: 8 }}>
-                            {sidebarGroups.map((group) => {
+                            {oracleSidebarGroups.map((group) => {
                               const active = selectedSidebarGroup?.catlinedesc === group.catlinedesc;
+                              const subGroups = customGroupsByParent[group.catlinedesc] || [];
+                              const isAddingHere = creatingSubGroupFor === group.catlinedesc;
                               return (
-                                <div
-                                  key={group.catlinedesc}
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={() => setSelectedGroupFilter(group.catlinedesc)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault();
-                                      setSelectedGroupFilter(group.catlinedesc);
-                                    }
-                                  }}
-                                  style={{
-                                    border: active ? '1px solid #0f766e' : group.is_custom ? '1px dashed #d48806' : '1px solid #e2e8f0',
-                                    borderRadius: 10,
-                                    padding: '10px 12px',
-                                    background: active
-                                      ? 'linear-gradient(135deg, rgba(15,118,110,.10), rgba(8,145,178,.08))'
-                                      : group.is_custom ? '#fffbe6' : '#fff',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                                <div key={group.catlinedesc}>
+                                  {/* Oracle group card */}
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => setSelectedGroupFilter(group.catlinedesc)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setSelectedGroupFilter(group.catlinedesc);
+                                      }
+                                    }}
+                                    style={{
+                                      border: active ? '1px solid #0f766e' : '1px solid #e2e8f0',
+                                      borderRadius: 10,
+                                      padding: '10px 12px',
+                                      background: active
+                                        ? 'linear-gradient(135deg, rgba(15,118,110,.10), rgba(8,145,178,.08))'
+                                        : '#fff',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                                       <Text strong style={{ color: active ? '#0f766e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {group.display_name || group.catlinedesc}
                                       </Text>
-                                      {group.is_custom && <Tag color="orange" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>Custom</Tag>}
+                                      <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4', flexShrink: 0 }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
                                     </div>
-                                    <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4', flexShrink: 0 }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                                    <Text type="secondary" style={{ fontSize: 11 }}>
-                                      {group.is_custom
-                                        ? `${Number(group.item_count) || 0} assigned items`
-                                        : `${Number(group.item_group_count) || 0} groups · ${Number(group.item_count) || 0} items`}
-                                    </Text>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                      {group.is_custom && (
-                                        <>
-                                          <Tooltip title="Assign items to this custom group">
-                                            <Button
-                                              type="text"
-                                              size="small"
-                                              icon={<PlusOutlined />}
-                                              style={{ fontSize: 11, padding: '0 4px', height: 20, color: '#0f766e' }}
-                                              onClick={(e) => { e.stopPropagation(); openAssignCustomGroup(group); }}
-                                            />
-                                          </Tooltip>
-                                          <Popconfirm
-                                            title="Delete this custom group?"
-                                            description="This will remove the group and all item assignments."
-                                            onConfirm={(e) => { if (e) e.stopPropagation(); handleDeleteCustomGroup(group); }}
-                                            onCancel={(e) => { if (e) e.stopPropagation(); }}
-                                            okText="Delete"
-                                            cancelText="Cancel"
-                                            okButtonProps={{ danger: true }}
-                                          >
-                                            <Button
-                                              type="text"
-                                              size="small"
-                                              danger
-                                              icon={<DeleteOutlined />}
-                                              style={{ fontSize: 11, padding: '0 4px', height: 20 }}
-                                              onClick={(e) => e.stopPropagation()}
-                                            />
-                                          </Popconfirm>
-                                        </>
-                                      )}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                                      <Text type="secondary" style={{ fontSize: 11 }}>
+                                        {`${Number(group.item_group_count) || 0} groups · ${Number(group.item_count) || 0} items`}
+                                      </Text>
                                       <Tooltip title="Weighted Average of Stock and On Order prices">
                                         <Text type="secondary" style={{ fontSize: 10, cursor: 'help', borderBottom: '1px dotted #94a3b8' }}>W.A</Text>
                                       </Tooltip>
                                     </div>
+
+                                    {/* Nested custom sub-groups */}
+                                    {(subGroups.length > 0 || isAddingHere) && (
+                                      <div
+                                        style={{ marginTop: 8, paddingLeft: 10, borderLeft: '2px solid #d48806', display: 'grid', gap: 4 }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => e.stopPropagation()}
+                                        role="presentation"
+                                      >
+                                        {subGroups.map((sub) => {
+                                          const subActive = selectedSidebarGroup?.catlinedesc === sub.catlinedesc;
+                                          return (
+                                            <div
+                                              key={sub.catlinedesc}
+                                              role="button"
+                                              tabIndex={0}
+                                              onClick={(e) => { e.stopPropagation(); setSelectedGroupFilter(sub.catlinedesc); }}
+                                              onKeyDown={(e) => {
+                                                e.stopPropagation();
+                                                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedGroupFilter(sub.catlinedesc); }
+                                              }}
+                                              style={{
+                                                border: subActive ? '1px solid #0f766e' : '1px dashed #d48806',
+                                                borderRadius: 7,
+                                                padding: '6px 8px',
+                                                background: subActive ? 'linear-gradient(135deg, rgba(15,118,110,.10), rgba(8,145,178,.08))' : '#fffbe6',
+                                                cursor: 'pointer',
+                                              }}
+                                            >
+                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: 1 }}>
+                                                  {renamingGroupId === sub.group_id ? (
+                                                    <Input
+                                                      size="small"
+                                                      autoFocus
+                                                      value={renameValue}
+                                                      onChange={(e) => setRenameValue(e.target.value)}
+                                                      onPressEnter={() => handleRenameCustomGroup(sub)}
+                                                      onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') setRenamingGroupId(null); }}
+                                                      onClick={(e) => e.stopPropagation()}
+                                                      maxLength={120}
+                                                      style={{ flex: 1, height: 20, fontSize: 11 }}
+                                                    />
+                                                  ) : (
+                                                    <Text style={{ fontSize: 12, fontWeight: 600, color: subActive ? '#0f766e' : '#92400e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                      {sub.display_name || sub.catlinedesc}
+                                                    </Text>
+                                                  )}
+                                                  {sub.has_formulation && renamingGroupId !== sub.group_id && (
+                                                    <Tooltip title="Saved formulation available">
+                                                      <Tag color="green" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>Fml</Tag>
+                                                    </Tooltip>
+                                                  )}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                                                  {renamingGroupId === sub.group_id ? (
+                                                    <>
+                                                      <Tooltip title="Save rename">
+                                                        <Button type="text" size="small" icon={<CheckOutlined />} style={{ fontSize: 11, padding: '0 3px', height: 18, color: '#0f766e' }} onClick={(e) => { e.stopPropagation(); handleRenameCustomGroup(sub); }} />
+                                                      </Tooltip>
+                                                      <Tooltip title="Cancel">
+                                                        <Button type="text" size="small" icon={<CloseOutlined />} style={{ fontSize: 11, padding: '0 3px', height: 18 }} onClick={(e) => { e.stopPropagation(); setRenamingGroupId(null); }} />
+                                                      </Tooltip>
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <Tooltip title="Assign items">
+                                                        <Button type="text" size="small" icon={<PlusOutlined />} style={{ fontSize: 11, padding: '0 3px', height: 18, color: '#0f766e' }} onClick={(e) => { e.stopPropagation(); openAssignCustomGroup(sub); }} />
+                                                      </Tooltip>
+                                                      <Tooltip title="Rename">
+                                                        <Button type="text" size="small" icon={<EditOutlined />} style={{ fontSize: 11, padding: '0 3px', height: 18, color: '#7c3aed' }} onClick={(e) => { e.stopPropagation(); setRenamingGroupId(sub.group_id); setRenameValue(sub.display_name || sub.catlinedesc); }} />
+                                                      </Tooltip>
+                                                      <Popconfirm
+                                                        title="Delete this sub-group?"
+                                                        description="This will remove the sub-group and all item assignments."
+                                                        onConfirm={(e) => { if (e) e.stopPropagation(); handleDeleteCustomGroup(sub); }}
+                                                        onCancel={(e) => { if (e) e.stopPropagation(); }}
+                                                        okText="Delete"
+                                                        cancelText="Cancel"
+                                                        okButtonProps={{ danger: true }}
+                                                      >
+                                                        <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ fontSize: 11, padding: '0 3px', height: 18 }} onClick={(e) => e.stopPropagation()} />
+                                                      </Popconfirm>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <Text type="secondary" style={{ fontSize: 10 }}>
+                                                {`${Number(sub.item_count) || 0} items`}
+                                              </Text>
+                                            </div>
+                                          );
+                                        })}
+
+                                        {/* Inline create sub-group */}
+                                        {isAddingHere ? (
+                                          <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
+                                            <Input
+                                              size="small"
+                                              autoFocus
+                                              placeholder="Sub-group name"
+                                              value={customGroupName}
+                                              onChange={(e) => setCustomGroupName(e.target.value)}
+                                              onPressEnter={() => handleCreateSubGroup(group.catlinedesc)}
+                                              onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setCreatingSubGroupFor(null); setCustomGroupName(''); } }}
+                                              onClick={(e) => e.stopPropagation()}
+                                              maxLength={120}
+                                              style={{ flex: 1, height: 22, fontSize: 11 }}
+                                            />
+                                            <Tooltip title="Create sub-group">
+                                              <Button type="text" size="small" icon={<CheckOutlined />} loading={customGroupCreating} disabled={!customGroupName.trim()} style={{ fontSize: 11, padding: '0 3px', height: 22, color: '#0f766e' }} onClick={(e) => { e.stopPropagation(); handleCreateSubGroup(group.catlinedesc); }} />
+                                            </Tooltip>
+                                            <Tooltip title="Cancel">
+                                              <Button type="text" size="small" icon={<CloseOutlined />} style={{ fontSize: 11, padding: '0 3px', height: 22 }} onClick={(e) => { e.stopPropagation(); setCreatingSubGroupFor(null); setCustomGroupName(''); }} />
+                                            </Tooltip>
+                                          </div>
+                                        ) : (
+                                          <Button
+                                            type="dashed"
+                                            size="small"
+                                            icon={<PlusOutlined />}
+                                            style={{ fontSize: 11, height: 22, width: '100%', color: '#d48806', borderColor: '#d48806', marginTop: 2 }}
+                                            onClick={(e) => { e.stopPropagation(); setCreatingSubGroupFor(group.catlinedesc); setCustomGroupName(''); }}
+                                          >
+                                            Add Sub-Group
+                                          </Button>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Show "Add Sub-Group" button even when no sub-groups exist yet */}
+                                    {subGroups.length === 0 && !isAddingHere && (
+                                      <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()} role="presentation" onKeyDown={(e) => e.stopPropagation()}>
+                                        <Button
+                                          type="dashed"
+                                          size="small"
+                                          icon={<PlusOutlined />}
+                                          style={{ fontSize: 11, height: 22, width: '100%', color: '#d48806', borderColor: '#d48806' }}
+                                          onClick={(e) => { e.stopPropagation(); setCreatingSubGroupFor(group.catlinedesc); setCustomGroupName(''); }}
+                                        >
+                                          Add Sub-Group
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               );
                             })}
 
-                            {!sidebarGroups.length && (
+                            {/* Orphan custom groups (created before parent tracking) */}
+                            {orphanCustomGroups.length > 0 && (
+                              <>
+                                <Divider style={{ margin: '4px 0', fontSize: 11 }}>Legacy Sub-Groups</Divider>
+                                {orphanCustomGroups.map((group) => {
+                                  const active = selectedSidebarGroup?.catlinedesc === group.catlinedesc;
+                                  return (
+                                    <div
+                                      key={group.catlinedesc}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => setSelectedGroupFilter(group.catlinedesc)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedGroupFilter(group.catlinedesc); }
+                                      }}
+                                      style={{
+                                        border: active ? '1px solid #0f766e' : '1px dashed #d48806',
+                                        borderRadius: 10,
+                                        padding: '10px 12px',
+                                        background: active ? 'linear-gradient(135deg, rgba(15,118,110,.10), rgba(8,145,178,.08))' : '#fffbe6',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                                          {renamingGroupId === group.group_id ? (
+                                            <Input
+                                              size="small"
+                                              autoFocus
+                                              value={renameValue}
+                                              onChange={(e) => setRenameValue(e.target.value)}
+                                              onPressEnter={() => handleRenameCustomGroup(group)}
+                                              onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') setRenamingGroupId(null); }}
+                                              onClick={(e) => e.stopPropagation()}
+                                              maxLength={120}
+                                              style={{ flex: 1, height: 22, fontSize: 12 }}
+                                            />
+                                          ) : (
+                                            <Text strong style={{ color: active ? '#0f766e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                              {group.display_name || group.catlinedesc}
+                                            </Text>
+                                          )}
+                                          {renamingGroupId !== group.group_id && <Tag color="orange" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>Custom</Tag>}
+                                          {group.has_formulation && renamingGroupId !== group.group_id && (
+                                            <Tooltip title="Saved formulation available for this custom adhesive group">
+                                              <Tag color="green" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>Formulated</Tag>
+                                            </Tooltip>
+                                          )}
+                                        </div>
+                                        <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4', flexShrink: 0 }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                                        <Text type="secondary" style={{ fontSize: 11 }}>{`${Number(group.item_count) || 0} assigned items`}</Text>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                          {renamingGroupId === group.group_id ? (
+                                            <>
+                                              <Tooltip title="Save rename"><Button type="text" size="small" icon={<CheckOutlined />} style={{ fontSize: 11, padding: '0 4px', height: 20, color: '#0f766e' }} onClick={(e) => { e.stopPropagation(); handleRenameCustomGroup(group); }} /></Tooltip>
+                                              <Tooltip title="Cancel"><Button type="text" size="small" icon={<CloseOutlined />} style={{ fontSize: 11, padding: '0 4px', height: 20 }} onClick={(e) => { e.stopPropagation(); setRenamingGroupId(null); }} /></Tooltip>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Tooltip title="Assign items to this custom group"><Button type="text" size="small" icon={<PlusOutlined />} style={{ fontSize: 11, padding: '0 4px', height: 20, color: '#0f766e' }} onClick={(e) => { e.stopPropagation(); openAssignCustomGroup(group); }} /></Tooltip>
+                                              <Tooltip title="Rename this custom group"><Button type="text" size="small" icon={<EditOutlined />} style={{ fontSize: 11, padding: '0 4px', height: 20, color: '#7c3aed' }} onClick={(e) => { e.stopPropagation(); setRenamingGroupId(group.group_id); setRenameValue(group.display_name || group.catlinedesc); }} /></Tooltip>
+                                              <Popconfirm title="Delete this custom group?" description="This will remove the group and all item assignments." onConfirm={(e) => { if (e) e.stopPropagation(); handleDeleteCustomGroup(group); }} onCancel={(e) => { if (e) e.stopPropagation(); }} okText="Delete" cancelText="Cancel" okButtonProps={{ danger: true }}>
+                                                <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ fontSize: 11, padding: '0 4px', height: 20 }} onClick={(e) => e.stopPropagation()} />
+                                              </Popconfirm>
+                                            </>
+                                          )}
+                                          <Tooltip title="Weighted Average of Stock and On Order prices">
+                                            <Text type="secondary" style={{ fontSize: 10, cursor: 'help', borderBottom: '1px dotted #94a3b8' }}>W.A</Text>
+                                          </Tooltip>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {!oracleSidebarGroups.length && !orphanCustomGroups.length && (
                               <Text type="secondary" style={{ fontSize: 12 }}>No category groups found.</Text>
                             )}
                           </div>
@@ -2101,33 +2894,14 @@ export default function CustomCategories() {
           <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
             {selectedGroups.size} groups selected
           </div>
-
-          <Divider style={{ margin: '12px 0 8px' }}>Create Custom Group</Divider>
-          <Space>
-            <Input
-              size="small"
-              placeholder="Custom group name"
-              value={customGroupName}
-              onChange={(e) => setCustomGroupName(e.target.value)}
-              style={{ width: 200 }}
-              maxLength={120}
-            />
-            <Button
-              size="small"
-              type="primary"
-              loading={customGroupCreating}
-              disabled={!customGroupName.trim()}
-              onClick={handleCreateCustomGroup}
-            >
-              Create
-            </Button>
-          </Space>
         </Spin>
       </Modal>
 
       {/* Custom Group Item Assignment Modal */}
       <Modal
-        title={`Assign Unmapped Items — ${customGroupTarget?.display_name || customGroupTarget?.catlinedesc || ''}`}
+        title={customGroupTarget?.parent_catlinedesc
+          ? `Assign Items — ${customGroupTarget?.display_name || customGroupTarget?.catlinedesc || ''} (within ${customGroupTarget.parent_catlinedesc})`
+          : `Assign Items — ${customGroupTarget?.display_name || customGroupTarget?.catlinedesc || ''}`}
         open={customGroupAssignOpen}
         onCancel={() => {
           setCustomGroupAssignOpen(false);
@@ -2209,6 +2983,123 @@ export default function CustomCategories() {
       </Modal>
 
       <Modal
+        title="Add Adhesive Components"
+        open={adhesivePickerOpen}
+        onCancel={() => {
+          setAdhesivePickerOpen(false);
+          setAdhesivePickerSearch('');
+          setAdhesivePickerRows([]);
+          setAdhesivePickerSource('group');
+        }}
+        footer={null}
+        width={980}
+      >
+        <Space wrap style={{ marginBottom: 10 }}>
+          <Select
+            size="small"
+            style={{ width: 180 }}
+            value={adhesivePickerSource}
+            options={ADHESIVE_PICKER_SOURCE_OPTIONS}
+            onChange={(value) => setAdhesivePickerSource(value || 'group')}
+          />
+          <Input
+            size="small"
+            style={{ width: 320 }}
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder="Search item code, description, category, group"
+            value={adhesivePickerSearch}
+            onChange={(e) => setAdhesivePickerSearch(e.target.value || '')}
+          />
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={fetchAdhesivePickerRows}
+            loading={adhesivePickerLoading}
+          >
+            Refresh
+          </Button>
+        </Space>
+
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 10 }}
+          message="Cross-category sourcing enabled"
+          description="You can add components from this group or from any Oracle item. This supports solvents like ETHYL ACETATE from Chemicals without remapping categories."
+        />
+
+        <Table
+          size="small"
+          rowKey="item_key"
+          loading={adhesivePickerLoading}
+          dataSource={adhesivePickerRows}
+          pagination={{ pageSize: 12, showSizeChanger: false }}
+          scroll={{ y: 380 }}
+          tableLayout="fixed"
+          locale={{ emptyText: 'No candidates found for current source/search.' }}
+          columns={[
+            {
+              title: 'Item',
+              dataIndex: 'mainitem',
+              ellipsis: true,
+              render: (_, row) => (
+                <div style={{ minWidth: 0 }}>
+                  <Text strong style={{ fontSize: 12 }}>{row.mainitem || row.item_key}</Text>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 11 }}>{row.maindescription || '—'}</Text>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              title: 'Category',
+              dataIndex: 'category',
+              width: 110,
+              align: 'center',
+              render: (value) => value ? <Tag style={{ fontSize: 10 }}>{value}</Tag> : <Text type="secondary">—</Text>,
+            },
+            {
+              title: 'Group',
+              dataIndex: 'catlinedesc',
+              width: 120,
+              ellipsis: true,
+              render: (value) => value || '—',
+            },
+            {
+              title: 'Default $/kg',
+              dataIndex: 'default_price',
+              width: 116,
+              align: 'center',
+              render: (value) => fmtCurrency(value, 4),
+            },
+            {
+              title: 'Solid %',
+              dataIndex: 'tds_solids_pct',
+              width: 86,
+              align: 'center',
+              render: (value) => (value == null ? '—' : fmtNum(value, 2)),
+            },
+            {
+              title: 'Action',
+              width: 88,
+              align: 'center',
+              render: (_, row) => (
+                <Button
+                  size="small"
+                  type="link"
+                  onClick={() => handleAddAdhesiveComponentFromPicker(row)}
+                  disabled={adhesiveExistingItemKeys.has(normalizeKey(row.item_key))}
+                >
+                  Add
+                </Button>
+              ),
+            },
+          ]}
+        />
+      </Modal>
+
+      <Modal
         title={
           igDetail
             ? (igDetail.scope_type === 'category_group'
@@ -2226,6 +3117,14 @@ export default function CustomCategories() {
           setDetailSupplierFilter('all');
           setGroupPricingDraft({ market_ref_price: null, market_price_date: null });
           setGroupPricingSavedAt(null);
+          setAdhesiveFormulation(null);
+          setAdhesiveFormulationBaselineSignature(null);
+          setAdhesiveQuickDepositGsm(ADHESIVE_DEFAULT_DEPOSIT_GSM);
+          setAdhesivePickerOpen(false);
+          setAdhesivePickerRows([]);
+          setAdhesivePickerSearch('');
+          setAdhesivePickerSource('group');
+          adhesiveDragItemKeyRef.current = null;
           if (igDetail) bulkMrpForm.resetFields();
         }}
         footer={null}
@@ -2367,19 +3266,26 @@ export default function CustomCategories() {
                               size="small"
                               pagination={false}
                               scroll={{ y: 520 }}
+                              tableLayout="fixed"
                               columns={[
-                                { title: 'Description', dataIndex: 'maindescription', width: 320, ellipsis: true },
-                                ...(selectedSidebarGroup?.is_custom ? [{
+                                { title: 'Description', dataIndex: 'maindescription', ellipsis: true },
+                                ...(isCustomGroupDetail ? [{
                                   title: 'Source',
                                   dataIndex: 'original_catlinedesc',
-                                  width: 140,
+                                  width: 120,
                                   ellipsis: true,
-                                  render: (v) => v ? <Tag style={{ fontSize: 10 }}>{v}</Tag> : <Text type="secondary" style={{ fontSize: 10 }}>—</Text>,
+                                  render: (v) => v ? (
+                                    <Tag style={{ fontSize: 10, maxWidth: '100%' }}>
+                                      <span style={{ display: 'inline-block', maxWidth: 84, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}>
+                                        {v}
+                                      </span>
+                                    </Tag>
+                                  ) : <Text type="secondary" style={{ fontSize: 10 }}>—</Text>,
                                 }] : []),
-                                { title: 'Stock Qty', dataIndex: 'stock_qty', width: 100, align: 'center', render: fmtQty },
-                                { title: 'Order Qty', dataIndex: 'order_qty', width: 100, align: 'center', render: fmtQty },
-                                { title: 'Stock', dataIndex: 'stock_price', width: 90, align: 'center', render: (v) => fmtCurrency(v, 2) },
-                                { title: 'On Order', dataIndex: 'on_order_price', width: 90, align: 'center', render: (v) => fmtCurrency(v, 2) },
+                                { title: 'Stock Qty', dataIndex: 'stock_qty', width: 92, align: 'center', render: fmtQty },
+                                { title: 'Order Qty', dataIndex: 'order_qty', width: 92, align: 'center', render: fmtQty },
+                                { title: 'Stock', dataIndex: 'stock_price', width: 84, align: 'center', render: (v) => fmtCurrency(v, 2) },
+                                { title: 'On Order', dataIndex: 'on_order_price', width: 84, align: 'center', render: (v) => fmtCurrency(v, 2) },
                                 {
                                   title: 'Specs',
                                   dataIndex: 'tds_id',
@@ -2389,6 +3295,37 @@ export default function CustomCategories() {
                                     ? <Tag color="green" style={{ fontSize: 10 }}>Yes</Tag>
                                     : <Tag style={{ fontSize: 10 }}>No</Tag>),
                                 },
+                                ...(isCustomGroupDetail ? [
+                                  {
+                                    title: 'Action',
+                                    width: 84,
+                                    align: 'center',
+                                    render: (_, row) => {
+                                      const rowItemKey = normalizeKey(row?.item_key || row?.mainitem);
+                                      const rowLoading = unassigningItemKey === rowItemKey;
+                                      const hasActiveUnassign = Boolean(unassigningItemKey);
+                                      return (
+                                        <Popconfirm
+                                          title="Unassign this item?"
+                                          description="This item will be removed from the current custom group."
+                                          onConfirm={() => handleUnassignCustomGroupItem(row?.item_key || row?.mainitem)}
+                                          okText="Unassign"
+                                          cancelText="Cancel"
+                                        >
+                                          <Button
+                                            type="link"
+                                            size="small"
+                                            danger
+                                            loading={rowLoading}
+                                            disabled={hasActiveUnassign && !rowLoading}
+                                          >
+                                            Unassign
+                                          </Button>
+                                        </Popconfirm>
+                                      );
+                                    },
+                                  },
+                                ] : []),
                               ]}
                             />
                           </Card>
@@ -2420,6 +3357,372 @@ export default function CustomCategories() {
                     </>
                   ),
                 },
+                ...(isAdhesiveFormulationDetail ? [
+                  {
+                    key: 'formulation',
+                    label: (
+                      <Space size={6}>
+                        <span>Formulation</span>
+                        {adhesiveFormulationDirty && (
+                          <Tag color="gold" style={{ fontSize: 10, margin: 0 }}>Unsaved</Tag>
+                        )}
+                      </Space>
+                    ),
+                    forceRender: true,
+                    children: (
+                      <Spin spinning={adhesiveFormulationLoading}>
+                        <Alert
+                          type="info"
+                          showIcon
+                          style={{ marginBottom: 10 }}
+                          message="Adhesive formulation BOM"
+                          description="Define the mix ratio (parts), solids %, and component role. Components can come from this group or from other categories such as Chemicals (e.g., ETHYL ACETATE)."
+                        />
+
+                        <Space wrap style={{ marginBottom: 10 }}>
+                          <Button
+                            size="small"
+                            icon={<PlusOutlined />}
+                            onClick={() => setAdhesivePickerOpen(true)}
+                          >
+                            Add Component
+                          </Button>
+                          <Button
+                            size="small"
+                            icon={<ReloadOutlined />}
+                            onClick={fetchAdhesiveFormulation}
+                            disabled={adhesiveFormulationSaving}
+                          >
+                            Reload
+                          </Button>
+                          <Button
+                            size="small"
+                            type="primary"
+                            loading={adhesiveFormulationSaving}
+                            onClick={handleSaveAdhesiveFormulation}
+                          >
+                            {adhesiveFormulationDirty ? 'Save Formulation *' : 'Save Formulation'}
+                          </Button>
+                          {adhesiveFormulationDirty && (
+                            <Tag color="gold" style={{ margin: 0 }}>Unsaved changes</Tag>
+                          )}
+                        </Space>
+
+                        <Table
+                          size="small"
+                          pagination={false}
+                          dataSource={adhesiveFormulation?.components || []}
+                          rowKey="item_key"
+                          tableLayout="fixed"
+                          scroll={{ x: 1600, y: 340 }}
+                          onRow={(row) => ({
+                            onDragOver: (event) => {
+                              if (!adhesiveDragItemKeyRef.current) return;
+                              event.preventDefault();
+                            },
+                            onDrop: (event) => {
+                              if (!adhesiveDragItemKeyRef.current) return;
+                              event.preventDefault();
+                              handleAdhesiveDrop(row.item_key);
+                            },
+                          })}
+                          locale={{ emptyText: 'No components added yet. Click "Add Component" to start building the formulation.' }}
+                          columns={[
+                            {
+                              title: 'Order',
+                              width: 94,
+                              align: 'center',
+                              render: (_, row) => {
+                                const rowIndex = (adhesiveFormulation?.components || []).findIndex(
+                                  (component) => normalizeKey(component.item_key) === normalizeKey(row.item_key)
+                                );
+                                const canMoveUp = rowIndex > 0;
+                                const canMoveDown = rowIndex > -1 && rowIndex < (adhesiveFormulation?.components || []).length - 1;
+
+                                return (
+                                  <Space size={2}>
+                                    <Tooltip title="Drag to reorder">
+                                      <span
+                                        draggable
+                                        onDragStart={(event) => handleAdhesiveDragStart(event, row.item_key)}
+                                        onDragEnd={() => { adhesiveDragItemKeyRef.current = null; }}
+                                        style={{ cursor: 'grab', color: '#64748b', display: 'inline-flex' }}
+                                      >
+                                        <MenuOutlined />
+                                      </span>
+                                    </Tooltip>
+                                    <Button
+                                      type="text"
+                                      size="small"
+                                      icon={<ArrowUpOutlined />}
+                                      disabled={!canMoveUp}
+                                      onClick={() => moveAdhesiveComponentByDirection(row.item_key, -1)}
+                                      style={{ padding: 0, width: 20, height: 20 }}
+                                    />
+                                    <Button
+                                      type="text"
+                                      size="small"
+                                      icon={<ArrowDownOutlined />}
+                                      disabled={!canMoveDown}
+                                      onClick={() => moveAdhesiveComponentByDirection(row.item_key, 1)}
+                                      style={{ padding: 0, width: 20, height: 20 }}
+                                    />
+                                  </Space>
+                                );
+                              },
+                            },
+                            {
+                              title: 'Component',
+                              dataIndex: 'mainitem',
+                              ellipsis: true,
+                              render: (_, row) => (
+                                <div style={{ minWidth: 0 }}>
+                                  <Text strong style={{ fontSize: 12 }}>{row.mainitem || row.item_key}</Text>
+                                  <div>
+                                    <Text type="secondary" style={{ fontSize: 11 }}>{row.maindescription || '—'}</Text>
+                                  </div>
+                                  <Space size={4} wrap>
+                                    {row.category ? <Tag style={{ fontSize: 10 }}>{row.category}</Tag> : null}
+                                    {row.catlinedesc ? <Tag style={{ fontSize: 10 }}>{row.catlinedesc}</Tag> : null}
+                                  </Space>
+                                </div>
+                              ),
+                            },
+                            {
+                              title: 'Role',
+                              width: 120,
+                              align: 'center',
+                              render: (_, row) => (
+                                <Select
+                                  size="small"
+                                  style={{ width: '100%' }}
+                                  value={row.component_role || 'other'}
+                                  options={ADHESIVE_COMPONENT_ROLE_OPTIONS}
+                                  onChange={(value) => updateAdhesiveComponent(row.item_key, { component_role: value || 'other' })}
+                                />
+                              ),
+                            },
+                            {
+                              title: 'Parts',
+                              width: 100,
+                              align: 'center',
+                              render: (_, row) => (
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={0.01}
+                                  style={{ width: '100%' }}
+                                  value={row.parts}
+                                  onChange={(value) => updateAdhesiveComponent(row.item_key, { parts: toOptionalNumber(value) })}
+                                />
+                              ),
+                            },
+                            {
+                              title: 'Solids %',
+                              width: 132,
+                              align: 'center',
+                              render: (_, row) => {
+                                const solidsSource = normalizeKey(row?.solids_pct_source);
+                                const sourceTag = solidsSource === 'override'
+                                  ? { label: 'Manual', color: 'orange', tip: 'Manual solids override is active for this component.' }
+                                  : solidsSource === 'tds'
+                                    ? { label: 'TDS', color: 'blue', tip: 'Solids % is pulled from TDS/spec parameters.' }
+                                    : null;
+
+                                return (
+                                  <div style={{ display: 'grid', gap: 4 }}>
+                                    <InputNumber
+                                      size="small"
+                                      min={0}
+                                      max={100}
+                                      step={0.1}
+                                      style={{ width: '100%' }}
+                                      value={row.solids_pct}
+                                      onChange={(value) => {
+                                        updateAdhesiveComponent(row.item_key, (current) => {
+                                          const nextValue = toOptionalNumber(value);
+                                          if (nextValue == null) {
+                                            const fallback = toOptionalNumber(current.tds_solids_pct);
+                                            return {
+                                              ...current,
+                                              solids_pct: fallback,
+                                              solids_pct_override: null,
+                                              solids_pct_source: fallback != null ? 'tds' : null,
+                                            };
+                                          }
+                                          return {
+                                            ...current,
+                                            solids_pct: nextValue,
+                                            solids_pct_override: nextValue,
+                                            solids_pct_source: 'override',
+                                          };
+                                        });
+                                      }}
+                                    />
+                                    {sourceTag ? (
+                                      <Tooltip title={sourceTag.tip}>
+                                        <Tag color={sourceTag.color} style={{ margin: 0, fontSize: 10, width: 'fit-content' }}>{sourceTag.label}</Tag>
+                                      </Tooltip>
+                                    ) : (
+                                      <Text type="secondary" style={{ fontSize: 10 }}>No source</Text>
+                                    )}
+                                  </div>
+                                );
+                              },
+                            },
+                            {
+                              title: '$/kg',
+                              width: 116,
+                              align: 'center',
+                              render: (_, row) => (
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  step={0.0001}
+                                  style={{ width: '100%' }}
+                                  value={row.unit_price}
+                                  onChange={(value) => {
+                                    updateAdhesiveComponent(row.item_key, (current) => {
+                                      const nextValue = toOptionalNumber(value);
+                                      if (nextValue == null) {
+                                        const fallbackAvg = toOptionalNumber(current.oracle_avg_price);
+                                        const fallbackOrder = toOptionalNumber(current.oracle_on_order_price);
+                                        const fallbackStock = toOptionalNumber(current.oracle_stock_price);
+                                        const fallbackMarket = toOptionalNumber(current.market_ref_price);
+                                        const fallback = fallbackAvg ?? fallbackOrder ?? fallbackStock ?? fallbackMarket;
+                                        const fallbackSource = fallbackAvg != null
+                                          ? 'oracle_avg'
+                                          : fallbackOrder != null
+                                            ? 'oracle_on_order'
+                                            : fallbackStock != null
+                                              ? 'oracle_stock'
+                                              : fallbackMarket != null
+                                                ? 'market_ref'
+                                                : null;
+                                        return {
+                                          ...current,
+                                          unit_price: fallback,
+                                          unit_price_override: null,
+                                          unit_price_source: fallbackSource,
+                                        };
+                                      }
+                                      return {
+                                        ...current,
+                                        unit_price: nextValue,
+                                        unit_price_override: nextValue,
+                                        unit_price_source: 'override',
+                                      };
+                                    });
+                                  }}
+                                />
+                              ),
+                            },
+                            {
+                              title: 'Cost',
+                              width: 110,
+                              align: 'center',
+                              render: (_, row) => {
+                                const parts = Number(row?.parts) || 0;
+                                const unitPrice = Number(row?.unit_price) || 0;
+                                return <Text strong>{fmtCurrency(parts * unitPrice, 2)}</Text>;
+                              },
+                            },
+                            {
+                              title: 'Notes',
+                              width: 170,
+                              render: (_, row) => (
+                                <Input
+                                  size="small"
+                                  maxLength={500}
+                                  value={row.notes || ''}
+                                  placeholder="Optional note"
+                                  onChange={(event) => {
+                                    const nextValue = String(event.target.value || '').slice(0, 500);
+                                    updateAdhesiveComponent(row.item_key, { notes: nextValue || null });
+                                  }}
+                                />
+                              ),
+                            },
+                            {
+                              title: 'Source',
+                              width: 96,
+                              align: 'center',
+                              render: (_, row) => {
+                                const source = normalizeKey(row?.unit_price_source);
+                                if (source === 'override') return <Tag color="orange" style={{ fontSize: 10 }}>Manual</Tag>;
+                                if (source === 'oracle_avg') return <Tag color="blue" style={{ fontSize: 10 }}>Oracle</Tag>;
+                                if (source === 'oracle_on_order') return <Tag style={{ fontSize: 10 }}>On Order</Tag>;
+                                if (source === 'oracle_stock') return <Tag style={{ fontSize: 10 }}>Stock</Tag>;
+                                if (source === 'market_ref') return <Tag color="purple" style={{ fontSize: 10 }}>Market</Tag>;
+                                return <Text type="secondary" style={{ fontSize: 10 }}>—</Text>;
+                              },
+                            },
+                            {
+                              title: 'Action',
+                              width: 84,
+                              align: 'center',
+                              render: (_, row) => (
+                                <Popconfirm
+                                  title="Remove component?"
+                                  description="This removes the component from the formulation."
+                                  onConfirm={() => handleRemoveAdhesiveComponent(row.item_key)}
+                                  okText="Remove"
+                                  cancelText="Cancel"
+                                >
+                                  <Button type="link" size="small" danger>Remove</Button>
+                                </Popconfirm>
+                              ),
+                            },
+                          ]}
+                        />
+
+                        <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
+                          <Col xs={24} xl={12}>
+                            <Card size="small" title="Summary">
+                              <Row gutter={[8, 8]}>
+                                <Col span={12}><Text type="secondary" style={{ fontSize: 11 }}>Total Parts</Text><div><Text strong>{fmtNum(adhesiveFormulationTotals.total_parts, 4)}</Text></div></Col>
+                                <Col span={12}><Text type="secondary" style={{ fontSize: 11 }}>Total Solids</Text><div><Text strong>{fmtNum(adhesiveFormulationTotals.total_solids, 4)}</Text></div></Col>
+                                <Col span={12}><Text type="secondary" style={{ fontSize: 11 }}>Total Cost</Text><div><Text strong>{fmtCurrency(adhesiveFormulationTotals.total_cost, 2)}</Text></div></Col>
+                                <Col span={12}><Text type="secondary" style={{ fontSize: 11 }}>$ / kg (Wet)</Text><div><Text strong>{fmtCurrency(adhesiveFormulationTotals.price_per_kg_wet, 4)}</Text></div></Col>
+                                <Col span={12}><Text type="secondary" style={{ fontSize: 11 }}>$ / kg (Solids)</Text><div><Text strong>{fmtCurrency(adhesiveFormulationTotals.price_per_kg_solids, 4)}</Text></div></Col>
+                                <Col span={12}><Text type="secondary" style={{ fontSize: 11 }}>Solids Share %</Text><div><Text strong>{fmtNum(adhesiveFormulationTotals.solids_share_pct, 4)}</Text></div></Col>
+                              </Row>
+                            </Card>
+                          </Col>
+                          <Col xs={24} xl={12}>
+                            <Card size="small" title="Quick Estimate (Per Job)">
+                              <Row gutter={[10, 8]}>
+                                <Col span={12}>
+                                  <Text type="secondary" style={{ fontSize: 11 }}>Deposit (g/m²)</Text>
+                                  <InputNumber
+                                    size="small"
+                                    min={0}
+                                    step={0.01}
+                                    style={{ width: '100%', marginTop: 4 }}
+                                    value={adhesiveQuickDepositGsm}
+                                    onChange={(value) => setAdhesiveQuickDepositGsm(toOptionalNumber(value) ?? 0)}
+                                  />
+                                </Col>
+                                <Col span={12}>
+                                  <Text type="secondary" style={{ fontSize: 11 }}>Wet GSM</Text>
+                                  <div style={{ marginTop: 6 }}><Text strong>{fmtNum(adhesiveQuickEstimate.wet_gsm, 4)}</Text></div>
+                                </Col>
+                                <Col span={12}>
+                                  <Text type="secondary" style={{ fontSize: 11 }}>Cost / m²</Text>
+                                  <div style={{ marginTop: 6 }}><Text strong>{fmtCurrency(adhesiveQuickEstimate.cost_per_sqm, 6)}</Text></div>
+                                </Col>
+                                <Col span={12}>
+                                  <Text type="secondary" style={{ fontSize: 11 }}>Cost / 1000 m²</Text>
+                                  <div style={{ marginTop: 6 }}><Text strong>{fmtCurrency(adhesiveQuickEstimate.cost_per_1000_sqm, 2)}</Text></div>
+                                </Col>
+                              </Row>
+                            </Card>
+                          </Col>
+                        </Row>
+                      </Spin>
+                    ),
+                  },
+                ] : []),
                 {
                   key: 'mrp',
                   label: 'MRP',

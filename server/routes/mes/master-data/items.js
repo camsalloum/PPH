@@ -3028,7 +3028,7 @@ module.exports = function (router) {
 
       // Get selected catlinedesc groups for this category
       const { rows: selectedGroups } = await pool.query(
-        'SELECT id, catlinedesc, is_custom, display_name, parent_catlinedesc FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true ORDER BY catlinedesc',
+        'SELECT id, catlinedesc, is_custom, display_name FROM mes_item_category_groups WHERE category_id=$1 AND is_active=true ORDER BY catlinedesc',
         [catId]
       );
 
@@ -3039,40 +3039,45 @@ module.exports = function (router) {
       // Separate Oracle vs custom groups
       const oracleGroups = selectedGroups.filter(g => !g.is_custom);
       const customGroups = selectedGroups.filter(g => !!g.is_custom);
-      const customGroupIds = customGroups
-        .map((group) => Number(group.id))
-        .filter((groupId) => Number.isFinite(groupId));
 
-      let customGroupHasFormulation = new Set();
-      if (normalizeMaterialKey(category.material_class) === 'adhesives' && customGroupIds.length) {
-        try {
-          const { rows: formulationRows } = await pool.query(`
-            SELECT group_id
-            FROM mes_adhesive_formulation_components
-            WHERE group_id = ANY($1)
-            GROUP BY group_id
-          `, [customGroupIds]);
-
-          customGroupHasFormulation = new Set(
-            formulationRows
-              .map((row) => Number(row.group_id))
-              .filter((groupId) => Number.isFinite(groupId))
-          );
-        } catch (formulationErr) {
-          if (formulationErr.code !== '42P01') throw formulationErr;
+      // Fetch formulation counts + active formulation info per Oracle group from new BOM tables
+      // Keyed by LOWER(TRIM(catlinedesc)) for safe matching
+      const formulationByGroup = {};
+      try {
+        const { rows: fRows } = await pool.query(`
+          SELECT
+            LOWER(TRIM(catlinedesc)) AS catlinedesc_key,
+            COUNT(*)::INT AS formulation_count,
+            COUNT(*) FILTER (WHERE status = 'active')::INT AS active_count,
+            MAX(CASE WHEN is_default AND status NOT IN ('deleted','archived') THEN id END) AS default_formulation_id,
+            MAX(CASE WHEN is_default AND status NOT IN ('deleted','archived') THEN name END) AS default_formulation_name,
+            MAX(CASE WHEN is_default AND status NOT IN ('deleted','archived') THEN version END) AS default_formulation_version
+          FROM mes_formulations
+          WHERE category_id = $1 AND status <> 'deleted'
+          GROUP BY LOWER(TRIM(catlinedesc))
+        `, [catId]);
+        for (const row of fRows) {
+          formulationByGroup[row.catlinedesc_key] = row;
         }
+      } catch (fErr) {
+        // Table may not exist in older envs — non-blocking
+        logger.warn('profile: mes_formulations query failed (non-blocking):', fErr.message);
       }
 
-      // Build lookup for group metadata (is_custom, id, display_name, parent_catlinedesc, has_formulation)
+      // Build lookup for group metadata (is_custom, id, display_name)
       const groupMeta = {};
       for (const sg of selectedGroups) {
-        const groupId = Number(sg.id);
+        const descKey = String(sg.catlinedesc || '').toLowerCase().trim();
+        const fInfo = formulationByGroup[descKey] || {};
         groupMeta[sg.catlinedesc] = {
-          group_id: sg.id,
-          is_custom: !!sg.is_custom,
-          display_name: sg.display_name || null,
-          parent_catlinedesc: sg.parent_catlinedesc || null,
-          has_formulation: !!sg.is_custom && customGroupHasFormulation.has(groupId),
+          group_id:                    sg.id,
+          is_custom:                   !!sg.is_custom,
+          display_name:                sg.display_name || null,
+          formulation_count:           fInfo.formulation_count || 0,
+          active_formulation_count:    fInfo.active_count || 0,
+          default_formulation_id:      fInfo.default_formulation_id || null,
+          default_formulation_name:    fInfo.default_formulation_name || null,
+          default_formulation_version: fInfo.default_formulation_version || null,
         };
       }
 
@@ -3342,8 +3347,11 @@ module.exports = function (router) {
           group_id: meta.group_id || null,
           is_custom: !!meta.is_custom,
           display_name: meta.display_name || null,
-          parent_catlinedesc: meta.parent_catlinedesc || null,
-          has_formulation: !!meta.has_formulation,
+          formulation_count:           meta.formulation_count || 0,
+          active_formulation_count:    meta.active_formulation_count || 0,
+          default_formulation_id:      meta.default_formulation_id || null,
+          default_formulation_name:    meta.default_formulation_name || null,
+          default_formulation_version: meta.default_formulation_version || null,
           item_count: Number(g.item_count) || 0,
           item_group_count: Number(g.item_group_count) || 0,
           stock_qty: stockQty,
@@ -3363,10 +3371,13 @@ module.exports = function (router) {
             group_id: meta.group_id || cg.id,
             is_custom: true,
             display_name: meta.display_name || cg.display_name || null,
-            parent_catlinedesc: meta.parent_catlinedesc || cg.parent_catlinedesc || null,
+            formulation_count:           meta.formulation_count || 0,
+            active_formulation_count:    meta.active_formulation_count || 0,
+            default_formulation_id:      meta.default_formulation_id || null,
+            default_formulation_name:    meta.default_formulation_name || null,
+            default_formulation_version: meta.default_formulation_version || null,
             item_count: 0,
             item_group_count: 0,
-            has_formulation: !!meta.has_formulation,
             stock_qty: 0,
             order_qty: 0,
             stock_price_wa: null,
@@ -4679,10 +4690,10 @@ module.exports = function (router) {
 
       // Insert custom group
       const { rows } = await pool.query(
-        `INSERT INTO mes_item_category_groups (category_id, catlinedesc, is_custom, display_name, is_active, parent_catlinedesc)
-         VALUES ($1, $2, true, $2, true, $3)
-         RETURNING id, category_id, catlinedesc, is_custom, display_name, parent_catlinedesc`,
-        [catId, groupName, parentDesc]
+        `INSERT INTO mes_item_category_groups (category_id, catlinedesc, is_custom, display_name, is_active)
+         VALUES ($1, $2, true, $2, true)
+         RETURNING id, category_id, catlinedesc, is_custom, display_name`,
+        [catId, groupName]
       );
 
       res.json({ success: true, data: rows[0] });

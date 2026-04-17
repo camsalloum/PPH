@@ -1,6 +1,6 @@
 # LIVE STATE — ProPackHub / PEBI
 > **Machine-optimized project snapshot. Updated at the end of every agent session.**
-> **Last Updated:** 2026-04-16
+> **Last Updated:** 2026-04-17
 
 ---
 
@@ -10,31 +10,40 @@
 |--------|--------|-------------|-------|
 | MIS/IMS | Production | 2026-03-26 | Dashboard perf fully optimized (MV + react-query). Raw Materials UX refined, RBAC gate added. |
 | CRM | Production | 2026-03-25 | Field trip AI workflow updated (rep-owned analyze/apply, text-first meeting briefs). 76 components stable. |
-| MES | Active Dev | 2026-04-16 | Material Specs rebuild complete. Parameter Admin (Phases A-E) complete. Custom Item Categories: live assignment hardened. Multi-level BOM/Formulation system planned (ADHESIVE_FORMULATION_PLAN.md rewritten). Next: implement BOM system per approved plan. |
+| MES | Active Dev | 2026-04-17 | Material Specs rebuild complete. Parameter Admin (Phases A-E) complete. Custom Item Categories: live assignment hardened. **Multi-level BOM/Formulation system: Phases 1-3 COMPLETE** (DB migration, backend API, frontend FormulationsTab). Audited and all fixes applied. Next: Phase 4 (Comparator), Phase 5 (Estimation bridge). |
 | AI Engine | Integrated | 2026-03-25 | Customer merging AI active. Churn/seasonality/forecasting services exist. |
 | Settings | Production | 2026-03-28 | Country/timezone support added. Tab persistence implemented. Sync time displays company timezone. |
 | Auth | Stable | 2026-03-22 | JWT flow working. Preferences cached (30s TTL). Request deduplication active. |
 
 ## Active Work
 
-**Last completed (2026-04-16):**
-- Added custom-group rename feature: PATCH endpoint in items.js + inline edit UI in sidebar with space-in-input fix (stopPropagation on keyDown).
-- Implemented parent/child sub-group restructuring (parent_catlinedesc column on mes_item_category_groups, backend scoped assignment, sidebar nested rendering) — USER REJECTED this approach.
-- Rewrote `docs/ADHESIVE_FORMULATION_PLAN.md` as a universal **Multi-Level BOM / Formulation System** plan:
-	- Formulations live INSIDE Oracle Category Groups (not as sidebar peers).
-	- Multi-level recursive BOM (formulation → sub-formulation → components, unlimited depth).
-	- All categories supported (adhesives, inks, chemicals, resins, films).
-	- Cross-category component sourcing.
-	- Versioned formulations (v1, v2...) with draft → active → archived lifecycle.
-	- New tables: `mes_formulations` + `mes_formulation_components`.
-	- 5 implementation phases defined.
+**Last completed (2026-04-17):**
+- **BOM/Formulation system Phases 1-3 fully implemented and audited:**
+  - Phase 1: DB migration `mes-master-050-formulations.js` — `mes_formulations` + `mes_formulation_components` tables with proper constraints, partial unique indexes, and FK cascades.
+  - Phase 2: Backend API `server/routes/mes/master-data/formulations.js` — full CRUD, BOM save (draft-only guard), duplicate/version, 3-step cascading item picker, sub-formulation picker with circular-ref exclusion, delete with reference check.
+  - Phase 2: Recursive resolver `server/utils/formulation-resolver.js` — memoized BOM cost/solids engine, `wouldCreateCircle`, `getBomDepth`, MAX_BOM_DEPTH=5.
+  - Phase 3: Frontend `FormulationEditor.jsx` (universal `FormulationsTab`) — list view + BOM editor, role options per material class, summary/quick-estimate cards, item picker modal, sub-formulation picker modal, dirty tracking.
+  - Phase 3: `CustomCategories.jsx` cleanup — removed ~800 lines of old adhesive/custom-group code, integrated universal FormulationsTab for all `scope_type === 'category_group'`.
+  - Phase 3: `items.js` profile endpoint enriched with `formulation_count`, `active_formulation_count`, `default_formulation_*` per group.
+- **Full audit completed with all fixes applied:**
+  - Fix A: Status whitelist on PUT (prevents `status='deleted'` bypass)
+  - Fix B: BOM save response merges metadata (prevents `activeFormulation` losing id/name/status)
+  - Fix C: Numeric `parts` validation (`isNaN` check for clean 400 instead of raw 500)
+  - Fix D: Candidates step 3 filters by both `category_id` and `catlinedesc`
+  - Fix E: Resolver NULL guard on orphaned `sub_formulation_id`
+  - Fix K: `GET /by-group` enriches with `price_per_kg_wet` / `solids_share_pct`
 
-**In progress:** Session closed. Awaiting user approval of BOM plan before implementation begins.
+**Next steps:**
+- Phase 4: Formulation Comparator (side-by-side BOM comparison UI)
+- Phase 5: Estimation bridge (link formulations to MES estimation calculator)
+- **Hotfix applied:** `formulation-resolver.js` TDS solids query was wrong — queried `tds.solid_pct` and `tds.item_code` as direct columns on `mes_non_resin_material_specs`, but that table stores solids inside `parameters_json` JSONB and uses `material_key`/`mainitem` (not `item_code`). Fixed to COALESCE between `mes_spec_adhesives.solids_pct` (direct column) and `mes_non_resin_material_specs.parameters_json->>'solids_pct'` / `->>'solid_pct'` (JSONB). This caused 500 on every "Open formulation" click.
 
-**Known issues from this session:**
-- `parent_catlinedesc` column added to `mes_item_category_groups` — will be dropped during BOM migration.
-- Custom sub-group code in items.js and CustomCategories.jsx will be reverted/replaced when BOM system is implemented.
-- Previous UX blocker (no direct unassign from custom-group detail) still open but deprioritized by BOM redesign.
+- **Dead code cleanup: ~500 lines of old adhesive formulation code in `items.js` (routes + helpers at L553-5268)**
+- Browser testing of FormulationsTab (partially tested — list view works, "Open v1" BOM detail now works after resolver fix)
+
+**Known issues:**
+- Old adhesive formulation routes still present in `items.js` (dead code, harmless, not called by new frontend)
+- Low-priority items from audit: no status state machine (arbitrary transitions like active→draft allowed), `is_default` can be set on non-active formulations, `as_new_version` string coercion edge case
 
 **Blocked:** RM sync requires VPN (FortiClient) — fails with 503 when VPN disconnected
 
@@ -54,6 +63,7 @@ Full list: `docs/TECH_DEBT.md` (33 items, 12 resolved)
 
 | Date | Summary |
 |------|---------|
+| 2026-04-17 | BOM/Formulation Phases 1-3 complete: migration #050, formulations.js backend CRUD, formulation-resolver.js recursive engine, FormulationEditor.jsx universal frontend, CustomCategories.jsx cleanup (~800 lines removed). Full audit completed — 6 fixes applied (status whitelist, BOM save merge, numeric validation, category filter, NULL guard, by-group enrichment). Build clean. |
 | 2026-04-16 | Multi-level BOM plan: added rename + parent/child sub-groups (rejected by user), then rewrote ADHESIVE_FORMULATION_PLAN.md as universal recursive BOM system across all categories. Plan only — no implementation. |
 | 2026-04-15 | Custom Categories full-day work: fixed profile 500 + deprecations, completed 13-gap audit and plan, implemented unmapped-only custom-group assignment logic, corrected top unmapped live counters, and identified next blocker (direct unassign UX from custom-group detail). |
 | 2026-04-10 | Custom Item Categories completion + full audit: backend metadata enrichment, estimation handoff, global search/filter/badges, substrate unmapped KPI, cutover validation, and docs/session close updated. |

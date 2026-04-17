@@ -1,7 +1,7 @@
 # Multi-Level BOM / Formulation System — Full Plan
 
-> **Status:** Draft — awaiting approval before implementation  
-> **Date:** 2026-04-16 (revised)  
+> **Status:** Approved — ready for implementation  
+> **Date:** 2026-04-17 (adopted review feedback)  
 > **Scope:** MES → Master Data → ALL Categories → Category Groups  
 > **Replaces:** Previous "Adhesive Formulation & Costing Plan" (custom-group-as-formulation approach)
 
@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS mes_formulations (
   name            VARCHAR(255) NOT NULL,          -- user-given name (e.g., "MORBOND 655 / CT85 / EA")
   version         INTEGER NOT NULL DEFAULT 1,     -- v1, v2, v3...
   status          VARCHAR(20) DEFAULT 'draft',    -- draft | active | archived
+  is_default      BOOLEAN DEFAULT false,           -- default formulation for estimation auto-selection (one per group)
   notes           TEXT,
   created_by      INTEGER,                        -- user_id
   created_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -100,6 +101,10 @@ CREATE TABLE IF NOT EXISTS mes_formulations (
 
 CREATE INDEX idx_formulation_category ON mes_formulations(category_id, catlinedesc);
 CREATE INDEX idx_formulation_status ON mes_formulations(status);
+-- Only one default formulation per group
+CREATE UNIQUE INDEX uq_formulation_default
+  ON mes_formulations(category_id, catlinedesc)
+  WHERE is_default = true;
 ```
 
 ### 2.2 New table: `mes_formulation_components`
@@ -346,10 +351,14 @@ Update formulation metadata (name, notes, status).
 ```
 
 - When status changes to `active`, all other versions of the same formulation name in the same group are set to `archived`.
+- Can set `is_default: true` — clears `is_default` on all other formulations in the same group.
+- **Cannot change metadata on `active` formulations** except `status` (to archive) and `is_default`. To modify an active formulation, duplicate it first.
 
 #### `PUT /formulations/:formulationId/components`
 
 Save/replace all components of a formulation (full replacement — not incremental).
+
+**Guard:** Rejects with 403 if formulation `status = 'active'`. Active formulations are read-only. Duplicate to create a new draft version before editing.
 
 ```json
 {
@@ -383,6 +392,7 @@ Save/replace all components of a formulation (full replacement — not increment
 2. All `sub_formulation_id` values must exist in `mes_formulations` and NOT create a circular reference.
 3. Circular reference detection: recursively walk the sub-formulation tree; if `formulationId` appears anywhere → reject with 409.
 4. `parts` must be > 0 for all components.
+5. Maximum BOM depth: 5 levels. If adding a sub-formulation would exceed depth → reject with 422.
 
 #### `POST /formulations/:formulationId/duplicate`
 
@@ -556,30 +566,54 @@ Clicking "Open v1" opens the BOM editor (could be an inner panel or modal):
 5. **Sub-formulation rows** — expandable. Show a collapsed summary line with the sub-formulation name + resolved price. Click ▸ to expand and see the sub-formulation's components (read-only).
 6. **Cost** column — computed: `parts × unit_price` (read-only).
 7. **×** — remove component (with Popconfirm).
-8. **+ Add Item** — opens picker (source toggle: This Group | This Category | All Items).
-9. **+ Add Formulation** — opens picker showing other formulations from any category/group (with circularity check).
+8. **+ Add Item** — opens the cascading component picker (see 4.3).
+9. **+ Add Formulation** — opens the sub-formulation picker (see 4.4).
 10. **Duplicate** — creates a new version (v2, v3...) or a new name.
 11. **Status** — Draft → Active (archives other versions with same name) → Archived.
 12. **Summary / Quick Estimate** — same as current, computed live client-side.
 
-### 4.3 Component picker modal
+### 4.3 Component picker modal — cascading selection
+
+The picker uses a **3-step dependent dropdown flow**. Each step is disabled until the previous one is filled. The preview and Add button only appear once all three steps are complete.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  Add Component                                                      │
 │  ─────────────────────────────────────────────────────────────────  │
-│  Source: [This Group] [This Category] [All Items]                   │
-│  Search: [_________________________________]                        │
-│  ┌────────────────────────────────────────────────────────────────┐ │
-│  │ Item Code    │ Description        │ Category │ $/kg  │ Solids │ │
-│  ├──────────────┼────────────────────┼──────────┼───────┼────────┤ │
-│  │ ETHYL ACETATE│ Solvent - EA       │Chemicals │ 1.50  │  0%    │ │
-│  │ TOLUENE      │ Solvent            │Chemicals │ 1.30  │  0%    │ │
-│  │ MORBOND 700  │ PU Resin High Soli │Adhesives │ 4.10  │ 75%   │ │
-│  └──────────────┴────────────────────┴──────────┴───────┴────────┘ │
-│                                                        [Add ✓]     │
+│                                                                     │
+│  Step 1 — Category                                                  │
+│  [Adhesives                              ▾]                         │
+│                                                                     │
+│  Step 2 — Group  (unlocks after Step 1)                             │
+│  [Sovent Base                            ▾]                         │
+│                                                                     │
+│  Step 3 — Item  (unlocks after Step 2, searchable)                  │
+│  [Search or select item...               ▾]                         │
+│                                                                     │
+│  ─────────────────────────────────────────────────────────────────  │
+│  Preview (appears after Step 3 selection):                          │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ MORBOND 655 · PU Resin 70% Solids · Adhesives / Sovent Base │  │
+│  │ Stock: ฿ 13.11  │  On Order: ฿ 13.19  │  Solids: 70%       │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│                                              [Cancel]  [Add ✓]     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+**Cascade rules:**
+
+| Step | Control | Data source | Reset behavior |
+|------|---------|-------------|---------------|
+| 1 — Category | Select | All `mes_item_categories`, loaded once at mount | Resets Step 2 + 3 |
+| 2 — Group | Select | Distinct `catlinedesc` for chosen category from `fp_actualrmdata` | Resets Step 3 |
+| 3 — Item | Searchable Select | All items for chosen category + group, searchable by code / description | — |
+
+**Behavior rules:**
+- Items already present in the formulation are **grayed out and disabled** in Step 3 (no duplicates).
+- The preview card shows stock price, on-order price, and TDS solids % so the user can verify before confirming.
+- `[Add ✓]` is disabled until Step 3 has a valid selection.
+- Changing Step 1 or Step 2 clears downstream selections but keeps the modal open.
 
 ### 4.4 Sub-formulation picker modal
 
@@ -746,18 +780,22 @@ A **Comparator** sub-view within any category, accessible via a button at the ca
 | A10 | Deposit GSM is per-job (not stored on formulation) | Same formulation applied at different GSM depending on substrate and structure |
 | A11 | Price resolution chain: override → Oracle stock WA → Oracle order → Oracle avg | Always-available costing even before user sets overrides |
 | A12 | Solids % resolution chain: override → TDS → spec table → manual entry required | Critical for costing accuracy; must be explicit |
+| A13 | Active formulations are read-only; duplicate to modify | Prevents accidental edits to formulations already used by estimation jobs |
+| A14 | Resolver uses memoization (`Map<formulationId, resolvedTotals>`) during recursive traversal | Avoids redundant DB queries when the same sub-formulation appears in multiple branches |
+| A15 | One default formulation per Oracle group (`is_default` flag) | Enables estimation auto-selection without user picking a formulation each time |
+| A16 | Maximum BOM depth = 5 levels, enforced at save time | Prevents runaway recursion and keeps resolution performant |
 
 ---
 
-## 8. Open Questions
+## 8. Open Questions (Resolved)
 
-| # | Question | Impact |
-|---|----------|--------|
-| Q1 | Should sub-formulations be restricted to the same category, or truly cross-category? | If cross-category: an Ink formulation could include a Resin blend. Adds flexibility but also complexity. Recommend: allow cross-category. |
-| Q2 | Should there be a "default active formulation" per Oracle group for estimation auto-selection? | Would simplify estimation workflow. Can be a boolean flag on `mes_formulations`. |
-| Q3 | Maximum BOM depth limit? | Recommend: 5 levels. Prevents runaway recursion. Validated at save time. |
-| Q4 | Should archived formulations be viewable or completely hidden? | Recommend: viewable but grayed out, not editable. Useful for historical reference. |
-| Q5 | Should the formulation components support quantity UOM (kg, L, g) or stay unitless (parts ratio)? | Parts ratio is simpler and sufficient for costing. UOM adds complexity for no clear benefit at this stage. |
+| # | Question | Resolution |
+|---|----------|------------|
+| Q1 | Should sub-formulations be restricted to the same category, or truly cross-category? | **Allow cross-category, unrestricted.** No whitelist needed — all categories can source from any other (A6). |
+| Q2 | Should there be a "default active formulation" per Oracle group for estimation auto-selection? | **Yes.** `is_default` boolean added to `mes_formulations` (A15). |
+| Q3 | Maximum BOM depth limit? | **5 levels.** Enforced at save time (A16). |
+| Q4 | Should archived formulations be viewable or completely hidden? | **Viewable but grayed out, not editable.** Useful for historical reference. |
+| Q5 | Should the formulation components support quantity UOM (kg, L, g) or stay unitless (parts ratio)? | **Parts ratio only.** All Oracle data is already per-KG. No UOM conversion needed. |
 
 ---
 

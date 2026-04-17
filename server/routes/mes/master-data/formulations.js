@@ -1,122 +1,201 @@
 /**
- * MES Master Data — Formulations Routes
- * Mounted at /api/mes/master-data/formulations
+ * MES Master Data — Formulations Routes (Multi-Level BOM System)
+ * Mounted at /api/mes/master-data
  *
- * CRUD for formulations, formulation_components, formulation_results.
- * A12 percentage validation is enforced by DB trigger (check_formulation_pct).
+ * Endpoints:
+ *   GET  /formulations/by-group          — list formulations for a category+group
+ *   GET  /formulations/:id               — full detail with resolved BOM
+ *   POST /formulations                   — create new formulation (draft)
+ *   PUT  /formulations/:id               — update metadata / status
+ *   PUT  /formulations/:id/components    — save BOM components (draft only)
+ *   POST /formulations/:id/duplicate     — duplicate as new version or name
+ *   DEL  /formulations/:id               — soft-delete
+ *   GET  /formulations/:id/candidates    — item picker (cascading)
+ *   GET  /formulations/:id/sub-candidates — sub-formulation picker
+ *
+ * References: ADHESIVE_FORMULATION_PLAN.md §3 Backend API
  */
+
+'use strict';
 
 const { pool } = require('../../../database/config');
 const { authenticate } = require('../../../middleware/auth');
 const logger = require('../../../utils/logger');
+const {
+  resolveFormulationById,
+  wouldCreateCircle,
+  getBomDepth,
+  MAX_BOM_DEPTH,
+} = require('../../../utils/formulation-resolver');
 
-const MGMT_ROLES = ['admin', 'sales_manager'];
-function isAdminOrMgmt(user) {
-  return MGMT_ROLES.includes(user?.role);
+const WRITE_ROLES = ['admin', 'sales_manager', 'mes_manager'];
+function canWrite(user) {
+  return WRITE_ROLES.includes(user?.role);
+}
+
+const VALID_STATUSES = ['draft', 'active', 'archived'];
+const VALID_TRANSITIONS = {
+  draft:    ['active', 'archived'],
+  active:   ['archived'],
+  archived: ['draft'],
+};
+
+/** Normalize item_key: lowercase + trim */
+function normalizeItemKey(str) {
+  return String(str || '').toLowerCase().trim();
 }
 
 module.exports = function (router) {
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FORMULATIONS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // ─── GET /formulations — List ─────────────────────────────────────────────
-  router.get('/formulations', authenticate, async (req, res) => {
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /formulations/by-group?category_id=&catlinedesc=
+  // List all formulations for an Oracle group, grouped by name+version
+  // ══════════════════════════════════════════════════════════════════════════
+  router.get('/formulations/by-group', authenticate, async (req, res) => {
     try {
-      const { product_group_id, status, search } = req.query;
-      const params = [];
-      const conditions = ['f.is_active = true'];
-      let idx = 1;
+      const catId = parseInt(req.query.category_id, 10);
+      const catlinedesc = String(req.query.catlinedesc || '').trim();
 
-      if (product_group_id) {
-        conditions.push(`f.product_group_id = $${idx++}`);
-        params.push(parseInt(product_group_id, 10));
-      }
-      if (status) {
-        conditions.push(`f.status = $${idx++}`);
-        params.push(status);
-      }
-      if (search) {
-        conditions.push(`f.formulation_name ILIKE $${idx}`);
-        params.push(`%${search}%`);
-        idx++;
+      if (!catId || !catlinedesc) {
+        return res.status(400).json({ success: false, error: 'category_id and catlinedesc are required' });
       }
 
-      const sql = `
-        SELECT f.*,
-               pg.product_group AS product_group_name,
-               (SELECT COUNT(*) FROM mes_formulation_components fc
-                WHERE fc.formulation_id = f.id AND fc.is_active = true) AS component_count
+      const { rows } = await pool.query(`
+        SELECT
+          f.id,
+          f.name,
+          f.version,
+          f.status,
+          f.is_default,
+          f.notes,
+          f.created_at,
+          f.updated_at,
+          (SELECT COUNT(*) FROM mes_formulation_components fc WHERE fc.formulation_id = f.id)::INT AS component_count
         FROM mes_formulations f
-        LEFT JOIN crm_product_groups pg ON pg.id = f.product_group_id
-        WHERE ${conditions.join(' AND ')}
-        ORDER BY f.product_group_id, f.formulation_name
-      `;
-      const { rows } = await pool.query(sql, params);
-      res.json({ success: true, data: rows });
+        WHERE f.category_id = $1
+          AND LOWER(TRIM(f.catlinedesc)) = LOWER(TRIM($2))
+          AND f.status <> 'deleted'
+        ORDER BY LOWER(f.name), f.version
+      `, [catId, catlinedesc]);
+
+      // Resolve cost/solids summaries for each formulation
+      const enriched = await Promise.all(rows.map(async (f) => {
+        try {
+          const resolved = await resolveFormulationById(pool, f.id);
+          return {
+            ...f,
+            price_per_kg_wet: resolved.price_per_kg_wet,
+            solids_share_pct: resolved.solids_share_pct,
+          };
+        } catch (_) {
+          return { ...f, price_per_kg_wet: null, solids_share_pct: null };
+        }
+      }));
+
+      res.json({ success: true, data: enriched });
     } catch (err) {
-      logger.error('GET /formulations error:', err);
+      logger.error('GET /formulations/by-group error:', err);
       res.status(500).json({ success: false, error: 'Failed to fetch formulations' });
     }
   });
 
-  // ─── GET /formulations/:id — Detail with components ───────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /formulations/:id
+  // Full formulation detail with resolved BOM costs
+  // ══════════════════════════════════════════════════════════════════════════
   router.get('/formulations/:id', authenticate, async (req, res) => {
     try {
-      const fRes = await pool.query(
-        `SELECT f.*, pg.product_group AS product_group_name
-         FROM mes_formulations f
-         LEFT JOIN crm_product_groups pg ON pg.id = f.product_group_id
-         WHERE f.id = $1`,
-        [req.params.id]
-      );
-      if (!fRes.rows.length) return res.status(404).json({ success: false, error: 'Formulation not found' });
+      const id = parseInt(req.params.id, 10);
 
-      const cRes = await pool.query(
-        `SELECT fc.*, im.item_name, im.item_code
-         FROM mes_formulation_components fc
-         LEFT JOIN mes_item_master im ON im.id = fc.item_id
-         WHERE fc.formulation_id = $1 AND fc.is_active = true
-         ORDER BY fc.percentage DESC`,
-        [req.params.id]
-      );
+      const { rows: fRows } = await pool.query(`
+        SELECT f.*, cat.name AS category_name, cat.material_class
+        FROM mes_formulations f
+        JOIN mes_item_categories cat ON cat.id = f.category_id
+        WHERE f.id = $1 AND f.status <> 'deleted'
+      `, [id]);
+      if (!fRows.length) return res.status(404).json({ success: false, error: 'Formulation not found' });
+      const formulation = fRows[0];
 
-      const data = fRes.rows[0];
-      data.components = cRes.rows;
-      res.json({ success: true, data });
+      // Resolve BOM with memoized recursive engine
+      const resolved = await resolveFormulationById(pool, id);
+
+      // Enrich components with Oracle display data
+      const enrichedComponents = await Promise.all(resolved.components.map(async comp => {
+        if (comp.component_type === 'item') {
+          const { rows: itemRows } = await pool.query(`
+            SELECT DISTINCT ON (LOWER(TRIM(mainitem)))
+              mainitem, maindescription, catlinedesc, itemgroup,
+              maincost AS stock_cost_wa,
+              purchaseprice AS purchase_cost_wa
+            FROM fp_actualrmdata
+            WHERE LOWER(TRIM(mainitem)) = $1
+            LIMIT 1
+          `, [comp.item_key]);
+          const item = itemRows[0] || {};
+          return { ...comp, mainitem: item.mainitem, maindescription: item.maindescription, source_catlinedesc: item.catlinedesc };
+        } else {
+          const { rows: subRows } = await pool.query(
+            'SELECT id, name, version, status, category_id FROM mes_formulations WHERE id = $1',
+            [comp.sub_formulation_id]
+          );
+          const sub = subRows[0] || {};
+          return { ...comp, sub_formulation_name: sub.name, sub_formulation_version: sub.version, sub_formulation_status: sub.status };
+        }
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          ...formulation,
+          components: enrichedComponents,
+          totals: {
+            total_parts:         resolved.total_parts,
+            total_solids:        resolved.total_solids,
+            total_cost:          resolved.total_cost,
+            price_per_kg_wet:    resolved.price_per_kg_wet,
+            price_per_kg_solids: resolved.price_per_kg_solids,
+            solids_share_pct:    resolved.solids_share_pct,
+          },
+        },
+      });
     } catch (err) {
       logger.error('GET /formulations/:id error:', err);
       res.status(500).json({ success: false, error: 'Failed to fetch formulation' });
     }
   });
 
-  // ─── POST /formulations — Create ──────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /formulations — Create new formulation (always draft)
+  // ══════════════════════════════════════════════════════════════════════════
   router.post('/formulations', authenticate, async (req, res) => {
-    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
-    try {
-      const {
-        product_group_id, bom_version_id, formulation_name,
-        version, target_properties, status, notes
-      } = req.body;
+    if (!canWrite(req.user)) return res.status(403).json({ success: false, error: 'Insufficient permissions' });
 
-      if (!product_group_id || !formulation_name) {
-        return res.status(400).json({ success: false, error: 'product_group_id and formulation_name are required' });
+    try {
+      const { category_id, catlinedesc, name, notes } = req.body;
+      if (!category_id || !catlinedesc || !name) {
+        return res.status(400).json({ success: false, error: 'category_id, catlinedesc, and name are required' });
       }
 
-      const sql = `
-        INSERT INTO mes_formulations
-          (product_group_id, bom_version_id, formulation_name,
-           version, target_properties, status, notes, created_by)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      const catCheck = await pool.query('SELECT id FROM mes_item_categories WHERE id=$1 AND is_active=true', [parseInt(category_id, 10)]);
+      if (!catCheck.rows.length) return res.status(400).json({ success: false, error: 'Invalid category_id' });
+
+      // Auto-increment version for same (category, group, name)
+      const { rows: vRows } = await pool.query(`
+        SELECT COALESCE(MAX(version), 0) AS max_version
+        FROM mes_formulations
+        WHERE category_id = $1
+          AND LOWER(TRIM(catlinedesc)) = LOWER(TRIM($2))
+          AND LOWER(TRIM(name)) = LOWER(TRIM($3))
+          AND status <> 'deleted'
+      `, [category_id, catlinedesc, name]);
+      const newVersion = Number(vRows[0].max_version) + 1;
+
+      const { rows } = await pool.query(`
+        INSERT INTO mes_formulations (category_id, catlinedesc, name, version, status, notes, created_by)
+        VALUES ($1, $2, $3, $4, 'draft', $5, $6)
         RETURNING *
-      `;
-      const { rows } = await pool.query(sql, [
-        parseInt(product_group_id, 10), bom_version_id || null,
-        formulation_name, version || 1,
-        target_properties ? JSON.stringify(target_properties) : null,
-        status || 'draft', notes || null, req.user?.id || null
-      ]);
+      `, [category_id, catlinedesc.trim(), name.trim(), newVersion, notes || null, req.user.id]);
+
       res.status(201).json({ success: true, data: rows[0] });
     } catch (err) {
       logger.error('POST /formulations error:', err);
@@ -124,205 +203,476 @@ module.exports = function (router) {
     }
   });
 
-  // ─── PUT /formulations/:id — Update ───────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // PUT /formulations/:id — Update metadata / status
+  // Active formulations: only status and is_default can change
+  // ══════════════════════════════════════════════════════════════════════════
   router.put('/formulations/:id', authenticate, async (req, res) => {
-    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
-    try {
-      const fields = [];
-      const params = [];
-      let idx = 1;
+    if (!canWrite(req.user)) return res.status(403).json({ success: false, error: 'Insufficient permissions' });
 
-      const allowed = [
-        'product_group_id', 'bom_version_id', 'formulation_name',
-        'version', 'target_properties', 'status', 'notes'
-      ];
-      for (const f of allowed) {
-        if (req.body[f] !== undefined) {
-          fields.push(`${f} = $${idx++}`);
-          params.push(f === 'target_properties' ? JSON.stringify(req.body[f]) : req.body[f]);
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { rows: fRows } = await pool.query(
+        `SELECT * FROM mes_formulations WHERE id=$1 AND status <> 'deleted'`, [id]
+      );
+      const existing = fRows[0];
+      if (!existing) return res.status(404).json({ success: false, error: 'Formulation not found' });
+
+      const { name, notes, status, is_default } = req.body;
+      const isActive = existing.status === 'active';
+
+      // Validate status value
+      if (status !== undefined && !VALID_STATUSES.includes(status)) {
+        return res.status(400).json({ success: false, error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
+      }
+
+      // Validate status transition
+      if (status !== undefined && status !== existing.status) {
+        const allowed = VALID_TRANSITIONS[existing.status] || [];
+        if (!allowed.includes(status)) {
+          return res.status(409).json({ success: false, error: `Cannot transition from '${existing.status}' to '${status}'` });
         }
       }
-      if (!fields.length) return res.status(400).json({ success: false, error: 'No fields to update' });
 
-      fields.push(`updated_at = NOW()`);
-      params.push(req.params.id);
+      // Active formulations are read-only except for status + is_default (A13)
+      if (isActive && (name !== undefined || notes !== undefined)) {
+        return res.status(409).json({ success: false, error: 'Active formulations are read-only. Duplicate to create a new draft version.' });
+      }
 
-      const sql = `UPDATE mes_formulations SET ${fields.join(', ')} WHERE id = $${idx} AND is_active = true RETURNING *`;
-      const { rows } = await pool.query(sql, params);
-      if (!rows.length) return res.status(404).json({ success: false, error: 'Formulation not found' });
-      res.json({ success: true, data: rows[0] });
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Handle status transition → active: archive all other versions with same name
+        if (status === 'active' && existing.status !== 'active') {
+          await client.query(`
+            UPDATE mes_formulations
+               SET status = 'archived', is_default = false, updated_at = NOW()
+             WHERE category_id = $1
+               AND LOWER(TRIM(catlinedesc)) = LOWER(TRIM($2))
+               AND LOWER(TRIM(name)) = LOWER(TRIM($3))
+               AND id <> $4
+               AND status = 'active'
+          `, [existing.category_id, existing.catlinedesc, existing.name, id]);
+        }
+
+        // Handle is_default: clear other defaults in the same group (only active can be default)
+        if (is_default === true) {
+          const effectiveStatus = status || existing.status;
+          if (effectiveStatus !== 'active') {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ success: false, error: 'Only active formulations can be set as default' });
+          }
+          await client.query(`
+            UPDATE mes_formulations
+               SET is_default = false, updated_at = NOW()
+             WHERE category_id = $1
+               AND LOWER(TRIM(catlinedesc)) = LOWER(TRIM($2))
+               AND id <> $3
+               AND is_default = true
+          `, [existing.category_id, existing.catlinedesc, id]);
+        }
+
+        const updates = [];
+        const params = [];
+        let idx = 1;
+
+        if (!isActive) {
+          if (name      !== undefined) { updates.push(`name = $${idx++}`);  params.push(name.trim()); }
+          if (notes     !== undefined) { updates.push(`notes = $${idx++}`); params.push(notes || null); }
+        }
+        if (status     !== undefined) { updates.push(`status = $${idx++}`);     params.push(status); }
+        if (is_default !== undefined) { updates.push(`is_default = $${idx++}`); params.push(!!is_default); }
+        updates.push(`updated_at = NOW()`);
+
+        params.push(id);
+        const { rows: updRows } = await client.query(
+          `UPDATE mes_formulations SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+          params
+        );
+
+        await client.query('COMMIT');
+        res.json({ success: true, data: updRows[0] });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       logger.error('PUT /formulations/:id error:', err);
       res.status(500).json({ success: false, error: 'Failed to update formulation' });
     }
   });
 
-  // ─── DELETE /formulations/:id — Soft delete ───────────────────────────────
-  router.delete('/formulations/:id', authenticate, async (req, res) => {
-    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+  // ══════════════════════════════════════════════════════════════════════════
+  // PUT /formulations/:id/components — Save BOM (full replace, draft only)
+  // ══════════════════════════════════════════════════════════════════════════
+  router.put('/formulations/:id/components', authenticate, async (req, res) => {
+    if (!canWrite(req.user)) return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+
     try {
-      const { rows } = await pool.query(
-        'UPDATE mes_formulations SET is_active = false, updated_at = NOW() WHERE id = $1 AND is_active = true RETURNING id',
-        [req.params.id]
+      const id = parseInt(req.params.id, 10);
+      const { rows: fRows } = await pool.query(
+        `SELECT * FROM mes_formulations WHERE id=$1 AND status <> 'deleted'`, [id]
       );
-      if (!rows.length) return res.status(404).json({ success: false, error: 'Formulation not found' });
-      res.json({ success: true, message: 'Formulation deactivated' });
+      const existing = fRows[0];
+      if (!existing) return res.status(404).json({ success: false, error: 'Formulation not found' });
+
+      // Guard: active = read-only (A13)
+      if (existing.status === 'active') {
+        return res.status(409).json({ success: false, error: 'Active formulations are read-only. Duplicate to create a new draft.' });
+      }
+
+      const { components } = req.body;
+      if (!Array.isArray(components)) {
+        return res.status(400).json({ success: false, error: 'components must be an array' });
+      }
+
+      // ── Validation ──
+      for (let i = 0; i < components.length; i++) {
+        const c = components[i];
+        if (!c.component_type || !['item', 'formulation'].includes(c.component_type)) {
+          return res.status(400).json({ success: false, error: `components[${i}]: component_type must be 'item' or 'formulation'` });
+        }
+        if (c.parts == null || isNaN(Number(c.parts)) || Number(c.parts) <= 0) {
+          return res.status(400).json({ success: false, error: `components[${i}]: parts must be a number > 0` });
+        }
+        if (c.component_type === 'item') {
+          if (!c.item_key) return res.status(400).json({ success: false, error: `components[${i}]: item_key is required` });
+          const key = normalizeItemKey(c.item_key);
+          const { rows: itemCheck } = await pool.query(
+            `SELECT 1 FROM fp_actualrmdata WHERE LOWER(TRIM(mainitem)) = $1 LIMIT 1`, [key]
+          );
+          if (!itemCheck.length) {
+            return res.status(400).json({ success: false, error: `components[${i}]: item '${c.item_key}' not found in Oracle data` });
+          }
+        } else {
+          if (!c.sub_formulation_id) return res.status(400).json({ success: false, error: `components[${i}]: sub_formulation_id is required` });
+          const subId = parseInt(c.sub_formulation_id, 10);
+
+          const { rows: subCheck } = await pool.query(
+            `SELECT id FROM mes_formulations WHERE id=$1 AND status <> 'deleted'`, [subId]
+          );
+          if (!subCheck.length) {
+            return res.status(400).json({ success: false, error: `components[${i}]: sub_formulation #${subId} not found` });
+          }
+
+          // Circular reference check (A4)
+          const circular = await wouldCreateCircle(pool, id, subId);
+          if (circular) {
+            return res.status(409).json({ success: false, error: `Adding formulation #${subId} would create a circular reference` });
+          }
+
+          // Depth check (A16)
+          const subDepth = await getBomDepth(pool, subId, 1);
+          if (subDepth >= MAX_BOM_DEPTH) {
+            return res.status(422).json({ success: false, error: `Adding formulation #${subId} would exceed maximum BOM depth of ${MAX_BOM_DEPTH}` });
+          }
+        }
+      }
+
+      // ── Full replacement in a transaction ──
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM mes_formulation_components WHERE formulation_id = $1', [id]);
+
+        for (let i = 0; i < components.length; i++) {
+          const c = components[i];
+          const itemKey = c.component_type === 'item' ? normalizeItemKey(c.item_key) : null;
+          const subId   = c.component_type === 'formulation' ? parseInt(c.sub_formulation_id, 10) : null;
+
+          await client.query(`
+            INSERT INTO mes_formulation_components
+              (formulation_id, component_type, item_key, sub_formulation_id,
+               component_role, parts, solids_pct, unit_price_override, sort_order, notes)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+          `, [
+            id,
+            c.component_type,
+            itemKey,
+            subId,
+            c.component_role || 'other',
+            Number(c.parts),
+            c.solids_pct != null ? Number(c.solids_pct) : null,
+            c.unit_price_override != null ? Number(c.unit_price_override) : null,
+            Number(c.sort_order ?? i),
+            c.notes || null,
+          ]);
+        }
+
+        await client.query(`UPDATE mes_formulations SET updated_at=NOW() WHERE id=$1`, [id]);
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+
+      // Return full formulation with resolved BOM (merge metadata + resolver output)
+      const { rows: updatedRows } = await pool.query(`
+        SELECT f.*, cat.name AS category_name, cat.material_class
+        FROM mes_formulations f
+        JOIN mes_item_categories cat ON cat.id = f.category_id
+        WHERE f.id = $1
+      `, [id]);
+      const resolved = await resolveFormulationById(pool, id);
+      res.json({
+        success: true,
+        data: {
+          ...updatedRows[0],
+          components: resolved.components,
+          totals: {
+            total_parts:         resolved.total_parts,
+            total_solids:        resolved.total_solids,
+            total_cost:          resolved.total_cost,
+            price_per_kg_wet:    resolved.price_per_kg_wet,
+            price_per_kg_solids: resolved.price_per_kg_solids,
+            solids_share_pct:    resolved.solids_share_pct,
+          },
+        },
+      });
+    } catch (err) {
+      logger.error('PUT /formulations/:id/components error:', err);
+      res.status(500).json({ success: false, error: 'Failed to save components' });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /formulations/:id/duplicate
+  // Duplicate as new version (same name) or new name (version resets to 1)
+  // ══════════════════════════════════════════════════════════════════════════
+  router.post('/formulations/:id/duplicate', authenticate, async (req, res) => {
+    if (!canWrite(req.user)) return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { rows: fRows } = await pool.query(
+        `SELECT * FROM mes_formulations WHERE id=$1 AND status <> 'deleted'`, [id]
+      );
+      const source = fRows[0];
+      if (!source) return res.status(404).json({ success: false, error: 'Formulation not found' });
+
+      const { new_name, as_new_version: rawAsNewVersion = true } = req.body;
+      const asNewVersion = rawAsNewVersion !== false && rawAsNewVersion !== 'false';
+      const targetName = asNewVersion ? source.name : String(new_name || '').trim();
+      if (!targetName) return res.status(400).json({ success: false, error: 'new_name is required when as_new_version is false' });
+
+      // Determine version
+      const { rows: vRows } = await pool.query(`
+        SELECT COALESCE(MAX(version), 0) AS max_version
+        FROM mes_formulations
+        WHERE category_id=$1 AND LOWER(TRIM(catlinedesc))=LOWER(TRIM($2)) AND LOWER(TRIM(name))=LOWER(TRIM($3)) AND status <> 'deleted'
+      `, [source.category_id, source.catlinedesc, targetName]);
+      const newVersion = Number(vRows[0].max_version) + 1;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const { rows: newRows } = await client.query(`
+          INSERT INTO mes_formulations (category_id, catlinedesc, name, version, status, notes, created_by)
+          VALUES ($1,$2,$3,$4,'draft',$5,$6)
+          RETURNING *
+        `, [source.category_id, source.catlinedesc, targetName, newVersion, source.notes, req.user.id]);
+        const newFormulation = newRows[0];
+
+        // Copy components
+        await client.query(`
+          INSERT INTO mes_formulation_components
+            (formulation_id, component_type, item_key, sub_formulation_id,
+             component_role, parts, solids_pct, unit_price_override, sort_order, notes)
+          SELECT $2, component_type, item_key, sub_formulation_id,
+                 component_role, parts, solids_pct, unit_price_override, sort_order, notes
+          FROM mes_formulation_components
+          WHERE formulation_id = $1
+        `, [id, newFormulation.id]);
+
+        await client.query('COMMIT');
+        res.status(201).json({ success: true, data: newFormulation });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      logger.error('POST /formulations/:id/duplicate error:', err);
+      res.status(500).json({ success: false, error: 'Failed to duplicate formulation' });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DELETE /formulations/:id — Soft-delete
+  // ══════════════════════════════════════════════════════════════════════════
+  router.delete('/formulations/:id', authenticate, async (req, res) => {
+    if (!canWrite(req.user)) return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { rows: fRows } = await pool.query(
+        `SELECT * FROM mes_formulations WHERE id=$1 AND status <> 'deleted'`, [id]
+      );
+      if (!fRows[0]) return res.status(404).json({ success: false, error: 'Formulation not found' });
+
+      // Block if referenced as sub-formulation by another formulation
+      const { rows: refs } = await pool.query(`
+        SELECT f.id, f.name, f.version
+        FROM mes_formulation_components fc
+        JOIN mes_formulations f ON f.id = fc.formulation_id
+        WHERE fc.sub_formulation_id = $1 AND f.status <> 'deleted'
+      `, [id]);
+      if (refs.length) {
+        return res.status(409).json({
+          success: false,
+          error: 'Cannot delete: this formulation is used as a sub-BOM in others',
+          references: refs.map(r => `${r.name} v${r.version} (#${r.id})`),
+        });
+      }
+
+      await pool.query(
+        `UPDATE mes_formulations SET status='deleted', is_default=false, updated_at=NOW() WHERE id=$1`, [id]
+      );
+      res.json({ success: true });
     } catch (err) {
       logger.error('DELETE /formulations/:id error:', err);
       res.status(500).json({ success: false, error: 'Failed to delete formulation' });
     }
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FORMULATION COMPONENTS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // ─── GET /formulations/:id/components — List components ───────────────────
-  router.get('/formulations/:id/components', authenticate, async (req, res) => {
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /formulations/:id/candidates?category_id=&catlinedesc=&search=
+  // Item picker — cascading: category → group → items
+  // ══════════════════════════════════════════════════════════════════════════
+  router.get('/formulations/:id/candidates', authenticate, async (req, res) => {
     try {
-      const { rows } = await pool.query(
-        `SELECT fc.*, im.item_name, im.item_code
-         FROM mes_formulation_components fc
-         LEFT JOIN mes_item_master im ON im.id = fc.item_id
-         WHERE fc.formulation_id = $1 AND fc.is_active = true
-         ORDER BY fc.percentage DESC`,
-        [req.params.id]
+      const catId      = parseInt(req.query.category_id, 10) || null;
+      const catDesc    = String(req.query.catlinedesc || '').trim();
+      const search     = String(req.query.search || '').trim();
+      const formId     = parseInt(req.params.id, 10);
+
+      // Already-used item_keys in this formulation (to gray out in picker)
+      const { rows: usedRows } = await pool.query(
+        `SELECT item_key FROM mes_formulation_components WHERE formulation_id=$1 AND component_type='item'`,
+        [formId]
       );
-      res.json({ success: true, data: rows });
+      const usedKeys = new Set(usedRows.map(r => r.item_key));
+
+      // If no category/group selected yet, return just the category list
+      if (!catId) {
+        const { rows: cats } = await pool.query(
+          `SELECT id, name, material_class FROM mes_item_categories WHERE is_active=true ORDER BY sort_order, name`
+        );
+        return res.json({ success: true, step: 'category', data: cats });
+      }
+
+      // If category but no group, return distinct groups for that category
+      if (!catDesc) {
+        const { rows: groups } = await pool.query(`
+          SELECT DISTINCT TRIM(catlinedesc) AS catlinedesc
+          FROM fp_actualrmdata
+          WHERE LOWER(TRIM(category)) IN (
+            SELECT LOWER(TRIM(name)) FROM mes_item_categories WHERE id=$1
+          )
+          ORDER BY TRIM(catlinedesc)
+        `, [catId]);
+        return res.json({ success: true, step: 'group', data: groups });
+      }
+
+      // Category + group selected: return items (filter by both category_id and catlinedesc)
+      const params = [catDesc, catId];
+      let searchClause = '';
+      if (search) {
+        params.push(`%${search}%`);
+        searchClause = `AND (mainitem ILIKE $${params.length} OR maindescription ILIKE $${params.length})`;
+      }
+
+      const { rows: items } = await pool.query(`
+        SELECT DISTINCT ON (LOWER(TRIM(mainitem)))
+          LOWER(TRIM(mainitem))         AS item_key,
+          TRIM(mainitem)                AS mainitem,
+          TRIM(maindescription)         AS maindescription,
+          TRIM(catlinedesc)             AS catlinedesc,
+          TRIM(itemgroup)               AS itemgroup,
+          COALESCE(SUM(mainitemstock * maincost)   / NULLIF(SUM(mainitemstock),   0), 0) AS stock_cost_wa,
+          COALESCE(SUM(purchaseprice * pendingorderqty) / NULLIF(SUM(pendingorderqty), 0), 0) AS purchase_cost_wa
+        FROM fp_actualrmdata
+        WHERE LOWER(TRIM(catlinedesc)) = LOWER(TRIM($1))
+          AND LOWER(TRIM(category)) IN (SELECT LOWER(TRIM(name)) FROM mes_item_categories WHERE id = $2)
+          ${searchClause}
+        GROUP BY LOWER(TRIM(mainitem)), TRIM(mainitem), TRIM(maindescription), TRIM(catlinedesc), TRIM(itemgroup)
+        ORDER BY LOWER(TRIM(mainitem))
+      `, params);
+
+      const enriched = items.map(row => ({
+        ...row,
+        already_in_formulation: usedKeys.has(row.item_key),
+      }));
+
+      res.json({ success: true, step: 'items', data: enriched });
     } catch (err) {
-      logger.error('GET /formulations/:id/components error:', err);
-      res.status(500).json({ success: false, error: 'Failed to fetch components' });
+      logger.error('GET /formulations/:id/candidates error:', err);
+      res.status(500).json({ success: false, error: 'Failed to fetch candidates' });
     }
   });
 
-  // ─── POST /formulations/:id/components — Add component ────────────────────
-  // A12: DB trigger enforces SUM(percentage) <= 100%
-  router.post('/formulations/:id/components', authenticate, async (req, res) => {
-    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /formulations/:id/sub-candidates?search=
+  // Sub-formulation picker (excludes circular candidates)
+  // ══════════════════════════════════════════════════════════════════════════
+  router.get('/formulations/:id/sub-candidates', authenticate, async (req, res) => {
     try {
-      const { resin_type, percentage, item_id, melt_index, density, purpose } = req.body;
+      const formId = parseInt(req.params.id, 10);
+      const search = String(req.query.search || '').trim();
 
-      if (!resin_type || percentage === undefined) {
-        return res.status(400).json({ success: false, error: 'resin_type and percentage are required' });
-      }
-
-      const sql = `
-        INSERT INTO mes_formulation_components
-          (formulation_id, resin_type, percentage, item_id, melt_index, density, purpose)
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
-        RETURNING *
+      // Get ALL non-deleted formulations except self
+      let sql = `
+        SELECT f.id, f.name, f.version, f.status, f.is_default,
+               f.catlinedesc, cat.name AS category_name,
+               (SELECT COUNT(*) FROM mes_formulation_components fc WHERE fc.formulation_id = f.id)::INT AS component_count
+        FROM mes_formulations f
+        JOIN mes_item_categories cat ON cat.id = f.category_id
+        WHERE f.id <> $1 AND f.status <> 'deleted'
       `;
-      const { rows } = await pool.query(sql, [
-        req.params.id, resin_type, parseFloat(percentage),
-        item_id || null, melt_index ? parseFloat(melt_index) : null,
-        density ? parseFloat(density) : null, purpose || null
-      ]);
-      res.status(201).json({ success: true, data: rows[0] });
-    } catch (err) {
-      // A12 trigger raises 'Total component percentage exceeds 100%'
-      if (err.message && err.message.includes('exceeds 100%')) {
-        return res.status(400).json({ success: false, error: 'Total component percentage would exceed 100%' });
+      const params = [formId];
+      if (search) {
+        params.push(`%${search}%`);
+        sql += ` AND (f.name ILIKE $${params.length} OR f.catlinedesc ILIKE $${params.length} OR cat.name ILIKE $${params.length})`;
       }
-      logger.error('POST /formulations/:id/components error:', err);
-      res.status(500).json({ success: false, error: 'Failed to add component' });
-    }
-  });
+      sql += ' ORDER BY cat.name, f.catlinedesc, LOWER(f.name), f.version';
 
-  // ─── PUT /formulations/components/:id — Update component ──────────────────
-  router.put('/formulations/components/:id', authenticate, async (req, res) => {
-    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
-    try {
-      const fields = [];
-      const params = [];
-      let idx = 1;
-
-      const allowed = ['resin_type', 'percentage', 'item_id', 'melt_index', 'density', 'purpose'];
-      for (const f of allowed) {
-        if (req.body[f] !== undefined) {
-          fields.push(`${f} = $${idx++}`);
-          params.push(req.body[f]);
-        }
-      }
-      if (!fields.length) return res.status(400).json({ success: false, error: 'No fields to update' });
-
-      params.push(req.params.id);
-      const sql = `UPDATE mes_formulation_components SET ${fields.join(', ')} WHERE id = $${idx} AND is_active = true RETURNING *`;
       const { rows } = await pool.query(sql, params);
-      if (!rows.length) return res.status(404).json({ success: false, error: 'Component not found' });
-      res.json({ success: true, data: rows[0] });
-    } catch (err) {
-      if (err.message && err.message.includes('exceeds 100%')) {
-        return res.status(400).json({ success: false, error: 'Total component percentage would exceed 100%' });
-      }
-      logger.error('PUT /formulations/components/:id error:', err);
-      res.status(500).json({ success: false, error: 'Failed to update component' });
-    }
-  });
 
-  // ─── DELETE /formulations/components/:id — Soft delete ────────────────────
-  router.delete('/formulations/components/:id', authenticate, async (req, res) => {
-    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
-    try {
-      const { rows } = await pool.query(
-        'UPDATE mes_formulation_components SET is_active = false WHERE id = $1 AND is_active = true RETURNING id',
-        [req.params.id]
-      );
-      if (!rows.length) return res.status(404).json({ success: false, error: 'Component not found' });
-      res.json({ success: true, message: 'Component deactivated' });
-    } catch (err) {
-      logger.error('DELETE /formulations/components/:id error:', err);
-      res.status(500).json({ success: false, error: 'Failed to delete component' });
-    }
-  });
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FORMULATION RESULTS (QC test results)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // ─── GET /formulations/:id/results — List test results ────────────────────
-  router.get('/formulations/:id/results', authenticate, async (req, res) => {
-    try {
-      const { rows } = await pool.query(
-        `SELECT fr.*
-         FROM mes_formulation_results fr
-         WHERE fr.formulation_id = $1 AND fr.is_active = true
-         ORDER BY fr.tested_at DESC`,
-        [req.params.id]
-      );
-      res.json({ success: true, data: rows });
-    } catch (err) {
-      logger.error('GET /formulations/:id/results error:', err);
-      res.status(500).json({ success: false, error: 'Failed to fetch formulation results' });
-    }
-  });
-
-  // ─── POST /formulations/:id/results — Record test result ──────────────────
-  router.post('/formulations/:id/results', authenticate, async (req, res) => {
-    if (!isAdminOrMgmt(req.user)) return res.status(403).json({ success: false, error: 'Forbidden' });
-    try {
-      const { production_order_id, actual_properties, pass_fail, tested_by, tested_at, notes } = req.body;
-
-      if (!actual_properties || pass_fail === undefined) {
-        return res.status(400).json({ success: false, error: 'actual_properties and pass_fail are required' });
+      // Filter out any that would create a circular reference
+      const safe = [];
+      for (const row of rows) {
+        const circular = await wouldCreateCircle(pool, formId, row.id);
+        if (!circular) safe.push({ ...row, would_create_circle: false });
       }
 
-      const sql = `
-        INSERT INTO mes_formulation_results
-          (formulation_id, production_order_id, actual_properties, pass_fail, tested_by, tested_at, notes)
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
-        RETURNING *
-      `;
-      const { rows } = await pool.query(sql, [
-        req.params.id, production_order_id || null,
-        JSON.stringify(actual_properties), pass_fail,
-        tested_by || null, tested_at || new Date().toISOString(),
-        notes || null
-      ]);
-      res.status(201).json({ success: true, data: rows[0] });
+      res.json({ success: true, data: safe });
     } catch (err) {
-      logger.error('POST /formulations/:id/results error:', err);
-      res.status(500).json({ success: false, error: 'Failed to record test result' });
+      logger.error('GET /formulations/:id/sub-candidates error:', err);
+      res.status(500).json({ success: false, error: 'Failed to fetch sub-formulation candidates' });
     }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Legacy route safety net — old resin-formulation GET, now returns 410 Gone
+  // ══════════════════════════════════════════════════════════════════════════
+  router.get('/formulations', authenticate, async (req, res) => {
+    // If by-group handler above didn't match (missing params), redirect to by-group docs
+    return res.status(400).json({
+      success: false,
+      error: 'Use /formulations/by-group?category_id=&catlinedesc= to list formulations',
+    });
   });
 
 };
+
+// ─── LEGACY NOTE ────────────────────────────────────────────────────────────
+// Old resin formulation routes (product_group_id / formulation_name / is_active)
+// have been removed. The tables were renamed to *_legacy in migration #050.
+// ────────────────────────────────────────────────────────────────────────────

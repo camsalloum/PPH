@@ -3126,10 +3126,45 @@ module.exports = function (router) {
       const overrideExcludeSql = hasOverrides ? 'AND LOWER(TRIM(mainitem)) <> ALL($3::text[])' : '';
       const overrideExcludeSqlR = hasOverrides ? 'AND LOWER(TRIM(r.mainitem)) <> ALL($3::text[])' : '';
 
-      // ── PASS 1: Oracle groups — aggregate per catlinedesc, excluding overridden items ──
-      const oracleParams = hasOverrides
-        ? [oracleDescList, searchLike, overriddenItemKeys]
-        : [oracleDescList, searchLike];
+      // ── Fetch mapped material keys from profile configs so Oracle pass only counts
+      //    items that are explicitly mapped.  catlinedesc values with no config (or an
+      //    empty mapped_material_keys) are left unfiltered so new categories still show
+      //    all Oracle items.
+      let managedCatlinedescKeys = [];
+      let allManagedItemKeys = [];
+      if (oracleDescList.length) {
+        try {
+          const { rows: configRows } = await pool.query(`
+            SELECT DISTINCT
+              LOWER(TRIM(cat_desc)) AS catlinedesc_key,
+              LOWER(TRIM(mk))       AS item_key
+            FROM mes_material_profile_configs,
+            UNNEST(COALESCE(mapped_material_keys, '{}'::text[])) AS mk
+            WHERE LOWER(TRIM(cat_desc)) = ANY($1::text[])
+              AND COALESCE(array_length(mapped_material_keys, 1), 0) > 0
+          `, [oracleDescList.map((d) => String(d || '').toLowerCase().trim())]);
+          managedCatlinedescKeys = [...new Set(configRows.map((r) => r.catlinedesc_key))];
+          allManagedItemKeys     = [...new Set(configRows.map((r) => r.item_key))];
+        } catch (cfgErr) {
+          if (cfgErr.code !== '42P01') logger.warn('profile: mes_material_profile_configs query warning', { error: cfgErr.message });
+        }
+      }
+      const hasManagedFilter = managedCatlinedescKeys.length > 0;
+
+      // ── PASS 1: Oracle groups — aggregate per catlinedesc, excluding overridden items
+      //    and items not in mapped_material_keys (when a profile config exists). ──
+      const oracleParams = [oracleDescList, searchLike];
+      if (hasOverrides) oracleParams.push(overriddenItemKeys);       // $3
+
+      let managedFilterSql  = '';
+      let managedFilterSqlR = '';
+      if (hasManagedFilter) {
+        const p = oracleParams.length + 1;                           // next $N
+        oracleParams.push(managedCatlinedescKeys);                   // $p
+        oracleParams.push(allManagedItemKeys);                       // $p+1
+        managedFilterSql  = `AND (LOWER(TRIM(catlinedesc)) <> ALL($${p}::text[]) OR LOWER(TRIM(mainitem)) = ANY($${p + 1}::text[]))`;
+        managedFilterSqlR = `AND (LOWER(TRIM(r.catlinedesc)) <> ALL($${p}::text[]) OR LOWER(TRIM(r.mainitem)) = ANY($${p + 1}::text[]))`;
+      }
 
       const { rows: groupAgg } = oracleDescList.length ? await pool.query(`
         SELECT
@@ -3144,6 +3179,7 @@ module.exports = function (router) {
         WHERE TRIM(catlinedesc) = ANY($1)
           AND ${rmSearchSql}
           ${overrideExcludeSql}
+          ${managedFilterSql}
         GROUP BY TRIM(catlinedesc)
         ORDER BY LOWER(TRIM(catlinedesc)) ASC
       `, oracleParams) : { rows: [] };
@@ -3163,6 +3199,7 @@ module.exports = function (router) {
           AND ${rmSearchSql}
           AND COALESCE(TRIM(itemgroup), '') <> ''
           ${overrideExcludeSql}
+          ${managedFilterSql}
         GROUP BY TRIM(catlinedesc), TRIM(itemgroup)
         ORDER BY LOWER(TRIM(catlinedesc)) ASC, LOWER(TRIM(itemgroup)) ASC
       `, oracleParams) : { rows: [] };
@@ -3184,6 +3221,7 @@ module.exports = function (router) {
           AND ${rmSearchSqlR}
           AND COALESCE(TRIM(r.itemgroup), '') <> ''
           ${overrideExcludeSqlR}
+          ${managedFilterSqlR}
         GROUP BY TRIM(r.catlinedesc), TRIM(r.itemgroup)
       `, oracleParams) : { rows: [] };
 
@@ -3605,6 +3643,20 @@ module.exports = function (router) {
         });
       }
 
+      // Items that are reassigned to a custom group in this category must be excluded
+      // from Oracle item-group queries to avoid double-counting.
+      const { rows: overriddenRows } = await pool.query(
+        'SELECT item_key FROM mes_item_group_overrides WHERE category_id = $1',
+        [catId]
+      );
+      const overriddenKeys = overriddenRows.map((r) => r.item_key);
+      const igOverrideExcludeSql = overriddenKeys.length
+        ? 'AND LOWER(TRIM(mainitem)) <> ALL($3::text[])'
+        : '';
+      const igOracleParams = overriddenKeys.length
+        ? [scopedCatlinedescList, itemgroup, overriddenKeys]
+        : [scopedCatlinedescList, itemgroup];
+
       // ── Oracle live data: all items in this itemgroup ──────────────────
       const { rows: rmItems } = await pool.query(`
         SELECT
@@ -3622,9 +3674,10 @@ module.exports = function (router) {
         FROM fp_actualrmdata
         WHERE TRIM(catlinedesc) = ANY($1)
           AND TRIM(itemgroup) = $2
+          ${igOverrideExcludeSql}
         GROUP BY LOWER(TRIM(mainitem))
         ORDER BY mainitem ASC
-      `, [scopedCatlinedescList, itemgroup]);
+      `, igOracleParams);
 
       // ── mes_item_master data for these items ───────────────────────────
       const itemKeys = rmItems.map(r => r.item_key);
@@ -3916,7 +3969,18 @@ module.exports = function (router) {
         `, [catId, catlinedesc]);
         rmItems = rows;
       } else {
-        // Oracle group: existing query
+        // Oracle group: fetch items, excluding any that were reassigned to a custom group
+        // within this category via mes_item_group_overrides (they belong to another group now).
+        const { rows: overriddenRows } = await pool.query(
+          'SELECT item_key FROM mes_item_group_overrides WHERE category_id = $1',
+          [catId]
+        );
+        const overriddenKeys = overriddenRows.map((r) => r.item_key);
+        const overrideExcludeSql = overriddenKeys.length
+          ? 'AND LOWER(TRIM(mainitem)) <> ALL($2::text[])'
+          : '';
+        const oracleParams = overriddenKeys.length ? [catlinedesc, overriddenKeys] : [catlinedesc];
+
         const { rows } = await pool.query(`
           SELECT
             LOWER(TRIM(mainitem)) AS item_key,
@@ -3932,9 +3996,10 @@ module.exports = function (router) {
             COALESCE(SUM(CASE WHEN pendingorderqty > 0 THEN pendingorderqty * purchaseprice ELSE 0 END), 0)::numeric AS order_val
           FROM fp_actualrmdata
           WHERE TRIM(catlinedesc) = $1
+            ${overrideExcludeSql}
           GROUP BY LOWER(TRIM(mainitem))
           ORDER BY mainitem ASC
-        `, [catlinedesc]);
+        `, oracleParams);
         rmItems = rows;
       }
 

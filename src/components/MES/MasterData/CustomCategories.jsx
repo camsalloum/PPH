@@ -1681,11 +1681,10 @@ export default function CustomCategories() {
                       <Col xs={24} xl={6} xxl={5}>
                         <Card size="small" title="Category Groups" styles={{ body: { padding: 10 } }}>
                           <div style={{ maxHeight: 560, overflowY: 'auto', display: 'grid', gap: 8 }}>
-                            {oracleSidebarGroups.map((group) => {
+                            {sidebarGroups.map((group) => {
                               const active = selectedSidebarGroup?.catlinedesc === group.catlinedesc;
                               return (
                                 <div key={group.catlinedesc}>
-                                  {/* Oracle group card */}
                                   <div
                                     role="button"
                                     tabIndex={0}
@@ -1707,14 +1706,21 @@ export default function CustomCategories() {
                                     }}
                                   >
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                      <Text strong style={{ color: active ? '#0f766e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {group.display_name || group.catlinedesc}
-                                      </Text>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                                        <Text strong style={{ color: active ? '#0f766e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {group.display_name || group.catlinedesc}
+                                        </Text>
+                                        {group.is_custom && (
+                                          <Tag color="purple" style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>Custom</Tag>
+                                        )}
+                                      </div>
                                       <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4', flexShrink: 0 }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                                       <Text type="secondary" style={{ fontSize: 11 }}>
-                                        {`${Number(group.item_group_count) || 0} groups · ${Number(group.item_count) || 0} items`}
+                                        {group.is_custom
+                                          ? `${Number(group.item_count) || 0} assigned item${Number(group.item_count) !== 1 ? 's' : ''}`
+                                          : `${Number(group.item_group_count) || 0} groups · ${Number(group.item_count) || 0} items`}
                                       </Text>
                                       <Tooltip title="Weighted Average of Stock and On Order prices">
                                         <Text type="secondary" style={{ fontSize: 10, cursor: 'help', borderBottom: '1px dotted #94a3b8' }}>W.A</Text>
@@ -1731,7 +1737,7 @@ export default function CustomCategories() {
                               );
                             })}
 
-                            {!oracleSidebarGroups.length && (
+                            {!sidebarGroups.length && (
                               <Text type="secondary" style={{ fontSize: 12 }}>No category groups found.</Text>
                             )}
                           </div>

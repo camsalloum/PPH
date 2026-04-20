@@ -33,13 +33,26 @@
   - Fix E: Resolver NULL guard on orphaned `sub_formulation_id`
   - Fix K: `GET /by-group` enriches with `price_per_kg_wet` / `solids_share_pct`
 
+**BOM Item Picker — Corrected Architecture (2026-04-17):**
+- Root issue: item picker was sourcing items from `fp_actualrmdata` (Oracle raw sync only — no spec data → solids always null).
+- Correct design: picker queries the spec table for the selected category (same source as Material Specs page), joined to `fp_actualrmdata` for pricing only.
+- Spec table map (from `mes_category_mapping.spec_table`):
+  - `adhesives` → `mes_spec_adhesives` (direct `solids_pct` column)
+  - `coating` → `mes_spec_coating` (direct `solids_pct` column)
+  - `substrates/films` → `mes_spec_substrates` (`parameters_json`)
+  - `chemicals` → `mes_spec_chemicals` (`parameters_json`)
+  - `additives` → `mes_spec_additives` (`parameters_json`)
+  - `packing_materials` → `mes_spec_packing_materials` (no solids)
+  - `mounting_tapes` → `mes_spec_mounting_tapes` (no solids)
+  - `resins` → `mes_material_tds` (`density` column; all DB items can be compounded)
+  - `trading` / `consumables` → excluded (no spec table, inventory-only)
+- Picker simplified from 3-step (category → group → item) to 2-step (category → item). Items carry `catlinedesc` label. Oracle group-step was redundant.
+- Resolver solids fallback also updated to check all spec tables in order.
+
 **Next steps:**
 - Phase 4: Formulation Comparator (side-by-side BOM comparison UI)
 - Phase 5: Estimation bridge (link formulations to MES estimation calculator)
-- **Hotfix applied:** `formulation-resolver.js` TDS solids query was wrong — queried `tds.solid_pct` and `tds.item_code` as direct columns on `mes_non_resin_material_specs`, but that table stores solids inside `parameters_json` JSONB and uses `material_key`/`mainitem` (not `item_code`). Fixed to COALESCE between `mes_spec_adhesives.solids_pct` (direct column) and `mes_non_resin_material_specs.parameters_json->>'solids_pct'` / `->>'solid_pct'` (JSONB). This caused 500 on every "Open formulation" click.
-
-- **Dead code cleanup: ~500 lines of old adhesive formulation code in `items.js` (routes + helpers at L553-5268)**
-- Browser testing of FormulationsTab (partially tested — list view works, "Open v1" BOM detail now works after resolver fix)
+- Dead code cleanup: ~500 lines of old adhesive formulation code in `items.js` (L553-5268)
 
 **Known issues:**
 - Old adhesive formulation routes still present in `items.js` (dead code, harmless, not called by new frontend)

@@ -129,14 +129,11 @@ export default function FormulationsTab({
   const [createNotes, setCreateNotes] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
 
-  // ── Component picker — 3-step cascading ──────────────────────────────────
+  // ── Component picker — 2-step: category → items from spec table ─────────
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerCatId, setPickerCatId] = useState(null);    // step 1
-  const [pickerCatDesc, setPickerCatDesc] = useState(null); // step 2
-  const [pickerItemKey, setPickerItemKey] = useState(null); // step 3
-  const [pickerGroups, setPickerGroups] = useState([]);
+  const [pickerItemKey, setPickerItemKey] = useState(null); // step 2
   const [pickerItems, setPickerItems] = useState([]);
-  const [pickerGroupsLoading, setPickerGroupsLoading] = useState(false);
   const [pickerItemsLoading, setPickerItemsLoading] = useState(false);
 
   // ── Sub-formulation picker ────────────────────────────────────────────────
@@ -399,37 +396,20 @@ export default function FormulationsTab({
     setDirty(true);
   }, []);
 
-  // ── Picker Step 2: load groups when category selected ─────────────────────
+  // ── Picker Step 2: load spec-table items when category selected ────────────
   useEffect(() => {
     if (!pickerCatId || !pickerOpen || !activeFormulation) return;
-    setPickerCatDesc(null);
-    setPickerItemKey(null);
-    setPickerGroups([]);
-    setPickerItems([]);
-    setPickerGroupsLoading(true);
-    axios.get(`${API}/api/mes/master-data/formulations/${activeFormulation.id}/candidates`, {
-      headers,
-      params: { category_id: pickerCatId },
-    })
-      .then((res) => setPickerGroups(res.data.data || []))
-      .catch(() => setPickerGroups([]))
-      .finally(() => setPickerGroupsLoading(false));
-  }, [pickerCatId, pickerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Picker Step 3: load items when group selected ─────────────────────────
-  useEffect(() => {
-    if (!pickerCatId || !pickerCatDesc || !pickerOpen || !activeFormulation) return;
     setPickerItemKey(null);
     setPickerItems([]);
     setPickerItemsLoading(true);
     axios.get(`${API}/api/mes/master-data/formulations/${activeFormulation.id}/candidates`, {
       headers,
-      params: { category_id: pickerCatId, catlinedesc: pickerCatDesc },
+      params: { category_id: pickerCatId },
     })
       .then((res) => setPickerItems(res.data.data || []))
       .catch(() => setPickerItems([]))
       .finally(() => setPickerItemsLoading(false));
-  }, [pickerCatDesc, pickerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pickerCatId, pickerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickerPreview = useMemo(
     () => pickerItemKey ? (pickerItems.find((i) => i.item_key === pickerItemKey) || null) : null,
@@ -439,9 +419,7 @@ export default function FormulationsTab({
   const resetPicker = useCallback(() => {
     setPickerOpen(false);
     setPickerCatId(null);
-    setPickerCatDesc(null);
     setPickerItemKey(null);
-    setPickerGroups([]);
     setPickerItems([]);
   }, []);
 
@@ -975,7 +953,7 @@ export default function FormulationsTab({
         <Alert type="info" style={{ marginTop: 10 }} message={`Notes: ${activeFormulation.notes}`} />
       )}
 
-      {/* ── Component Picker Modal (3-step cascading) ── */}
+      {/* ── Component Picker Modal (2-step: category → spec-table items) ── */}
       <Modal
         title="Add Component"
         open={pickerOpen}
@@ -1002,38 +980,27 @@ export default function FormulationsTab({
               placeholder="Select a category"
               value={pickerCatId}
               options={categoryOptions}
-              onChange={(v) => { setPickerCatId(v); setPickerCatDesc(null); setPickerItemKey(null); }}
+              onChange={(v) => { setPickerCatId(v); setPickerItemKey(null); setPickerItems([]); }}
               showSearch
               filterOption={(input, opt) => String(opt.label || '').toLowerCase().includes(input.toLowerCase())}
             />
           </div>
 
           <div>
-            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 2 — Group</div>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 2 — Item</div>
             <Select
               style={{ width: '100%' }}
-              placeholder={pickerCatId ? 'Select a group' : 'Select a category first'}
+              placeholder={pickerCatId ? 'Search or select an item' : 'Select a category first'}
               disabled={!pickerCatId}
-              loading={pickerGroupsLoading}
-              value={pickerCatDesc}
-              options={(pickerGroups || []).map((g) => ({ value: g.catlinedesc, label: g.catlinedesc }))}
-              onChange={(v) => { setPickerCatDesc(v); setPickerItemKey(null); }}
-              showSearch
-              filterOption={(input, opt) => String(opt.label || '').toLowerCase().includes(input.toLowerCase())}
-            />
-          </div>
-
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 3 — Item</div>
-            <Select
-              style={{ width: '100%' }}
-              placeholder={pickerCatDesc ? 'Search or select item' : 'Select a group first'}
-              disabled={!pickerCatDesc}
               loading={pickerItemsLoading}
               value={pickerItemKey}
               options={(pickerItems || []).map((item) => ({
                 value: item.item_key,
-                label: `${item.mainitem} — ${item.maindescription || ''}`,
+                label: [
+                  item.mainitem,
+                  item.maindescription ? `– ${item.maindescription}` : null,
+                  item.catlinedesc     ? `[${item.catlinedesc}]`       : null,
+                ].filter(Boolean).join(' '),
                 disabled: item.already_in_formulation,
               }))}
               onChange={(v) => setPickerItemKey(v)}

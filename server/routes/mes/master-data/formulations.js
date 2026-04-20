@@ -543,15 +543,26 @@ module.exports = function (router) {
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // GET /formulations/:id/candidates?category_id=&catlinedesc=&search=
-  // Item picker — cascading: category → group → items
+  // GET /formulations/:id/candidates?category_id=&search=
+  // Item picker — 2-step: category → items sourced from spec tables
+  // (same source as Material Specs page; Oracle fp_actualrmdata joined for pricing only)
   // ══════════════════════════════════════════════════════════════════════════
   router.get('/formulations/:id/candidates', authenticate, async (req, res) => {
+    // Whitelisted spec table names — never interpolated without this check
+    const SPEC_TABLE_WHITELIST = new Set([
+      'mes_spec_substrates', 'mes_spec_adhesives', 'mes_spec_chemicals',
+      'mes_spec_additives', 'mes_spec_coating', 'mes_spec_packing_materials',
+      'mes_spec_mounting_tapes',
+    ]);
+    // Tables with a dedicated direct solids_pct column (not JSONB only)
+    const DIRECT_SOLIDS_TABLES = new Set(['mes_spec_adhesives', 'mes_spec_coating']);
+    // Categories with no spec data — excluded from picker
+    const INVENTORY_ONLY_CLASSES = new Set(['trading', 'consumables']);
+
     try {
-      const catId      = parseInt(req.query.category_id, 10) || null;
-      const catDesc    = String(req.query.catlinedesc || '').trim();
-      const search     = String(req.query.search || '').trim();
-      const formId     = parseInt(req.params.id, 10);
+      const catId  = parseInt(req.query.category_id, 10) || null;
+      const search = String(req.query.search || '').trim();
+      const formId = parseInt(req.params.id, 10);
 
       // Already-used item_keys in this formulation (to gray out in picker)
       const { rows: usedRows } = await pool.query(
@@ -560,57 +571,203 @@ module.exports = function (router) {
       );
       const usedKeys = new Set(usedRows.map(r => r.item_key));
 
-      // If no category/group selected yet, return just the category list
+      // ── Step 1: no category yet → return category list (excluding inventory-only) ──
       if (!catId) {
-        const { rows: cats } = await pool.query(
-          `SELECT id, name, material_class FROM mes_item_categories WHERE is_active=true ORDER BY sort_order, name`
-        );
+        const { rows: cats } = await pool.query(`
+          SELECT c.id, c.name, c.material_class
+          FROM mes_item_categories c
+          WHERE c.is_active = true
+            AND LOWER(TRIM(c.material_class)) NOT IN (${
+              Array.from(INVENTORY_ONLY_CLASSES).map((_, i) => `$${i + 1}`).join(', ')
+            })
+          ORDER BY c.sort_order, c.name
+        `, Array.from(INVENTORY_ONLY_CLASSES));
         return res.json({ success: true, step: 'category', data: cats });
       }
 
-      // If category but no group, return distinct groups for that category
-      if (!catDesc) {
-        const { rows: groups } = await pool.query(`
-          SELECT DISTINCT TRIM(catlinedesc) AS catlinedesc
-          FROM fp_actualrmdata
-          WHERE LOWER(TRIM(category)) IN (
-            SELECT LOWER(TRIM(name)) FROM mes_item_categories WHERE id=$1
-          )
-          ORDER BY TRIM(catlinedesc)
-        `, [catId]);
-        return res.json({ success: true, step: 'group', data: groups });
+      // ── Step 2: resolve category → material_class + spec_table ──────────────
+      const { rows: catRows } = await pool.query(`
+        SELECT c.material_class, m.spec_table
+        FROM mes_item_categories c
+        LEFT JOIN mes_category_mapping m
+          ON LOWER(TRIM(m.material_class)) = LOWER(TRIM(c.material_class))
+         AND m.is_active = true
+        WHERE c.id = $1
+        LIMIT 1
+      `, [catId]);
+
+      if (!catRows.length) return res.json({ success: true, step: 'items', data: [] });
+
+      const { material_class, spec_table } = catRows[0];
+      const safeTable = SPEC_TABLE_WHITELIST.has(spec_table) ? spec_table : null;
+      const matClass  = String(material_class || '').toLowerCase();
+
+      // ── Resins: sourced from mes_material_tds ───────────────────────────────
+      if (matClass === 'resins') {
+        const params = [];
+        let whereClause = 'WHERE 1=1';
+        if (search) {
+          params.push(`%${search}%`);
+          whereClause += ` AND (
+            t.oracle_item_code ILIKE $${params.length}
+            OR t.brand_grade    ILIKE $${params.length}
+          )`;
+        }
+
+        const { rows: items } = await pool.query(`
+          SELECT
+            LOWER(TRIM(t.oracle_item_code))        AS item_key,
+            TRIM(t.oracle_item_code)               AS mainitem,
+            TRIM(t.brand_grade)                    AS maindescription,
+            TRIM(t.cat_desc)                       AS catlinedesc,
+            t.status,
+            t.density                              AS tds_density,
+            NULL::numeric                          AS tds_solids_pct,
+            COALESCE(
+              SUM(r.mainitemstock * r.maincost)
+                / NULLIF(SUM(r.mainitemstock), 0),
+              0
+            )                                      AS stock_cost_wa,
+            COALESCE(
+              SUM(r.purchaseprice * r.pendingorderqty)
+                / NULLIF(SUM(r.pendingorderqty), 0),
+              0
+            )                                      AS purchase_cost_wa
+          FROM mes_material_tds t
+          LEFT JOIN fp_actualrmdata r
+            ON LOWER(TRIM(r.mainitem)) = LOWER(TRIM(t.oracle_item_code))
+          ${whereClause}
+          GROUP BY
+            LOWER(TRIM(t.oracle_item_code)), TRIM(t.oracle_item_code),
+            TRIM(t.brand_grade), TRIM(t.cat_desc),
+            t.status, t.density
+          ORDER BY TRIM(t.oracle_item_code)
+        `, params);
+
+        const enriched = items.map(row => ({
+          ...row,
+          already_in_formulation: usedKeys.has(row.item_key),
+        }));
+        return res.json({ success: true, step: 'items', data: enriched });
       }
 
-      // Category + group selected: return items (filter by both category_id and catlinedesc)
-      const params = [catDesc, catId];
-      let searchClause = '';
+      // ── Inventory-only: return empty list ──────────────────────────────────
+      if (INVENTORY_ONLY_CLASSES.has(matClass)) {
+        return res.json({ success: true, step: 'items', data: [] });
+      }
+
+      // ── Spec-table path (adhesives, coating, chemicals, additives, etc.) ───
+      if (safeTable) {
+        const hasDirect = DIRECT_SOLIDS_TABLES.has(safeTable);
+        const solidsExpr = hasDirect
+          ? `COALESCE(s.solids_pct,
+               (s.parameters_json->>'solids_pct')::numeric,
+               (s.parameters_json->>'solid_pct')::numeric)`
+          : `COALESCE(
+               (s.parameters_json->>'solids_pct')::numeric,
+               (s.parameters_json->>'solid_pct')::numeric)`;
+
+        const params = [];
+        let whereClause = 'WHERE 1=1';
+        if (search) {
+          params.push(`%${search}%`);
+          whereClause += ` AND (
+            s.mainitem      ILIKE $${params.length}
+            OR s.maindescription ILIKE $${params.length}
+            OR s.material_key   ILIKE $${params.length}
+          )`;
+        }
+
+        const { rows: items } = await pool.query(`
+          SELECT
+            COALESCE(NULLIF(LOWER(TRIM(s.mainitem)), ''), LOWER(TRIM(s.material_key))) AS item_key,
+            COALESCE(NULLIF(TRIM(s.mainitem), ''),        TRIM(s.material_key))         AS mainitem,
+            TRIM(s.maindescription)  AS maindescription,
+            TRIM(s.catlinedesc)      AS catlinedesc,
+            s.status,
+            ${solidsExpr}            AS tds_solids_pct,
+            COALESCE(
+              SUM(r.mainitemstock * r.maincost)
+                / NULLIF(SUM(r.mainitemstock), 0),
+              0
+            )                        AS stock_cost_wa,
+            COALESCE(
+              SUM(r.purchaseprice * r.pendingorderqty)
+                / NULLIF(SUM(r.pendingorderqty), 0),
+              0
+            )                        AS purchase_cost_wa
+          FROM ${safeTable} s
+          LEFT JOIN fp_actualrmdata r
+            ON LOWER(TRIM(r.mainitem)) =
+               COALESCE(NULLIF(LOWER(TRIM(s.mainitem)), ''), LOWER(TRIM(s.material_key)))
+          ${whereClause}
+          GROUP BY
+            COALESCE(NULLIF(LOWER(TRIM(s.mainitem)), ''), LOWER(TRIM(s.material_key))),
+            COALESCE(NULLIF(TRIM(s.mainitem), ''), TRIM(s.material_key)),
+            TRIM(s.maindescription), TRIM(s.catlinedesc),
+            s.status, ${solidsExpr}
+          ORDER BY mainitem
+        `, params);
+
+        const enriched = items.map(row => ({
+          ...row,
+          already_in_formulation: usedKeys.has(row.item_key),
+        }));
+        return res.json({ success: true, step: 'items', data: enriched });
+      }
+
+      // ── Fallback: mes_non_resin_material_specs filtered by material_class ──
+      const params = [matClass];
+      let whereClause = `WHERE LOWER(TRIM(s.material_class)) = $1`;
       if (search) {
         params.push(`%${search}%`);
-        searchClause = `AND (mainitem ILIKE $${params.length} OR maindescription ILIKE $${params.length})`;
+        whereClause += ` AND (
+          s.mainitem      ILIKE $${params.length}
+          OR s.maindescription ILIKE $${params.length}
+          OR s.material_key   ILIKE $${params.length}
+        )`;
       }
 
       const { rows: items } = await pool.query(`
-        SELECT DISTINCT ON (LOWER(TRIM(mainitem)))
-          LOWER(TRIM(mainitem))         AS item_key,
-          TRIM(mainitem)                AS mainitem,
-          TRIM(maindescription)         AS maindescription,
-          TRIM(catlinedesc)             AS catlinedesc,
-          TRIM(itemgroup)               AS itemgroup,
-          COALESCE(SUM(mainitemstock * maincost)   / NULLIF(SUM(mainitemstock),   0), 0) AS stock_cost_wa,
-          COALESCE(SUM(purchaseprice * pendingorderqty) / NULLIF(SUM(pendingorderqty), 0), 0) AS purchase_cost_wa
-        FROM fp_actualrmdata
-        WHERE LOWER(TRIM(catlinedesc)) = LOWER(TRIM($1))
-          AND LOWER(TRIM(category)) IN (SELECT LOWER(TRIM(name)) FROM mes_item_categories WHERE id = $2)
-          ${searchClause}
-        GROUP BY LOWER(TRIM(mainitem)), TRIM(mainitem), TRIM(maindescription), TRIM(catlinedesc), TRIM(itemgroup)
-        ORDER BY LOWER(TRIM(mainitem))
+        SELECT
+          COALESCE(NULLIF(LOWER(TRIM(s.mainitem)), ''), LOWER(TRIM(s.material_key))) AS item_key,
+          COALESCE(NULLIF(TRIM(s.mainitem), ''),        TRIM(s.material_key))         AS mainitem,
+          TRIM(s.maindescription)  AS maindescription,
+          TRIM(s.catlinedesc)      AS catlinedesc,
+          s.status,
+          COALESCE(
+            (s.parameters_json->>'solids_pct')::numeric,
+            (s.parameters_json->>'solid_pct')::numeric
+          )                        AS tds_solids_pct,
+          COALESCE(
+            SUM(r.mainitemstock * r.maincost) / NULLIF(SUM(r.mainitemstock), 0),
+            0
+          )                        AS stock_cost_wa,
+          COALESCE(
+            SUM(r.purchaseprice * r.pendingorderqty) / NULLIF(SUM(r.pendingorderqty), 0),
+            0
+          )                        AS purchase_cost_wa
+        FROM mes_non_resin_material_specs s
+        LEFT JOIN fp_actualrmdata r
+          ON LOWER(TRIM(r.mainitem)) =
+             COALESCE(NULLIF(LOWER(TRIM(s.mainitem)), ''), LOWER(TRIM(s.material_key)))
+        ${whereClause}
+        GROUP BY
+          COALESCE(NULLIF(LOWER(TRIM(s.mainitem)), ''), LOWER(TRIM(s.material_key))),
+          COALESCE(NULLIF(TRIM(s.mainitem), ''), TRIM(s.material_key)),
+          TRIM(s.maindescription), TRIM(s.catlinedesc),
+          s.status,
+          COALESCE(
+            (s.parameters_json->>'solids_pct')::numeric,
+            (s.parameters_json->>'solid_pct')::numeric
+          )
+        ORDER BY mainitem
       `, params);
 
       const enriched = items.map(row => ({
         ...row,
         already_in_formulation: usedKeys.has(row.item_key),
       }));
-
       res.json({ success: true, step: 'items', data: enriched });
     } catch (err) {
       logger.error('GET /formulations/:id/candidates error:', err);

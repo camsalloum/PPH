@@ -109,12 +109,37 @@ async function resolveFormulation(pool, formulationId, memo, ancestors, depth) {
            AND (r.mainitemstock > 0 OR r.pendingorderqty > 0))
       END AS avg_cost_wa,
       -- TDS solids % fallback (item components only)
-      -- Try mes_spec_adhesives first (direct column), then mes_non_resin_material_specs (JSONB)
+      -- Priority: adhesives direct col → coating direct col → any spec table JSONB → non_resin_specs JSONB → resin density
       CASE WHEN fc.component_type = 'item' THEN
         COALESCE(
           (SELECT sa.solids_pct
            FROM mes_spec_adhesives sa
            WHERE LOWER(TRIM(COALESCE(NULLIF(sa.mainitem,''), sa.material_key))) = fc.item_key
+           LIMIT 1),
+          (SELECT sc.solids_pct
+           FROM mes_spec_coating sc
+           WHERE LOWER(TRIM(COALESCE(NULLIF(sc.mainitem,''), sc.material_key))) = fc.item_key
+           LIMIT 1),
+          (SELECT COALESCE(
+              (ss.parameters_json->>'solids_pct')::NUMERIC,
+              (ss.parameters_json->>'solid_pct')::NUMERIC
+            )
+           FROM mes_spec_substrates ss
+           WHERE LOWER(TRIM(COALESCE(NULLIF(ss.mainitem,''), ss.material_key))) = fc.item_key
+           LIMIT 1),
+          (SELECT COALESCE(
+              (sc2.parameters_json->>'solids_pct')::NUMERIC,
+              (sc2.parameters_json->>'solid_pct')::NUMERIC
+            )
+           FROM mes_spec_chemicals sc2
+           WHERE LOWER(TRIM(COALESCE(NULLIF(sc2.mainitem,''), sc2.material_key))) = fc.item_key
+           LIMIT 1),
+          (SELECT COALESCE(
+              (sad.parameters_json->>'solids_pct')::NUMERIC,
+              (sad.parameters_json->>'solid_pct')::NUMERIC
+            )
+           FROM mes_spec_additives sad
+           WHERE LOWER(TRIM(COALESCE(NULLIF(sad.mainitem,''), sad.material_key))) = fc.item_key
            LIMIT 1),
           (SELECT COALESCE(
               (nr.parameters_json->>'solids_pct')::NUMERIC,

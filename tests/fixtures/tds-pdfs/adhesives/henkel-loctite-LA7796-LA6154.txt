@@ -1,0 +1,299 @@
+Technical Data Sheet
+LOCTITE LIOFOL LA 7796 / LA 6154
+May-2017
+PRODUCT DESCRIPTION
+LOCTITE LIOFOL LA 7796 / LA 6154 has the following
+product characteristics:
+Technology Polyurethane
+Product Type Laminating adhesive
+Condition Solvent-free
+Components Two components - requires mixing
+Application Manufacture of flexible laminates
+Performance Medium-High
+Cure After mixing - curing at room
+temperature [RT]
+Mix ratio
+Base : Hardener
+Parts by weight
+100 : 50
+Application area:
+LOCTITE LIOFOL LA 7796 / LA 6154 is suitable for a wide
+range of transparent, metalized plastic film and foil
+laminates.
+Suitable substrates:
+● Polyester (PET)
+● Metallized Polyester (PET)
+● Polyethylene (PE)
+● Slip film
+● High slip film
+● White pigmented Polyethylene (PE) film
+● White pigmented Polyethylene (PE) EVA film (up to 9%
+vinyl acetate)
+● EVA copolymer film
+● Polypropylene (CPP, OPP)
+● Metallized Polypropylene (CPP, OPP) film
+● Polyamide (CPA, OPA)
+● Aluminium foil
+● Polyester (PET) with AIOx-coating
+● Polyester (PET) with SiOx-coating
+Films may be plain or printed. All films must have a surface
+tension of at least 38 mN/m (= dyn/cm). The use of an inline
+corona station can improve the anchorage of the adhesive to
+uncoated films.
+Laminates made from suitable films can be subjected to
+the following processes:
+● Pasteurisation (30 min at 90 °C) of plastic film laminates
+● Pasteurisation (30 min at 90 °C) of foil containing
+laminates
+● Boiling of plastic film laminates
+● Boiling of foil containing laminates
+● Deep draw of plastic film laminates
+● Aggressive filling goods in plastic film laminates
+● Aggressive filling goods in foil containing laminates
+● Hot-filling
+● Dry filling goods
+● Liquid filling goods
+● Microwavable packs (without receptor)
+Product properties:
+LOCTITE LIOFOL LA 7796 / LA 6154 offers the following
+properties:
+● excellent machine runability
+● excellent substrate wetting
+● very long pot life
+● good protection from anti seal effects when using high
+slip PE, CPA, EVA or white pigmented PE films
+● high thermal resistance plastic film laminates
+● high thermal resistance in foil containing laminates
+● excellent chemical resistance against aggressive filling
+goods in plastic film laminates
+● excellent chemical resistance against aggressive filling
+goods in foil containing laminates
+● fast PAA decay even in problematic laminates
+● suitable for very high machine speeds
+● fast bond strength increase and further processing
+● The cured adhesive film is transparent, odorless, elastic
+and resistant to ageing
+
+-- 1 of 3 --
+
+TDS LOCTITE LIOFOL LA 7796 / Hardener LA 6154, May-2017
+TECHNICAL DATA
+LOCTITE LIOFOL LA 7796
+Component NCO component
+Solvent none
+Appearance (500 mL glass) clear to turbid, yellow
+Solid content, % 100
+Viscosity at 40 °C, mPas 600 to 1,500
+Density at 20 °C, g/cm³ 1.2
+Hardener LA 6154
+Component OH component
+Solvent none
+Appearance (500 mL glass) clear to turbid, colourless
+to yellow
+Solid content, % 100
+Viscosity at 20 °C, mPas 300 to 1,300
+Density at 20 °C, g/cm³ 1.1
+Ready-to-Use Mixture
+Viscosity at 40 °C, mPas ~900
+Increase of Viscosity
+after 15 minutes, mPas ~2,000
+after 30 minutes, mPas ~4,000
+after 60 minutes, mPas ~11,000
+Running solids, % 100
+Typical Temperature/Viscosity Profile
+Viscosity, mPa·s
+Minutes
+12000
+10000
+8000
+6000
+4000
+2000
+0
+0 15 30 45 60
+Compliance with food packaging regulations:
+Under specific conditions LOCTITE LIOFOL LA 7796 / LA
+6154 is suitable for the manufacture of food packaging
+materials under the applicable FDA, EU-provisions and/or
+BfR recommendations. A food contact statement with further
+details is available on request. The responsibility for
+compliance with the specific conditions lies with the
+converter and not with the adhesive supplier.
+LOCTITE LIOFOL LA 7796 / LA 6154 contains aromatic
+isocyanates. Migration testing under conditions of use is
+required, particularly with high temperature applications, to
+demonstrate compliance with the limits of primary aromatic
+amines.
+DIRECTIONS OF USE
+Preliminary statement:
+Prior to application it is necessary to read the Safety Data
+Sheet for information about precautionary measures and
+safety recommendations. Please also refer to the local
+country-specific safety regulations pertaining to dangerous
+goods.
+LOCTITE LIOFOL LA 7796 / LA 6154 contains isocyanates.
+To avoid the emission of volatile isocyanates into the working
+area, the coating unit has to be equipped with an extraction
+hood. Avoid skin contact. Local country-specific safety
+regulations with regard to handling of isocyanates have to be
+followed.
+Dosing:
+The adhesive is continuously added in the gap of the
+application station with a two-component dosing and mixing
+unit. The amount of adhesive in the gap should be kept at the
+lowest possible level. Use a static mixer which provides
+effective mixing. At the outlet of the dosing and mixing
+equipment, the adhesive has to be clear and homogeneous,
+not milky. A new static mixer has to be used after a longer
+dosing stop.
+Working life:
+Ready to use adhesive that has not been consumed after the
+time stated has to be discarded. In tropical conditions, i.e.
+high ambient temperatures and/or high humidity the working
+life of the mixed adhesive is shorter.
+Application:
+LOCTITE LIOFOL LA 7796 / LA 6154 can be applied
+on laminating machines with multi-roller application system.
+Application weight:
+Depending on the film combination and intended application
+of the laminate, the following coat weights (dry) are
+recommended.
+Typical application weight, g/m²: 1 to 3
+For printed laminates the application weight has to be
+adjusted depending on print coverage.
+Processing temperature:
+For optimal processing, adjustment of the processing
+temperature is necessary. In order to achieve the best
+possible flow and good wetting, we recommend to the
+following processing temperatures:
+Dosing unit - LOCTITE LIOFOL LA 7796, °C: 30 to 45
+Dosing unit - LOCTITE LIOFOL LA 6154, °C: 20 to 40
+Tubes, °C: 30 to 45
+Gap, °C: 35 to 45
+Application Station - application roller, °C:
+(dependent on line speed)
+45 to 60
+Nip roller, °C: 20 to 60
+Working conditions:
+Precise web tension control together with a suitable winding
+program help to avoid tunneling as well as telescoping and
+curling effects. High laminating temperature (suitable for the
+substrates in use) together with a high line pressure of the
+
+-- 2 of 3 --
+
+TDS LOCTITE LIOFOL LA 7796 / Hardener LA 6154, May-2017
+calander improve the bond strength and optical appearance
+of the laminate.
+Curing:
+Depending on laminate structure and end use, laminates
+may be subjected to further processing after the typical cure
+time mentioned below.
+Triplex lamination after duplex lamination: 4 to 8 hours
+Slitting / rewinding: 24 hours
+Final performance: 3 to 5 days
+The curing temperature should not fall below 18 °C, since the
+chemical crosslinking reaction may be delayed or stopped.
+When manufacturing laminates for food and pharmaceutical
+applications, in addition to mechanical hardening, the time
+required to reach the applicable migration limits has to be
+taken into account. For further details, please consult the
+food contact statement.
+Cleaning:
+Application station and machine parts should be cleaned
+immediately after production with a suitable solvent such as
+ethyl acetate or methylethylketone (MEK). Cured adhesive
+can be removed with LOCTITE LIOFOL CL ECOPOWER.
+During machine stops, LOCTITE LIOFOL CL ECOPOWER
+can help to prevent the hardening of the adhesive and
+thereby increases the lifetime of rubber rollers. Technical
+data sheets for these products are available upon request.
+When cleaning, observe the applicable safety regulations
+and the manufacturer's instructions.
+STORAGE
+Please refer to the Material Safety Data Sheet and the
+applicable local legislation for safe storage. Opened
+containers of LOCTITE LIOFOL LA 7796 or LA 6154 have to
+be reclosed tightly immediately after use and consumed
+within a short time span. When stored in a dry and cool place
+outside of direct sunlight in original unopened containers, the
+shelf life is as follows.
+Shelf Life:
+LOCTITE LIOFOL LA 7796, months: 9
+LOCTITE LIOFOL LA 6154, months: 9
+Recommended storage temperature, °C -20 to 50
+ADDITIONAL INFORMATION
+Performance testing:
+Before going into full scale production, practical testing is
+necessary, as substrates, additives, printing inks, filling
+goods and the final application can influence the quality and
+final performance of a laminate significantly.
+Disclaimer
+Note:
+The information provided in this Technical Data Sheet (TDS) including the
+recommendations for use and application of the product are based on our
+knowledge and experience of the product as at the date of this TDS. The
+product can have a variety of different applications as well as differing
+application and working conditions in your environment that are beyond our
+control. Henkel is, therefore, not liable for the suitability of our product for the
+production processes and conditions in respect of which you use them, as
+well as the intended applications and results. We strongly recommend that
+you carry out your own prior trials to confirm such suitability of our product.
+Any liability in respect of the information in the Technical Data Sheet or any
+other written or oral recommendation(s) regarding the concerned product is
+excluded, except if otherwise explicitly agreed and except in relation to death
+or personal injury caused by our negligence and any liability under any
+applicable mandatory product liability law.
+In case products are delivered by Henkel Belgium NV, Henkel Electronic
+Materials NV, Henkel Nederland BV, Henkel Technologies France SAS
+and Henkel France SA please additionally note the following:
+In case Henkel would be nevertheless held liable, on whatever legal ground,
+Henkel’s liability will in no event exceed the amount of the concerned
+delivery.
+In case products are delivered by Henkel Colombiana, S.A.S. the
+following disclaimer is applicable:
+The information provided in this Technical Data Sheet (TDS) including the
+recommendations for use and application of the product are based on our
+knowledge and experience of the product as at the date of this TDS. Henkel
+is, therefore, not liable for the suitability of our product for the production
+processes and conditions in respect of which you use them, as well as the
+intended applications and results. We strongly recommend that you carry out
+your own prior trials to confirm such suitability of our product.
+Any liability in respect of the information in the Technical Data Sheet or any
+other written or oral recommendation(s) regarding the concerned product is
+excluded, except if otherwise explicitly agreed and except in relation to death
+or personal injury caused by our negligence and any liability under any
+applicable mandatory product liability law.
+In case products are delivered by Henkel Corporation, Resin
+Technology Group, Inc., or Henkel Canada Corporation, the following
+disclaimer is applicable:
+The data contained herein are furnished for information only and are believed
+to be reliable. We cannot assume responsibility for the results obtained by
+others over whose methods we have no control. It is the user's responsibility
+to determine suitability for the user's purpose of any production methods
+mentioned herein and to adopt such precautions as may be advisable for the
+protection of property and of persons against any hazards that may be
+involved in the handling and use thereof. In light of the foregoing, Henkel
+Corporation specifically disclaims all warranties expressed or implied,
+including warranties of merchantability or fitness for a particular
+purpose, arising from sale or use of Henkel Corporation’s products.
+Henkel Corporation specifically disclaims any liability for consequential
+or incidental damages of any kind, including lost profits. The discussion
+herein of various processes or compositions is not to be interpreted as
+representation that they are free from domination of patents owned by others
+or as a license under any Henkel Corporation patents that may cover such
+processes or compositions. We recommend that each prospective user test
+his proposed application before repetitive use, using this data as a guide.
+This product may be covered by one or more United States or foreign patents
+or patent applications.
+Trademark usage: [Except as otherwise noted] All trademarks in this
+document are trademarks and/or registered trademarks of Henkel and its
+affiliates in the U.S. and elsewhere.
+Reference 0.0
+Henkel AG & Co. KGaA Henkel Corporation Henkel Diadema Henkel (China) Co.Ltd. Henkel Jebel Ali FZCO
+40191 Düsseldorf, Germany Cary, NC 27511, USA Diadema - SP, Brasil 201203 Shanghai, China Dubai, UAE
+Phone: +49-211-797-0 Phone: +1-919-319-1933 Phone: +55-11-3205-8955 Phone: +86-21-2891-8000 Phone: +971-4-3893333
+For more information contact us on www.henkel.com
+
+-- 3 of 3 --
+

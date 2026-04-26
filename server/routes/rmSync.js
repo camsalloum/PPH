@@ -15,6 +15,7 @@ const { pool, authPool } = require('../database/config');
 const { authenticate } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const requireAnyRole = require('../middleware/requireAnyRole');
+const { detectUnmappedCategories } = require('../utils/mes-unmapped-categories');
 const vpnService = require('../services/VPNService');
 const { notifyNewRMBatchReceived } = require('../services/rmNotificationService');
 
@@ -294,6 +295,18 @@ router.post('/sync', authenticate, requireAnyRole(['admin']), async (req, res) =
             }
           } catch (e) {
             console.error('[RM Sync] QC incoming auto-create error:', e.message);
+          }
+
+          // Phase 9 — detect Oracle categories not yet mapped to a material_class
+          try {
+            const unmapped = await detectUnmappedCategories();
+            syncInfo.unmappedCategoriesNew = unmapped.inserted;
+            syncInfo.unmappedCategoriesTotal = unmapped.totalUnmapped;
+            if (unmapped.inserted > 0) {
+              console.log(`[RM Sync] Detected ${unmapped.inserted} new unmapped Oracle category(ies):`, unmapped.newCategories);
+            }
+          } catch (e) {
+            console.error('[RM Sync] Unmapped category detection error:', e.message);
           }
         } else {
           syncInfo.status = 'failed';

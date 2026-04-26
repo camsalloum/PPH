@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extruder Line Configuration</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --white: #ffffff;
+    --surface2: #f0f1f4;
+    --border: #dde0e8;
+    --border-focus: #2563eb;
+    --accent: #2563eb;
+    --accent-light: #eff4ff;
+    --accent2: #059669;
+    --accent2-light: #ecfdf5;
+    --text: #1a1d2e;
+    --text-mid: #4b5563;
+    --text-muted: #9ca3af;
+    --label: #374151;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Lato', sans-serif;
+    --radius: 7px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  .page-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 40px;
+    position: sticky; top: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: var(--shadow);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .form-badge {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    color: var(--accent); background: var(--accent-light);
+    border: 1px solid #bfdbfe; padding: 4px 9px; border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .form-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+  .form-subtitle { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    font-family: var(--sans); font-size: 13px; font-weight: 700;
+    padding: 9px 20px; border-radius: var(--radius);
+    cursor: pointer; border: 1px solid transparent; transition: all 0.15s;
+  }
+  .btn-ghost { background: var(--white); border-color: var(--border); color: var(--text-mid); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
+  .btn-primary:hover { background: #1d4ed8; }
+
+  .page-body { max-width: 1060px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ID STRIP */
+  .id-strip {
+    background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr 1fr 150px;
+    gap: 16px; align-items: end; margin-bottom: 22px; box-shadow: var(--shadow);
+  }
+
+  /* LAYER SELECTOR */
+  .layer-selector-block {
+    background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 24px; margin-bottom: 22px; box-shadow: var(--shadow);
+  }
+  .ls-title { font-size: 12px; font-weight: 700; color: var(--text-mid); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; font-family: var(--mono); }
+  .ls-options { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ls-option { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+  .ls-option input { display: none; }
+  .ls-pill {
+    padding: 9px 24px; border: 2px solid var(--border); border-radius: 8px;
+    font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-mid);
+    background: var(--bg); transition: all 0.15s; cursor: pointer; white-space: nowrap;
+  }
+  .ls-option input:checked + .ls-pill { border-color: var(--accent); background: var(--accent-light); color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .ls-sublabel { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+  .layer-diagram { display: flex; gap: 5px; align-items: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .ld-label { font-size: 10px; color: var(--text-muted); font-family: var(--mono); margin-right: 4px; flex-shrink: 0; }
+  .ld-bar { height: 26px; border-radius: 4px; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; font-family: var(--mono); font-weight: 500; color: #fff; transition: all 0.3s; min-width: 30px; }
+
+  /* SECTION */
+  .section {
+    background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 18px; box-shadow: var(--shadow); overflow: hidden;
+    animation: fadeUp 0.3s ease both;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .section-header { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .sh-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .ic-blue   { background: #dbeafe; }
+  .ic-green  { background: #d1fae5; }
+  .ic-amber  { background: #fef3c7; }
+  .ic-purple { background: #ede9fe; }
+  .ic-rose   { background: #ffe4e6; }
+  .ic-cyan   { background: #cffafe; }
+  .sh-meta { flex: 1; }
+  .sh-name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .sh-desc { font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 1px; }
+  .sh-count { font-family: var(--mono); font-size: 10px; color: var(--text-muted); background: var(--white); border: 1px solid var(--border); padding: 3px 8px; border-radius: 10px; }
+  .section-body { padding: 18px 22px; }
+
+  /* GRIDS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 13px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 13px; }
+  .col-2 { grid-column: span 2; }
+  .mt12 { margin-top: 12px; }
+  .mt16 { margin-top: 16px; }
+
+  /* FIELDS */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field-label { font-size: 11px; font-weight: 700; color: var(--label); letter-spacing: 0.05em; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+  .req { color: #ef4444; }
+  .opt-tag { font-size: 9px; font-family: var(--mono); color: var(--text-muted); background: var(--surface2); padding: 1px 5px; border-radius: 3px; }
+  .field-unit { font-family: var(--mono); font-size: 9px; color: var(--text-muted); margin-left: auto; }
+  .field-hint { font-size: 10px; color: var(--text-muted); font-family: var(--mono); line-height: 1.4; }
+
+  input[type=text], input[type=number], select, textarea {
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); font-family: var(--sans); font-size: 13.5px; padding: 9px 12px; width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s; outline: none; appearance: none;
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-muted); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239ca3af' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; cursor: pointer;
+  }
+  select option { background: var(--white); }
+  textarea { resize: vertical; min-height: 68px; line-height: 1.5; }
+
+  /* TOGGLE */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 13px; }
+  .toggle-text { font-size: 13px; color: var(--text-mid); }
+  .toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .tslider { position: absolute; inset: 0; background: #d1d5db; border-radius: 11px; cursor: pointer; transition: background 0.2s; }
+  .tslider::before { content:''; position:absolute; width:15px; height:15px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.15); }
+  .toggle input:checked + .tslider { background: var(--accent); }
+  .toggle input:checked + .tslider::before { transform: translateX(17px); }
+
+  /* RANGE */
+  .range-group { display: grid; grid-template-columns: 1fr auto 1fr; gap: 7px; align-items: center; }
+  .range-sep { font-family: var(--mono); font-size: 11px; color: var(--text-muted); text-align: center; }
+
+  /* LAYER CARDS */
+  #layersContainer { margin-bottom: 18px; }
+  .layer-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; box-shadow: var(--shadow); overflow: hidden; animation: fadeUp 0.3s ease both; }
+  .lc-header { display: flex; align-items: center; gap: 14px; padding: 13px 20px; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .lc-badge { font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 5px; border: 1px solid; white-space: nowrap; }
+  .lc-title { font-size: 14px; font-weight: 700; flex: 1; }
+  .lc-role { font-size: 11px; font-family: var(--mono); color: var(--text-muted); }
+  .lc-body { padding: 18px 20px; }
+  .ext-spec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+  .sub-div { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--mono); padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px dashed var(--border); }
+  .sub-div-mt { margin-top: 16px; }
+
+  /* COMPONENT SLOTS */
+  .comp-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .comp-header-label { font-size: 12px; color: var(--text-mid); }
+  .comp-count-selector { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .comp-count-btn { padding: 5px 12px; font-family: var(--mono); font-size: 12px; background: var(--bg); color: var(--text-mid); border: none; border-right: 1px solid var(--border); cursor: pointer; transition: all 0.12s; }
+  .comp-count-btn:last-child { border-right: none; }
+  .comp-count-btn.active { background: var(--accent); color: #fff; }
+  .comp-count-btn:hover:not(.active) { background: var(--surface2); }
+  .comp-slots-grid { display: grid; gap: 8px; }
+  .comp-slot { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 11px 13px; display: grid; grid-template-columns: 90px 1.4fr 1fr 1fr; gap: 10px; align-items: center; }
+  .slot-label { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text-mid); display: flex; align-items: center; gap: 6px; }
+  .slot-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .slot-field-label { font-size: 9px; font-weight: 700; color: var(--label); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+
+  /* SUBMIT */
+  .submit-area { display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 700px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .ext-spec-grid { grid-template-columns: 1fr 1fr; }
+    .id-strip { grid-template-columns: 1fr 1fr; }
+    .comp-slot { grid-template-columns: 1fr 1fr; }
+    .page-header { flex-direction: column; gap: 12px; align-items: flex-start; padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="header-left">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
+        <span class="form-badge">Form 02</span>
+        <span class="form-title">Extruder Line Configuration</span>
+      </div>
+      <div class="form-subtitle">Blown film line · dynamic layer structure · Mono / 3L / 5L / 7L / 9L</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" onclick="resetForm()">Reset</button>
+    <button class="btn btn-primary" onclick="saveForm()">Save Line Card →</button>
+  </div>
+</header>
+
+<div class="page-body">
+<form id="mainForm" novalidate>
+
+  <!-- MACHINE IDENTITY -->
+  <div class="id-strip">
+    <div class="field">
+      <label class="field-label">Line / Machine ID <span class="req">*</span></label>
+      <input type="text" name="line_id" placeholder="e.g. Line-A, EX-01" required>
+    </div>
+    <div class="field">
+      <label class="field-label">Manufacturer</label>
+      <input type="text" name="manufacturer" placeholder="e.g. Windmöller & Hölscher">
+    </div>
+    <div class="field">
+      <label class="field-label">Model / Series</label>
+      <input type="text" name="model" placeholder="e.g. VAREX II, EVOLUTION">
+    </div>
+    <div class="field">
+      <label class="field-label">Year</label>
+      <input type="number" name="year" placeholder="2022" min="1970" max="2035">
+    </div>
+  </div>
+
+  <!-- LAYER SELECTOR -->
+  <div class="layer-selector-block">
+    <div class="ls-title">Line Structure — Number of Layers</div>
+    <div class="ls-options">
+      <label class="ls-option"><input type="radio" name="layer_count" value="1" onchange="buildLayers(1)"><span class="ls-pill">Mono</span><span class="ls-sublabel">1 extruder</span></label>
+      <label class="ls-option"><input type="radio" name="layer_count" value="3" onchange="buildLayers(3)" checked><span class="ls-pill">3-Layer</span><span class="ls-sublabel">A / B / C</span></label>
+      <label class="ls-option"><input type="radio" name="layer_count" value="5" onchange="buildLayers(5)"><span class="ls-pill">5-Layer</span><span class="ls-sublabel">A → E</span></label>
+      <label class="ls-option"><input type="radio" name="layer_count" value="7" onchange="buildLayers(7)"><span class="ls-pill">7-Layer</span><span class="ls-sublabel">A → G</span></label>
+      <label class="ls-option"><input type="radio" name="layer_count" value="9" onchange="buildLayers(9)"><span class="ls-pill">9-Layer</span><span class="ls-sublabel">A → I</span></label>
+    </div>
+    <div class="layer-diagram" id="layerDiagram"></div>
+  </div>
+
+  <!-- DYNAMIC LAYER CARDS -->
+  <div id="layersContainer"></div>
+
+  <!-- DIE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="sh-icon ic-green">🎯</div>
+      <div class="sh-meta"><div class="sh-name">Die</div><div class="sh-desc">type · diameter · gap · land · material · lip heating · gauge control</div></div>
+      <span class="sh-count">8 fields</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div class="field">
+          <label class="field-label">Die Model / Designation</label>
+          <input type="text" name="die_model" placeholder="e.g. MAXICONE C 450/630-3">
+        </div>
+        <div class="field">
+          <label class="field-label">Die Type <span class="req">*</span></label>
+          <select name="die_type" required>
+            <option value="">Select…</option>
+            <option>Spiral mandrel (MAXICONE)</option>
+            <option>Spiral mandrel (standard)</option>
+            <option>Side-fed</option>
+            <option>Bottom-fed</option>
+            <option>Spider leg</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Die Diameter <span class="req">*</span> <span class="field-unit">mm</span></label>
+          <input type="number" name="die_diameter_mm" placeholder="e.g. 550" step="1" min="30" max="2000" required>
+        </div>
+        <div class="field">
+          <label class="field-label">Die Land Length <span class="field-unit">mm</span></label>
+          <input type="number" name="die_land_mm" placeholder="e.g. 40" step="0.5" min="5">
+        </div>
+        <div class="field">
+          <label class="field-label">Die Gap Range <span class="field-unit">mm</span></label>
+          <div class="range-group">
+            <input type="number" name="die_gap_min" placeholder="Min" step="0.1" min="0.3">
+            <span class="range-sep">→</span>
+            <input type="number" name="die_gap_max" placeholder="Max" step="0.1" max="5">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Die Material</label>
+          <select name="die_material">
+            <option value="">Select…</option>
+            <option>Chrome-plated mild steel</option>
+            <option>Tool steel</option>
+            <option>Alpha brass</option>
+            <option>Stainless steel</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Max Layer Ratio</label>
+          <input type="text" name="max_layer_ratio" placeholder="e.g. 1:6:1">
+        </div>
+        <div class="field">
+          <label class="field-label">Gauge Control System</label>
+          <select name="gauge_control">
+            <option value="">Select…</option>
+            <option>Thermal segmented (e.g. OPTIFIL P2K)</option>
+            <option>Mechanical die bolts</option>
+            <option>Beta scanner feedback</option>
+            <option>None / manual</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-3 mt12">
+        <div class="field">
+          <label class="field-label">Die Lip Heating — Internal</label>
+          <div class="toggle-row"><span class="toggle-text">Internal lip heater fitted</span><label class="toggle"><input type="checkbox" name="die_lip_internal"><span class="tslider"></span></label></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Die Lip Heating — External</label>
+          <div class="toggle-row"><span class="toggle-text">External lip heater fitted</span><label class="toggle"><input type="checkbox" name="die_lip_external"><span class="tslider"></span></label></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COOLING -->
+  <div class="section">
+    <div class="section-header">
+      <div class="sh-icon ic-blue">❄️</div>
+      <div class="sh-meta"><div class="sh-name">Cooling System</div><div class="sh-desc">air ring · IBC · BUR range · compact cooler · film sizing cage · cooling water</div></div>
+      <span class="sh-count">9 fields</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div class="field">
+          <label class="field-label">Air Ring Type <span class="req">*</span></label>
+          <select name="air_ring_type" required>
+            <option value="">Select…</option>
+            <option>Single lip</option>
+            <option>Dual lip venturi</option>
+            <option>Dual lip XP (extreme performance)</option>
+            <option>HDPE high-velocity</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Air Ring Model</label>
+          <input type="text" name="air_ring_model" placeholder="e.g. ARCTIS XP 2100 M">
+        </div>
+        <div class="field">
+          <label class="field-label">Blow-up Ratio Range</label>
+          <div class="range-group">
+            <input type="number" name="bur_min" placeholder="Min" step="0.1" min="1">
+            <span class="range-sep">→</span>
+            <input type="number" name="bur_max" placeholder="Max" step="0.1" max="8">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">IBC — Internal Bubble Cooling</label>
+          <div class="toggle-row"><span class="toggle-text">IBC system fitted</span><label class="toggle"><input type="checkbox" name="ibc_fitted"><span class="tslider"></span></label></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Compact Air Cooler</label>
+          <div class="toggle-row"><span class="toggle-text">Chilled / conditioned air system</span><label class="toggle"><input type="checkbox" name="chilled_air"><span class="tslider"></span></label></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Sizing Cage Model</label>
+          <input type="text" name="cage_model" placeholder="e.g. VARIOCAGE with CFRP rollers">
+        </div>
+        <div class="field">
+          <label class="field-label">Profile Gauge Control</label>
+          <select name="gauge_profile_ctrl">
+            <option value="">Select…</option>
+            <option>Thermal segmented (OPTIFIL P2K)</option>
+            <option>Capacitive (K-NOSTIC reversing)</option>
+            <option>Mechanical die bolts</option>
+            <option>None</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Cooling Water Supply Temp <span class="field-unit">°C</span></label>
+          <input type="number" name="cooling_water_temp" placeholder="e.g. 15" step="1" min="5" max="30">
+          <span class="field-hint">Relevant for IBC &amp; chilled air; affects frost line height</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Cooling Water Flow Rate <span class="field-unit">m³/h</span></label>
+          <input type="number" name="cooling_water_flow" placeholder="e.g. 12" step="0.5" min="0">
+          <span class="field-hint">Total circuit flow rate</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LINE CONFIG -->
+  <div class="section">
+    <div class="section-header">
+      <div class="sh-icon ic-amber">📐</div>
+      <div class="sh-meta"><div class="sh-name">Line Configuration</div><div class="sh-desc">working width · film range · speed · flattening ratio · corona · haul-off · slitting</div></div>
+      <span class="sh-count">12 fields</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4">
+        <div class="field">
+          <label class="field-label">Working Width <span class="req">*</span> <span class="field-unit">mm</span></label>
+          <input type="number" name="working_width_mm" placeholder="e.g. 2600" step="10" required>
+        </div>
+        <div class="field">
+          <label class="field-label">Film Width Range <span class="field-unit">mm</span></label>
+          <div class="range-group">
+            <input type="number" name="film_width_min" placeholder="Min" step="10">
+            <span class="range-sep">→</span>
+            <input type="number" name="film_width_max" placeholder="Max" step="10">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Max Line Speed <span class="req">*</span> <span class="field-unit">m/min</span></label>
+          <input type="number" name="max_speed_mpm" placeholder="e.g. 150" step="1" required>
+        </div>
+        <div class="field">
+          <label class="field-label">Max Total Melt Capacity <span class="field-unit">kg/h</span></label>
+          <input type="number" name="max_melt_kgh" placeholder="e.g. 1180" step="10">
+        </div>
+        <div class="field">
+          <label class="field-label">Film Gauge Range <span class="field-unit">µm</span></label>
+          <div class="range-group">
+            <input type="number" name="gauge_min_um" placeholder="Min" step="1">
+            <span class="range-sep">→</span>
+            <input type="number" name="gauge_max_um" placeholder="Max" step="5">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Flattening Ratio Range</label>
+          <div class="range-group">
+            <input type="number" name="flat_ratio_min" placeholder="Min" step="0.05" min="1">
+            <span class="range-sep">→</span>
+            <input type="number" name="flat_ratio_max" placeholder="Max" step="0.05" max="8">
+          </div>
+          <span class="field-hint">Used to calculate lay-flat width from die ⌀ &amp; BUR</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Haul-off Type</label>
+          <select name="haul_off_type">
+            <option value="">Select…</option>
+            <option>Reversing (360° oscillating)</option>
+            <option>Fixed (non-reversing)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Screen Pack Changer</label>
+          <select name="screen_pack">
+            <option value="">Select…</option>
+            <option>Hydraulic — discontinuous</option>
+            <option>Hydraulic — continuous</option>
+            <option>Manual</option>
+            <option>None</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-3 mt12">
+        <div class="field">
+          <label class="field-label">Corona Treater</label>
+          <div class="toggle-row"><span class="toggle-text">Corona treater fitted</span><label class="toggle"><input type="checkbox" name="corona_fitted" id="coronaToggle" onchange="toggleCorona()"><span class="tslider"></span></label></div>
+        </div>
+        <div class="field" id="coronaSides">
+          <label class="field-label">Treatment Sides</label>
+          <select name="corona_sides">
+            <option value="">N/A</option>
+            <option>1-side</option>
+            <option>2-side</option>
+            <option>4-side (inside + outside)</option>
+          </select>
+        </div>
+        <div class="field" id="coronaPower">
+          <label class="field-label">Corona Power Output <span class="field-unit">kW</span></label>
+          <input type="text" name="corona_power_kw" placeholder="e.g. 2×20 kW">
+        </div>
+        <div class="field">
+          <label class="field-label">Slitting Blade Type</label>
+          <select name="slitting_type">
+            <option value="">Select…</option>
+            <option>Shear cut (2-roller)</option>
+            <option>Air blade (low-wear)</option>
+            <option>Razor (score cut)</option>
+            <option>Hot wire</option>
+            <option>No slitter</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Slitters per Winding Station</label>
+          <input type="number" name="slitter_count" placeholder="e.g. 4" step="1" min="0" max="16">
+        </div>
+        <div class="field">
+          <label class="field-label">Anti-static System</label>
+          <div class="toggle-row"><span class="toggle-text">Anti-static bars / brushes fitted</span><label class="toggle"><input type="checkbox" name="antistatic"><span class="tslider"></span></label></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WINDER -->
+  <div class="section">
+    <div class="section-header">
+      <div class="sh-icon ic-purple">🎞️</div>
+      <div class="sh-meta"><div class="sh-name">Winder</div><div class="sh-desc">type · roll specs · core diameters · tension range · drive modes</div></div>
+      <span class="sh-count">8 fields</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4">
+        <div class="field">
+          <label class="field-label">Winder Type</label>
+          <select name="winder_type">
+            <option value="">Select…</option>
+            <option>Single winder — surface drive</option>
+            <option>Dual winder — back-to-back (surface)</option>
+            <option>Dual winder — surface + center</option>
+            <option>Turret winder</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Winder Model</label>
+          <input type="text" name="winder_model" placeholder="e.g. FILMATIC II S">
+        </div>
+        <div class="field">
+          <label class="field-label">Max Roll Diameter <span class="field-unit">mm</span></label>
+          <input type="number" name="max_roll_dia_mm" placeholder="e.g. 1200" step="50">
+        </div>
+        <div class="field">
+          <label class="field-label">Max Roll Weight <span class="field-unit">kg</span></label>
+          <input type="number" name="max_roll_weight_kg" placeholder="e.g. 2500" step="50">
+        </div>
+        <div class="field">
+          <label class="field-label">Core Inner Diameter(s)</label>
+          <input type="text" name="core_id" placeholder='e.g. 76 mm (3") / 152 mm (6")'>
+        </div>
+        <div class="field">
+          <label class="field-label">Web Tension Range <span class="field-unit">N</span></label>
+          <div class="range-group">
+            <input type="number" name="tension_min_n" placeholder="Min" step="5">
+            <span class="range-sep">→</span>
+            <input type="number" name="tension_max_n" placeholder="Max" step="10">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Gap Winding Mode</label>
+          <div class="toggle-row"><span class="toggle-text">Gap winding available</span><label class="toggle"><input type="checkbox" name="gap_winding"><span class="tslider"></span></label></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Center Drive</label>
+          <div class="toggle-row"><span class="toggle-text">Center drive fitted</span><label class="toggle"><input type="checkbox" name="center_drive"><span class="tslider"></span></label></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPERATIONAL HISTORY -->
+  <div class="section">
+    <div class="section-header">
+      <div class="sh-icon ic-rose">📋</div>
+      <div class="sh-meta"><div class="sh-name">Operational History <span class="opt-tag" style="margin-left:4px;">Optional</span></div><div class="sh-desc">typical outputs · last overhaul · known constraints · notes</div></div>
+      <span class="sh-count">7 fields</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-4">
+        <div class="field">
+          <label class="field-label">Typical LDPE Output <span class="field-unit">kg/h</span></label>
+          <input type="number" name="typical_ldpe_kgh" placeholder="e.g. 900" step="10">
+        </div>
+        <div class="field">
+          <label class="field-label">Typical LLDPE Output <span class="field-unit">kg/h</span></label>
+          <input type="number" name="typical_lldpe_kgh" placeholder="e.g. 720" step="10">
+        </div>
+        <div class="field">
+          <label class="field-label">Typical HDPE Output <span class="field-unit">kg/h</span></label>
+          <input type="number" name="typical_hdpe_kgh" placeholder="e.g. 850" step="10">
+          <span class="field-hint">HDPE-grade throughput for stiffness film runs</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Typical mLLDPE Output <span class="field-unit">kg/h</span></label>
+          <input type="number" name="typical_mlldpe_kgh" placeholder="e.g. 650" step="10">
+          <span class="field-hint">Metallocene grades (higher back-pressure)</span>
+        </div>
+      </div>
+      <div class="grid-3 mt12">
+        <div class="field">
+          <label class="field-label">Last Screw Change / Major Overhaul</label>
+          <input type="number" name="last_overhaul_year" placeholder="e.g. 2023" min="1990" max="2035">
+          <span class="field-hint">Year of last significant mechanical intervention</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Known Problem Grades</label>
+          <input type="text" name="problem_grades" placeholder="e.g. high-MFI mLLDPE">
+        </div>
+        <div class="field">
+          <!-- spacer -->
+        </div>
+      </div>
+      <div class="field mt12">
+        <label class="field-label">Machine Notes / Service History <span class="opt-tag">Optional</span></label>
+        <textarea name="machine_notes" placeholder="Screw wear, bearing changes, known torque limitations, recurring issues, recent service notes…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="submit-area">
+    <button type="button" class="btn btn-ghost" onclick="resetForm()">Clear All</button>
+    <button type="button" class="btn btn-primary" onclick="saveForm()">Save Line Card →</button>
+  </div>
+
+</form>
+</div>
+
+<script>
+const LAYER_CONFIGS = {
+  1: [{ id:'A', role:'Single layer', color:'#2563eb', bg:'#dbeafe' }],
+  3: [
+    { id:'A', role:'Outer layer', color:'#2563eb', bg:'#dbeafe' },
+    { id:'B', role:'Middle layer (core)', color:'#059669', bg:'#d1fae5' },
+    { id:'C', role:'Inner layer', color:'#2563eb', bg:'#dbeafe' }
+  ],
+  5: [
+    { id:'A', role:'Outer layer', color:'#2563eb', bg:'#dbeafe' },
+    { id:'B', role:'Outer tie layer', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'C', role:'Core layer', color:'#059669', bg:'#d1fae5' },
+    { id:'D', role:'Inner tie layer', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'E', role:'Inner layer', color:'#2563eb', bg:'#dbeafe' }
+  ],
+  7: [
+    { id:'A', role:'Outer layer', color:'#2563eb', bg:'#dbeafe' },
+    { id:'B', role:'Outer tie', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'C', role:'Outer barrier', color:'#d97706', bg:'#fef3c7' },
+    { id:'D', role:'Core layer', color:'#059669', bg:'#d1fae5' },
+    { id:'E', role:'Inner barrier', color:'#d97706', bg:'#fef3c7' },
+    { id:'F', role:'Inner tie', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'G', role:'Inner layer', color:'#2563eb', bg:'#dbeafe' }
+  ],
+  9: [
+    { id:'A', role:'Outer layer', color:'#2563eb', bg:'#dbeafe' },
+    { id:'B', role:'Outer tie 1', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'C', role:'Outer barrier', color:'#d97706', bg:'#fef3c7' },
+    { id:'D', role:'Outer tie 2', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'E', role:'Core layer', color:'#059669', bg:'#d1fae5' },
+    { id:'F', role:'Inner tie 1', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'G', role:'Inner barrier', color:'#d97706', bg:'#fef3c7' },
+    { id:'H', role:'Inner tie 2', color:'#7c3aed', bg:'#ede9fe' },
+    { id:'I', role:'Inner layer', color:'#2563eb', bg:'#dbeafe' }
+  ]
+};
+
+const SLOT_COLORS = ['#2563eb','#059669','#d97706','#7c3aed','#db2777','#0891b2','#65a30d','#ea580c'];
+const SCREW_OPTIONS = ['Conventional single-flight','Barrier flighted (LT)','High-shear mixing','LLDPE-optimised barrier','Metering + mixing section'];
+
+let currentLayerCount = 3;
+let componentCounts = {};
+
+function buildLayers(n) {
+  currentLayerCount = n;
+  const layers = LAYER_CONFIGS[n];
+
+  // Diagram
+  const diag = document.getElementById('layerDiagram');
+  diag.innerHTML = `<span class="ld-label">Bubble cross-section:</span>`;
+  layers.forEach(l => {
+    const bar = document.createElement('div');
+    bar.className = 'ld-bar';
+    bar.style.background = l.color;
+    bar.textContent = l.id;
+    diag.appendChild(bar);
+  });
+
+  // Cards
+  const container = document.getElementById('layersContainer');
+  container.innerHTML = '';
+  layers.forEach((layer, idx) => {
+    if (!componentCounts[layer.id]) componentCounts[layer.id] = 4;
+    const card = document.createElement('div');
+    card.className = 'layer-card';
+    card.id = `lc-${layer.id}`;
+    card.style.animationDelay = `${idx * 0.06}s`;
+    card.innerHTML = buildLayerCardHTML(layer, idx, n);
+    container.appendChild(card);
+  });
+}
+
+function buildLayerCardHTML(layer, idx, total) {
+  const n = componentCounts[layer.id] || 4;
+  const screwOpts = SCREW_OPTIONS.map(t => `<option>${t}</option>`).join('');
+  const countBtns = [1,2,3,4,5,6,7,8].map(i =>
+    `<button type="button" class="comp-count-btn ${i===n?'active':''}" onclick="setCompCount('${layer.id}',${i})">${i}</button>`
+  ).join('');
+
+  return `
+    <div class="lc-header">
+      <span class="lc-badge" style="color:${layer.color};border-color:${layer.bg};background:${layer.bg};">Extruder ${layer.id}</span>
+      <div class="lc-title">Layer ${idx+1} of ${total}</div>
+      <div class="lc-role">${layer.role}</div>
+    </div>
+    <div class="lc-body">
+      <div class="sub-div">Extruder Specifications</div>
+      <div class="ext-spec-grid">
+        <div class="field"><label class="field-label">Model / Size</label><input type="text" name="ext_${layer.id}_model" placeholder="e.g. 70.30D"></div>
+        <div class="field"><label class="field-label">Screw ⌀ <span class="field-unit">mm</span></label><input type="number" name="ext_${layer.id}_dia" placeholder="e.g. 70" step="1" min="20" max="300"></div>
+        <div class="field"><label class="field-label">L/D Ratio</label><input type="number" name="ext_${layer.id}_ld" placeholder="e.g. 30" step="0.5"></div>
+        <div class="field"><label class="field-label">Motor Power <span class="field-unit">kW</span></label><input type="number" name="ext_${layer.id}_power" placeholder="e.g. 80" step="5"></div>
+        <div class="field"><label class="field-label">Max Speed <span class="field-unit">RPM</span></label><input type="number" name="ext_${layer.id}_rpm" placeholder="e.g. 180" step="5"></div>
+        <div class="field"><label class="field-label">Max Head Pressure <span class="field-unit">bar</span></label><input type="number" name="ext_${layer.id}_pressure" placeholder="e.g. 350" step="10"></div>
+        <div class="field"><label class="field-label">Max Output <span class="field-unit">kg/h</span></label><input type="number" name="ext_${layer.id}_max_kgh" placeholder="e.g. 320" step="5" min="0"><span class="field-hint" style="font-size:9px;color:#9ca3af;font-family:monospace;">Needed for per-layer ratio calculations</span></div>
+        <div class="field"><label class="field-label">Screw Type</label><select name="ext_${layer.id}_screw_type"><option value="">Select…</option>${screwOpts}</select></div>
+        <div class="field"><label class="field-label">Compression Ratio</label><input type="number" name="ext_${layer.id}_cr" placeholder="e.g. 3.0" step="0.1" min="1.5" max="5"></div>
+        <div class="field"><label class="field-label">Barrel Temp Zones</label><input type="number" name="ext_${layer.id}_zones" placeholder="e.g. 4" step="1" min="1" max="12"><span class="field-hint" style="font-size:9px;color:#9ca3af;font-family:monospace;">heating + cooling zones</span></div>
+      </div>
+      <div class="grid-3 mt12" style="margin-bottom:16px;">
+        <div class="field"><label class="field-label">Grooved Feed Bushing</label><div class="toggle-row"><span class="toggle-text">Bi-metallic grooved feed</span><label class="toggle"><input type="checkbox" name="ext_${layer.id}_grooved"><span class="tslider"></span></label></div></div>
+        <div class="field"><label class="field-label">LLDPE-Optimised Screw</label><div class="toggle-row"><span class="toggle-text">LLDPE-compatible geometry</span><label class="toggle"><input type="checkbox" name="ext_${layer.id}_lldpe_screw"><span class="tslider"></span></label></div></div>
+      </div>
+
+      <div class="sub-div sub-div-mt">Material Components — Dosing Slots on this Extruder</div>
+      <div class="comp-header">
+        <span class="comp-header-label">Number of material inlets:</span>
+        <div class="comp-count-selector" id="csel_${layer.id}">${countBtns}</div>
+      </div>
+      <div class="comp-slots-grid" id="cslots_${layer.id}">${buildSlotsHTML(layer.id, n)}</div>
+    </div>
+  `;
+}
+
+function buildSlotsHTML(layerId, n) {
+  let html = '';
+  for (let i = 1; i <= n; i++) {
+    const color = SLOT_COLORS[(i-1) % SLOT_COLORS.length];
+    html += `
+      <div class="comp-slot">
+        <div class="slot-label"><span class="slot-dot" style="background:${color}"></span>Slot ${i}</div>
+        <div>
+          <div class="slot-field-label">Material / Purpose</div>
+          <input type="text" name="ext_${layerId}_s${i}_name" placeholder="e.g. LLDPE, MB, Slip" style="font-size:12px;">
+        </div>
+        <div>
+          <div class="slot-field-label">Dosing Range (%)</div>
+          <div class="range-group">
+            <input type="number" name="ext_${layerId}_s${i}_min" placeholder="Min" step="0.5" min="0" max="100" style="font-size:12px;padding:7px 8px;">
+            <span class="range-sep">—</span>
+            <input type="number" name="ext_${layerId}_s${i}_max" placeholder="Max" step="0.5" min="0" max="100" style="font-size:12px;padding:7px 8px;">
+          </div>
+        </div>
+        <div>
+          <div class="slot-field-label">Conveying System</div>
+          <select name="ext_${layerId}_s${i}_conv" style="font-size:12px;padding:7px 10px;">
+            <option value="">—</option>
+            <option>Vacuum (pneumatic)</option>
+            <option>Gravimetric feeder</option>
+            <option>Volumetric feeder</option>
+            <option>Manual hopper</option>
+          </select>
+        </div>
+      </div>
+    `;
+  }
+  return html;
+}
+
+function setCompCount(layerId, n) {
+  componentCounts[layerId] = n;
+  document.getElementById(`csel_${layerId}`).querySelectorAll('.comp-count-btn').forEach((b,i) => {
+    b.classList.toggle('active', i+1 === n);
+  });
+  document.getElementById(`cslots_${layerId}`).innerHTML = buildSlotsHTML(layerId, n);
+}
+
+function toggleCorona() {
+  const on = document.getElementById('coronaToggle').checked;
+  ['coronaSides','coronaPower'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.opacity = on ? '1' : '0.4';
+    el.querySelectorAll('input,select').forEach(f => f.disabled = !on);
+  });
+}
+
+function resetForm() {
+  if (confirm('Clear all data?')) {
+    document.getElementById('mainForm').reset();
+    buildLayers(currentLayerCount);
+    toggleCorona();
+  }
+}
+
+function saveForm() {
+  const form = document.getElementById('mainForm');
+  const req = form.querySelectorAll('[required]');
+  let valid = true;
+  req.forEach(el => {
+    el.style.borderColor = '';
+    el.style.boxShadow = '';
+    if (!el.value.trim()) {
+      el.style.borderColor = '#ef4444';
+      el.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.1)';
+      valid = false;
+    }
+  });
+  if (!valid) { alert('Please fill in the required fields.'); return; }
+
+  const data = {};
+  new FormData(form).forEach((v, k) => data[k] = v);
+  form.querySelectorAll('input[type=checkbox]').forEach(cb => { data[cb.name] = cb.checked; });
+  data._layer_count = currentLayerCount;
+  data._component_counts = { ...componentCounts };
+
+  console.log('Line Card:', JSON.stringify(data, null, 2));
+  alert(`✓ Line card saved!\n\nLine: ${data.line_id || '—'}\nManufacturer: ${data.manufacturer || '—'}\nLayers: ${currentLayerCount}\nDie: ⌀${data.die_diameter_mm || '—'} mm\n\nFull JSON logged to console.`);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildLayers(3);
+  toggleCorona();
+});
+</script>
+</body>
+</html>

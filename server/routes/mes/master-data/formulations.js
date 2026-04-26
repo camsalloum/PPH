@@ -179,6 +179,17 @@ module.exports = function (router) {
       const catCheck = await pool.query('SELECT id FROM mes_item_categories WHERE id=$1 AND is_active=true', [parseInt(category_id, 10)]);
       if (!catCheck.rows.length) return res.status(400).json({ success: false, error: 'Invalid category_id' });
 
+      // Free unique slots from previously deleted rows with the same logical key.
+      await pool.query(`
+        UPDATE mes_formulations
+           SET name = CONCAT(LEFT(name, 220), ' [deleted#', id::text, ']'),
+               updated_at = NOW()
+         WHERE status = 'deleted'
+           AND category_id = $1
+           AND LOWER(TRIM(catlinedesc)) = LOWER(TRIM($2))
+           AND LOWER(TRIM(name)) = LOWER(TRIM($3))
+      `, [category_id, catlinedesc, name]);
+
       // Auto-increment version for same (category, group, name)
       const { rows: vRows } = await pool.query(`
         SELECT COALESCE(MAX(version), 0) AS max_version
@@ -460,6 +471,17 @@ module.exports = function (router) {
       const targetName = asNewVersion ? source.name : String(new_name || '').trim();
       if (!targetName) return res.status(400).json({ success: false, error: 'new_name is required when as_new_version is false' });
 
+      // Free unique slots from previously deleted rows with the same logical key.
+      await pool.query(`
+        UPDATE mes_formulations
+           SET name = CONCAT(LEFT(name, 220), ' [deleted#', id::text, ']'),
+               updated_at = NOW()
+         WHERE status = 'deleted'
+           AND category_id = $1
+           AND LOWER(TRIM(catlinedesc)) = LOWER(TRIM($2))
+           AND LOWER(TRIM(name)) = LOWER(TRIM($3))
+      `, [source.category_id, source.catlinedesc, targetName]);
+
       // Determine version
       const { rows: vRows } = await pool.query(`
         SELECT COALESCE(MAX(version), 0) AS max_version
@@ -500,6 +522,9 @@ module.exports = function (router) {
       }
     } catch (err) {
       logger.error('POST /formulations/:id/duplicate error:', err);
+      if (err.code === '23505' && err.constraint === 'uq_formulation_version') {
+        return res.status(409).json({ success: false, error: 'A newer version was created in parallel. Please retry duplicate.' });
+      }
       res.status(500).json({ success: false, error: 'Failed to duplicate formulation' });
     }
   });
@@ -533,7 +558,15 @@ module.exports = function (router) {
       }
 
       await pool.query(
-        `UPDATE mes_formulations SET status='deleted', is_default=false, updated_at=NOW() WHERE id=$1`, [id]
+        `
+          UPDATE mes_formulations
+             SET status='deleted',
+                 is_default=false,
+                 name = CONCAT(LEFT(name, 220), ' [deleted#', id::text, ']'),
+                 updated_at=NOW()
+           WHERE id=$1
+        `,
+        [id]
       );
       res.json({ success: true });
     } catch (err) {
@@ -560,9 +593,10 @@ module.exports = function (router) {
     const INVENTORY_ONLY_CLASSES = new Set(['trading', 'consumables']);
 
     try {
-      const catId  = parseInt(req.query.category_id, 10) || null;
-      const search = String(req.query.search || '').trim();
-      const formId = parseInt(req.params.id, 10);
+      const catId       = parseInt(req.query.category_id, 10) || null;
+      const catlinedesc = String(req.query.catlinedesc || '').trim();
+      const search      = String(req.query.search || '').trim();
+      const formId      = parseInt(req.params.id, 10);
 
       // Already-used item_keys in this formulation (to gray out in picker)
       const { rows: usedRows } = await pool.query(
@@ -602,6 +636,17 @@ module.exports = function (router) {
       const safeTable = SPEC_TABLE_WHITELIST.has(spec_table) ? spec_table : null;
       const matClass  = String(material_class || '').toLowerCase();
 
+      // ── Step 2b: no catlinedesc yet → return group list ──────────────────────
+      if (!catlinedesc) {
+        const { rows: groups } = await pool.query(`
+          SELECT catlinedesc, display_name
+          FROM mes_item_category_groups
+          WHERE category_id = $1 AND is_active = true
+          ORDER BY catlinedesc
+        `, [catId]);
+        return res.json({ success: true, step: 'groups', data: groups });
+      }
+
       // ── Resins: sourced from mes_material_tds ───────────────────────────────
       if (matClass === 'resins') {
         const params = [];
@@ -613,6 +658,8 @@ module.exports = function (router) {
             OR t.brand_grade    ILIKE $${params.length}
           )`;
         }
+        params.push(catlinedesc);
+        whereClause += ` AND LOWER(TRIM(t.cat_desc)) = LOWER(TRIM($${params.length}))`;
 
         const { rows: items } = await pool.query(`
           SELECT
@@ -677,6 +724,8 @@ module.exports = function (router) {
             OR s.material_key   ILIKE $${params.length}
           )`;
         }
+        params.push(catlinedesc);
+        whereClause += ` AND LOWER(TRIM(s.catlinedesc)) = LOWER(TRIM($${params.length}))`;
 
         const { rows: items } = await pool.query(`
           SELECT
@@ -709,6 +758,36 @@ module.exports = function (router) {
           ORDER BY mainitem
         `, params);
 
+        // ── If spec table is empty, fall back to Oracle items ──────────────
+        if (items.length === 0) {
+          const oracleParams = [catId, catlinedesc];
+          let oracleWhere = 'AND LOWER(TRIM(r.catlinedesc)) = LOWER(TRIM($2))';
+          if (search) {
+            oracleParams.push(`%${search}%`);
+            oracleWhere += ` AND (r.mainitem ILIKE $${oracleParams.length} OR r.maindescription ILIKE $${oracleParams.length})`;
+          }
+          const { rows: oracleItems } = await pool.query(`
+            SELECT
+              LOWER(TRIM(r.mainitem))  AS item_key,
+              TRIM(r.mainitem)         AS mainitem,
+              TRIM(r.maindescription)  AS maindescription,
+              TRIM(r.catlinedesc)      AS catlinedesc,
+              NULL::text               AS status,
+              NULL::numeric            AS tds_solids_pct,
+              COALESCE(SUM(r.mainitemstock * r.maincost) / NULLIF(SUM(r.mainitemstock), 0), 0) AS stock_cost_wa,
+              COALESCE(SUM(r.purchaseprice * r.pendingorderqty) / NULLIF(SUM(r.pendingorderqty), 0), 0) AS purchase_cost_wa
+            FROM fp_actualrmdata r
+            JOIN mes_item_category_groups g
+              ON LOWER(TRIM(g.catlinedesc)) = LOWER(TRIM(r.catlinedesc))
+             AND g.is_active = true AND g.is_custom = false AND g.category_id = $1
+            WHERE 1=1 ${oracleWhere}
+            GROUP BY LOWER(TRIM(r.mainitem)), TRIM(r.mainitem), TRIM(r.maindescription), TRIM(r.catlinedesc)
+            ORDER BY TRIM(r.mainitem)
+          `, oracleParams);
+          const enrichedOracle = oracleItems.map(row => ({ ...row, already_in_formulation: usedKeys.has(row.item_key) }));
+          return res.json({ success: true, step: 'items', data: enrichedOracle });
+        }
+
         const enriched = items.map(row => ({
           ...row,
           already_in_formulation: usedKeys.has(row.item_key),
@@ -717,8 +796,8 @@ module.exports = function (router) {
       }
 
       // ── Fallback: mes_non_resin_material_specs filtered by material_class ──
-      const params = [matClass];
-      let whereClause = `WHERE LOWER(TRIM(s.material_class)) = $1`;
+      const params = [matClass, catlinedesc];
+      let whereClause = `WHERE LOWER(TRIM(s.material_class)) = $1 AND LOWER(TRIM(s.catlinedesc)) = LOWER(TRIM($2))`;
       if (search) {
         params.push(`%${search}%`);
         whereClause += ` AND (
@@ -825,6 +904,83 @@ module.exports = function (router) {
       success: false,
       error: 'Use /formulations/by-group?category_id=&catlinedesc= to list formulations',
     });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Component Roles CRUD  —  /component-roles
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // GET /component-roles?material_class=adhesives
+  router.get('/component-roles', authenticate, async (req, res) => {
+    try {
+      const mc = String(req.query.material_class || '').trim().toLowerCase() || null;
+      const params = [];
+      let where = 'WHERE is_active = true';
+      if (mc) { params.push(mc); where += ` AND LOWER(TRIM(material_class)) = $${params.length}`; }
+      const { rows } = await pool.query(
+        `SELECT id, material_class, value, label, sort_order FROM mes_component_roles ${where} ORDER BY material_class, sort_order, label`,
+        params
+      );
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      logger.error('GET /component-roles error:', err);
+      res.status(500).json({ success: false, error: 'Failed to fetch roles' });
+    }
+  });
+
+  // POST /component-roles
+  router.post('/component-roles', authenticate, async (req, res) => {
+    try {
+      const { material_class, value, label, sort_order } = req.body;
+      if (!material_class || !value || !label)
+        return res.status(400).json({ success: false, error: 'material_class, value and label are required' });
+      const slug = String(value).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const { rows } = await pool.query(
+        `INSERT INTO mes_component_roles (material_class, value, label, sort_order)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (material_class, value) DO UPDATE
+           SET label=$3, sort_order=$4, is_active=true, updated_at=NOW()
+         RETURNING id, material_class, value, label, sort_order`,
+        [String(material_class).toLowerCase().trim(), slug, String(label).trim(), parseInt(sort_order, 10) || 0]
+      );
+      res.json({ success: true, data: rows[0] });
+    } catch (err) {
+      logger.error('POST /component-roles error:', err);
+      res.status(500).json({ success: false, error: 'Failed to create role' });
+    }
+  });
+
+  // PUT /component-roles/:id
+  router.put('/component-roles/:id', authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { label, sort_order } = req.body;
+      if (!label) return res.status(400).json({ success: false, error: 'label is required' });
+      const { rows } = await pool.query(
+        `UPDATE mes_component_roles SET label=$1, sort_order=$2, updated_at=NOW() WHERE id=$3
+         RETURNING id, material_class, value, label, sort_order`,
+        [String(label).trim(), parseInt(sort_order, 10) || 0, id]
+      );
+      if (!rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+      res.json({ success: true, data: rows[0] });
+    } catch (err) {
+      logger.error('PUT /component-roles/:id error:', err);
+      res.status(500).json({ success: false, error: 'Failed to update role' });
+    }
+  });
+
+  // DELETE /component-roles/:id  (soft delete)
+  router.delete('/component-roles/:id', authenticate, async (req, res) => {
+    try {
+      await pool.query(
+        `UPDATE mes_component_roles SET is_active=false, updated_at=NOW() WHERE id=$1`,
+        [parseInt(req.params.id, 10)]
+      );
+      res.json({ success: true });
+    } catch (err) {
+      logger.error('DELETE /component-roles/:id error:', err);
+      res.status(500).json({ success: false, error: 'Failed to delete role' });
+    }
   });
 
 };

@@ -46,15 +46,17 @@
 
 ## Session Protocol
 
-**Start** — read `docs/LIVE_STATE.md` for current project state. Or use `/session-manager` for a guided briefing.
+**Start** — read `docs/PROJECT_MAP.md` FIRST (canonical A→Z map: architecture, MES, PDF parser, Item Master / Costing flow, code-quality audit, Live Issues Board), then `docs/LIVE_STATE.md` for current state. Or use `/session-manager` for a guided briefing.
 
-**End** — use `/session-manager` to update `docs/LIVE_STATE.md` + append `docs/SESSION_LOG.md`. Or do it manually:
+**End** — **manual only**. Do NOT auto-update memory after every change. When the owner says **"update memory"**:
 1. Append one row to `docs/SESSION_LOG.md`
-2. Update `docs/TECH_DEBT.md` if new issues found
-3. Update `docs/API_CONTRACTS.md` if endpoints changed
-4. Update `docs/LIVE_STATE.md` module table + active work section
+2. Update affected sections of `docs/PROJECT_MAP.md` (esp. §13 Live Issues Board)
+3. Update `docs/TECH_DEBT.md` if new issues found
+4. Update `docs/API_CONTRACTS.md` if endpoints changed
+5. Update `docs/LIVE_STATE.md` module table + active work section
 
 ## Deep References
+- `docs/PROJECT_MAP.md` — **READ FIRST EVERY SESSION**. Canonical A→Z system map with audits.
 - `AGENT.md` — full rules (17 sections, all agents)
 - `docs/PROJECT_CONTEXT.md` — architecture, folder structure, roles
 - `docs/TECH_DEBT.md` — 33 tracked issues (12 resolved)

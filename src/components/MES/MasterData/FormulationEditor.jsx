@@ -38,38 +38,28 @@ import {
   SearchOutlined,
   ArrowLeftOutlined,
   CopyOutlined,
+  SettingOutlined,
+  EditOutlined,
+  CheckOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
 
 const { Text } = Typography;
 const API = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
-const ROLE_OPTIONS_BY_CLASS = {
-  adhesives: [
-    { value: 'resin', label: 'Resin' },
-    { value: 'hardener', label: 'Hardener' },
-    { value: 'catalyst', label: 'Catalyst' },
-    { value: 'solvent', label: 'Solvent' },
-    { value: 'other', label: 'Other' },
-  ],
-  inks: [
-    { value: 'pigment', label: 'Pigment' },
-    { value: 'binder', label: 'Binder' },
-    { value: 'solvent', label: 'Solvent' },
-    { value: 'additive', label: 'Additive' },
-    { value: 'other', label: 'Other' },
-  ],
-};
-const GENERIC_ROLE_OPTIONS = [
-  { value: 'base', label: 'Base' },
-  { value: 'additive', label: 'Additive' },
-  { value: 'diluent', label: 'Diluent' },
-  { value: 'other', label: 'Other' },
+// Fallback if DB roles not yet loaded
+const FALLBACK_ROLES = [
+  { value: 'resin',    label: 'Resin'    },
+  { value: 'hardener', label: 'Hardener' },
+  { value: 'other',    label: 'Other'    },
 ];
 
-function getRoleOptions(materialClass) {
-  return ROLE_OPTIONS_BY_CLASS[String(materialClass || '').toLowerCase()] || GENERIC_ROLE_OPTIONS;
-}
+// Cycling color palette for role badges
+const ROLE_PALETTE = ['#3B82F6','#F59E0B','#10B981','#A78BFA','#F87171','#06B6D4','#84CC16','#F97316'];
+const COMPARE_MAX = 5;
+const COMPARE_LABELS = ['A', 'B', 'C', 'D', 'E'];
+const COMPARE_COLORS = ['blue', 'purple', 'geekblue', 'magenta', 'cyan'];
 
 function computeTotals(components) {
   const comps = Array.isArray(components) ? components : [];
@@ -129,12 +119,47 @@ export default function FormulationsTab({
   const [createNotes, setCreateNotes] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
 
-  // ── Component picker — 2-step: category → items from spec table ─────────
+  // ── Duplicate modal ──────────────────────────────────────────────────────
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupSourceId, setDupSourceId] = useState(null);
+  const [dupSourceName, setDupSourceName] = useState('');
+  const [dupMode, setDupMode] = useState('version'); // 'version' | 'name'
+  const [dupName, setDupName] = useState('');
+  const [dupLoading, setDupLoading] = useState(false);
+
+  // ── Comparator (2-5 formulas) ──────────────────────────────────────────
+  const [compareSelectedIds, setCompareSelectedIds] = useState([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareTargets, setCompareTargets] = useState([]);
+  const [compareRows, setCompareRows] = useState([]);
+  const [compareDiffOnly, setCompareDiffOnly] = useState(false);
+
+  // ── Inline rename ─────────────────────────────────────────────────────────
+  const [renamingName, setRenamingName] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameLoading, setRenameLoading] = useState(false);
+
+  // ── Component picker — 3-step: category → group (catlinedesc) → items ────
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerCatId, setPickerCatId] = useState(null);    // step 1
-  const [pickerItemKey, setPickerItemKey] = useState(null); // step 2
+  const [pickerCatId, setPickerCatId] = useState(null);      // step 1
+  const [pickerGroupKey, setPickerGroupKey] = useState(null); // step 2 (catlinedesc)
+  const [pickerGroups, setPickerGroups] = useState([]);
+  const [pickerGroupsLoading, setPickerGroupsLoading] = useState(false);
+  const [pickerItemKey, setPickerItemKey] = useState(null);   // step 3
   const [pickerItems, setPickerItems] = useState([]);
   const [pickerItemsLoading, setPickerItemsLoading] = useState(false);
+
+  // ── Replace existing item component (dynamic candidates) ─────────────────
+  const [replaceOpen, setReplaceOpen] = useState(false);
+  const [replaceRowIdx, setReplaceRowIdx] = useState(null);
+  const [replaceCatId, setReplaceCatId] = useState(null);
+  const [replaceGroupKey, setReplaceGroupKey] = useState(null);
+  const [replaceGroups, setReplaceGroups] = useState([]);
+  const [replaceGroupsLoading, setReplaceGroupsLoading] = useState(false);
+  const [replaceItemKey, setReplaceItemKey] = useState(null);
+  const [replaceItems, setReplaceItems] = useState([]);
+  const [replaceItemsLoading, setReplaceItemsLoading] = useState(false);
 
   // ── Sub-formulation picker ────────────────────────────────────────────────
   const [subPickerOpen, setSubPickerOpen] = useState(false);
@@ -146,10 +171,47 @@ export default function FormulationsTab({
   // ── Quick estimate ────────────────────────────────────────────────────────
   const [quickGSM, setQuickGSM] = useState(3);
 
+  // ── Component roles (DB-driven) ──────────────────────────────────────────
+  const [roleOptions, setRoleOptions] = useState(FALLBACK_ROLES);
+  const [manageRolesOpen, setManageRolesOpen] = useState(false);
+  const [rolesEditing, setRolesEditing] = useState(null); // {id, label, sort_order} or null for new
+  const [rolesNewLabel, setRolesNewLabel] = useState('');
+  const [rolesNewValue, setRolesNewValue] = useState('');
+  const [rolesLoading, setRolesLoading] = useState(false);
+
+  const fetchRoles = useCallback(() => {
+    if (!materialClass) return;
+    const mc = String(materialClass).toLowerCase().trim();
+    // Try class-specific first, fallback to _default
+    axios.get(`${API}/api/mes/master-data/component-roles`, { headers, params: { material_class: mc } })
+      .then((res) => {
+        const rows = res.data.data || [];
+        if (rows.length > 0) {
+          setRoleOptions(rows.map(r => ({ value: r.value, label: r.label })));
+        } else {
+          // fallback to _default
+          return axios.get(`${API}/api/mes/master-data/component-roles`, { headers, params: { material_class: '_default' } })
+            .then((r2) => {
+              const def = r2.data.data || [];
+              setRoleOptions(def.length > 0 ? def.map(r => ({ value: r.value, label: r.label })) : FALLBACK_ROLES);
+            });
+        }
+      })
+      .catch(() => setRoleOptions(FALLBACK_ROLES));
+  }, [materialClass, headers]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fetchRoles(); }, [materialClass]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Derived ──────────────────────────────────────────────────────────────
-  const roleOptions = useMemo(() => getRoleOptions(materialClass), [materialClass]);
 
   const totals = useMemo(() => computeTotals(components), [components]);
+
+  // Maps role value → color (stable order from roleOptions)
+  const roleColorMap = useMemo(() => {
+    const map = {};
+    roleOptions.forEach((r, i) => { map[r.value] = ROLE_PALETTE[i % ROLE_PALETTE.length]; });
+    return map;
+  }, [roleOptions]);
 
   const quickEstimate = useMemo(() => {
     const deposit = Math.max(0, Number(quickGSM) || 0);
@@ -177,11 +239,32 @@ export default function FormulationsTab({
     }));
   }, [formulations]);
 
+  const compareDisplayRows = useMemo(
+    () => (compareDiffOnly ? compareRows.filter((r) => r.different) : compareRows),
+    [compareRows, compareDiffOnly]
+  );
+
+  const compareSlotById = useMemo(() => {
+    const map = new Map();
+    compareSelectedIds.forEach((id, idx) => {
+      map.set(Number(id), COMPARE_LABELS[idx] || `#${idx + 1}`);
+    });
+    return map;
+  }, [compareSelectedIds]);
+
+  useEffect(() => {
+    setCompareSelectedIds((prev) => {
+      const allowed = new Set((formulations || []).map((f) => f.id));
+      const next = prev.filter((id) => allowed.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [formulations]);
+
   // Item keys already in the BOM (to prevent duplicates)
   const existingItemKeys = useMemo(
     () => new Set(
       components
-        .filter((c) => c.component_type === 'item')
+        .filter((c) => c.component_type !== 'formulation')
         .map((c) => c.item_key)
         .filter(Boolean)
     ),
@@ -224,18 +307,44 @@ export default function FormulationsTab({
     }
   }, [catId, catlinedesc, headers, message]);
 
+  const handleRename = useCallback(async (oldName) => {
+    const newName = renameValue.trim();
+    if (!newName || newName === oldName) { setRenamingName(null); return; }
+    setRenameLoading(true);
+    try {
+      const versions = formulations.filter((f) => f.name === oldName && f.status !== 'active');
+      for (const f of versions) {
+        await axios.put(`${API}/api/mes/master-data/formulations/${f.id}`, { name: newName }, { headers });
+      }
+      await fetchList();
+      setRenamingName(null);
+      message.success('Renamed');
+    } catch (e) {
+      message.error(e.response?.data?.error || 'Rename failed');
+    } finally {
+      setRenameLoading(false);
+    }
+  }, [renameValue, formulations, headers, fetchList, message]);
+
   // Reset when group changes
   useEffect(() => {
     setFormulations([]);
     setActiveFormulation(null);
     setComponents([]);
     setDirty(false);
+    setCompareSelectedIds([]);
+    setCompareOpen(false);
+    setCompareTargets([]);
+    setCompareRows([]);
+    setCompareDiffOnly(false);
     fetchList();
   }, [catId, catlinedesc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── API: Open single formulation ─────────────────────────────────────────
   const openFormulation = useCallback(async (id) => {
     setDetailLoading(true);
+    // Scroll the modal body back to top so the sticky header is visible
+    document.querySelector('.mes-fullscreen-modal .ant-modal-body')?.scrollTo({ top: 0 });
     try {
       const res = await axios.get(`${API}/api/mes/master-data/formulations/${id}`, { headers });
       const data = res.data.data;
@@ -331,20 +440,176 @@ export default function FormulationsTab({
   }, [activeFormulation, components, headers, message, fetchList]);
 
   // ── API: Duplicate ────────────────────────────────────────────────────────
-  const handleDuplicate = useCallback(async (id, asNewVersion = true) => {
+  const handleDuplicate = useCallback(async (id, asNewVersion = true, newName = '') => {
     try {
+      const payload = { as_new_version: asNewVersion };
+      if (!asNewVersion) payload.new_name = String(newName || '').trim();
       const res = await axios.post(
         `${API}/api/mes/master-data/formulations/${id}/duplicate`,
-        { as_new_version: asNewVersion },
+        payload,
         { headers }
       );
       message.success('Formulation duplicated');
       await fetchList();
       openFormulation(res.data.data.id);
+      return res.data.data.id;
     } catch (err) {
       message.error(err.response?.data?.error || 'Duplicate failed');
+      return null;
     }
   }, [headers, message, fetchList, openFormulation]);
+
+  const openDuplicateModal = useCallback((id, currentName) => {
+    setDupSourceId(id);
+    setDupSourceName(String(currentName || ''));
+    setDupMode('version');
+    setDupName(String(currentName || ''));
+    setDupOpen(true);
+  }, []);
+
+  const confirmDuplicate = useCallback(async () => {
+    if (!dupSourceId) return;
+    if (dupMode === 'name' && !dupName.trim()) {
+      message.warning('Enter a name for the duplicated formulation');
+      return;
+    }
+    setDupLoading(true);
+    try {
+      const createdId = await handleDuplicate(dupSourceId, dupMode === 'version', dupName);
+      if (createdId) setDupOpen(false);
+    } finally {
+      setDupLoading(false);
+    }
+  }, [dupSourceId, dupMode, dupName, message, handleDuplicate]);
+
+  const toggleCompareSelection = useCallback((id) => {
+    const numId = Number(id);
+    if (compareSelectedIds.includes(numId)) {
+      setCompareSelectedIds(compareSelectedIds.filter((x) => x !== numId));
+      return;
+    }
+    if (compareSelectedIds.length >= COMPARE_MAX) {
+      message.info(`Select up to ${COMPARE_MAX} formulations to compare`);
+      return;
+    }
+    setCompareSelectedIds([...compareSelectedIds, numId]);
+  }, [compareSelectedIds, message]);
+
+  const openComparator = useCallback(async () => {
+    if (compareSelectedIds.length < 2 || compareSelectedIds.length > COMPARE_MAX) {
+      message.warning(`Pick 2 to ${COMPARE_MAX} formulations to compare`);
+      return;
+    }
+    setCompareLoading(true);
+    try {
+      const selectedIds = [...compareSelectedIds];
+      const responses = await Promise.all(
+        selectedIds.map((id) => axios.get(`${API}/api/mes/master-data/formulations/${id}`, { headers }))
+      );
+      const selectedFormulations = responses.map((r) => r.data?.data || null).filter(Boolean);
+      if (selectedFormulations.length < 2) {
+        message.warning('Need at least 2 valid formulations to compare');
+        return;
+      }
+
+      const keyOf = (c) => {
+        if (c.component_type === 'formulation') return `sub:${c.sub_formulation_id}`;
+        return `item:${String(c.item_key || c.mainitem || '').toLowerCase().trim()}`;
+      };
+
+      const labelOf = (c) => {
+        if (c.component_type === 'formulation') return c.sub_formulation_name || `Sub #${c.sub_formulation_id}`;
+        return c.maindescription || c.mainitem || c.item_key || '—';
+      };
+
+      const codeOf = (c) => {
+        if (c.component_type === 'formulation') return c.sub_formulation_id ? `Sub #${c.sub_formulation_id}` : 'Sub';
+        return c.mainitem || c.item_key || '';
+      };
+
+      const costOf = (c) => {
+        if (c?.line_cost != null) return Number(c.line_cost) || 0;
+        return (Number(c?.parts) || 0) * (Number(c?.unit_price) || 0);
+      };
+
+      const byKey = new Map();
+
+      selectedFormulations.forEach((f) => {
+        const fid = Number(f.id);
+        (f.components || []).forEach((c) => {
+          const k = keyOf(c);
+          if (!k) return;
+          const prev = byKey.get(k) || {
+            key: k,
+            component: labelOf(c),
+            code: codeOf(c),
+            values: {},
+          };
+          const current = prev.values[fid] || {
+            role: null,
+            parts: null,
+            solids: null,
+            price: null,
+            cost: null,
+          };
+
+          current.role = c.component_role || current.role;
+          current.parts = (current.parts ?? 0) + (Number(c.parts) || 0);
+          if (c.solids_pct != null) current.solids = Number(c.solids_pct);
+          if (c.unit_price != null) current.price = Number(c.unit_price);
+          current.cost = (current.cost ?? 0) + costOf(c);
+
+          prev.component = prev.component || labelOf(c);
+          prev.code = prev.code || codeOf(c);
+          prev.values[fid] = current;
+          byKey.set(k, prev);
+        });
+      });
+
+      const diffNumArray = (arr, eps = 0.0001) => {
+        const normalized = arr.map((v) => (v == null ? null : (Number(v) || 0)));
+        const nonNull = normalized.filter((v) => v != null);
+        if (nonNull.length === 0) return false;
+        if (nonNull.length !== normalized.length) return true;
+        return Math.abs(Math.max(...nonNull) - Math.min(...nonNull)) > eps;
+      };
+
+      const diffStrArray = (arr) => {
+        const normalized = arr.map((v) => (v == null ? '' : String(v).trim().toLowerCase()));
+        if (normalized.every((v) => !v)) return false;
+        return new Set(normalized).size > 1;
+      };
+
+      const rows = Array.from(byKey.values())
+        .map((r) => {
+          const cells = selectedIds.map((id) => r.values[id] || null);
+          const roleDifferent = diffStrArray(cells.map((c) => c?.role ?? null));
+          const partsDifferent = diffNumArray(cells.map((c) => c?.parts ?? null));
+          const solidsDifferent = diffNumArray(cells.map((c) => c?.solids ?? null));
+          const priceDifferent = diffNumArray(cells.map((c) => c?.price ?? null));
+          const costDifferent = diffNumArray(cells.map((c) => c?.cost ?? null));
+          return {
+            ...r,
+            roleDifferent,
+            partsDifferent,
+            solidsDifferent,
+            priceDifferent,
+            costDifferent,
+            different: roleDifferent || partsDifferent || solidsDifferent || priceDifferent || costDifferent,
+          };
+        })
+        .sort((a, b) => String(a.component).localeCompare(String(b.component)));
+
+      setCompareTargets(selectedFormulations);
+      setCompareRows(rows);
+      setCompareDiffOnly(false);
+      setCompareOpen(true);
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Failed to compare formulations');
+    } finally {
+      setCompareLoading(false);
+    }
+  }, [compareSelectedIds, headers, message]);
 
   // ── API: Change status ────────────────────────────────────────────────────
   const handleStatusChange = useCallback(async (id, status) => {
@@ -396,20 +661,36 @@ export default function FormulationsTab({
     setDirty(true);
   }, []);
 
-  // ── Picker Step 2: load spec-table items when category selected ────────────
+  // ── Picker Step 2: load groups when category selected ──────────────────────
   useEffect(() => {
-    if (!pickerCatId || !pickerOpen || !activeFormulation) return;
+    if (!pickerCatId || !pickerOpen || !activeFormulation) { setPickerGroups([]); return; }
+    setPickerGroupKey(null);
+    setPickerItemKey(null);
+    setPickerItems([]);
+    setPickerGroupsLoading(true);
+    axios.get(`${API}/api/mes/master-data/formulations/${activeFormulation.id}/candidates`, {
+      headers,
+      params: { category_id: pickerCatId },
+    })
+      .then((res) => setPickerGroups(res.data.data || []))
+      .catch(() => setPickerGroups([]))
+      .finally(() => setPickerGroupsLoading(false));
+  }, [pickerCatId, pickerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Picker Step 3: load items when group selected ─────────────────────────
+  useEffect(() => {
+    if (!pickerCatId || !pickerGroupKey || !pickerOpen || !activeFormulation) return;
     setPickerItemKey(null);
     setPickerItems([]);
     setPickerItemsLoading(true);
     axios.get(`${API}/api/mes/master-data/formulations/${activeFormulation.id}/candidates`, {
       headers,
-      params: { category_id: pickerCatId },
+      params: { category_id: pickerCatId, catlinedesc: pickerGroupKey },
     })
       .then((res) => setPickerItems(res.data.data || []))
       .catch(() => setPickerItems([]))
       .finally(() => setPickerItemsLoading(false));
-  }, [pickerCatId, pickerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pickerGroupKey, pickerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickerPreview = useMemo(
     () => pickerItemKey ? (pickerItems.find((i) => i.item_key === pickerItemKey) || null) : null,
@@ -419,9 +700,85 @@ export default function FormulationsTab({
   const resetPicker = useCallback(() => {
     setPickerOpen(false);
     setPickerCatId(null);
+    setPickerGroupKey(null);
+    setPickerGroups([]);
     setPickerItemKey(null);
     setPickerItems([]);
   }, []);
+
+  const replaceCurrentItemKey = useMemo(
+    () => (replaceRowIdx != null ? (components[replaceRowIdx]?.item_key || null) : null),
+    [replaceRowIdx, components]
+  );
+
+  const replacePreview = useMemo(
+    () => replaceItemKey ? (replaceItems.find((i) => i.item_key === replaceItemKey) || null) : null,
+    [replaceItemKey, replaceItems]
+  );
+
+  const resetReplace = useCallback(() => {
+    setReplaceOpen(false);
+    setReplaceRowIdx(null);
+    setReplaceCatId(null);
+    setReplaceGroupKey(null);
+    setReplaceGroups([]);
+    setReplaceItemKey(null);
+    setReplaceItems([]);
+  }, []);
+
+  const openReplaceForRow = useCallback((idx) => {
+    const row = components[idx];
+    if (!row || row.component_type === 'formulation' || !activeFormulation) return;
+    const currentItemKey = row.item_key || null;
+    const currentGroup = row.catlinedesc || row.source_catlinedesc || null;
+    const stockWa = row.stock_cost_wa ?? row.oracle_stock_price ?? null;
+    const orderWa = row.purchase_cost_wa ?? row.oracle_order_price ?? null;
+    const fallbackPreview = currentItemKey ? [{
+      item_key: currentItemKey,
+      mainitem: row.mainitem || currentItemKey,
+      maindescription: row.maindescription || null,
+      catlinedesc: currentGroup,
+      stock_cost_wa: stockWa,
+      purchase_cost_wa: orderWa,
+      tds_solids_pct: row.tds_solids_pct ?? row.solids_pct ?? null,
+      already_in_formulation: false,
+    }] : [];
+
+    setReplaceOpen(true);
+    setReplaceRowIdx(idx);
+    // Default to current category and pre-select the current row values.
+    setReplaceCatId(catId || null);
+    setReplaceGroupKey(currentGroup);
+    setReplaceGroups([]);
+    setReplaceItemKey(currentItemKey);
+    setReplaceItems(fallbackPreview);
+  }, [components, activeFormulation, catId]);
+
+  // Replace modal Step 2: load groups when category selected
+  useEffect(() => {
+    if (!replaceCatId || !replaceOpen || !activeFormulation) { setReplaceGroups([]); return; }
+    setReplaceGroupsLoading(true);
+    axios.get(`${API}/api/mes/master-data/formulations/${activeFormulation.id}/candidates`, {
+      headers,
+      params: { category_id: replaceCatId },
+    })
+      .then((res) => setReplaceGroups(res.data.data || []))
+      .catch(() => setReplaceGroups([]))
+      .finally(() => setReplaceGroupsLoading(false));
+  }, [replaceCatId, replaceOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Replace modal Step 3: load items when group selected
+  useEffect(() => {
+    if (!replaceCatId || !replaceGroupKey || !replaceOpen || !activeFormulation) return;
+    setReplaceItemsLoading(true);
+    axios.get(`${API}/api/mes/master-data/formulations/${activeFormulation.id}/candidates`, {
+      headers,
+      params: { category_id: replaceCatId, catlinedesc: replaceGroupKey },
+    })
+      .then((res) => setReplaceItems(res.data.data || []))
+      .catch(() => setReplaceItems([]))
+      .finally(() => setReplaceItemsLoading(false));
+  }, [replaceGroupKey, replaceOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddComponent = useCallback(() => {
     if (!pickerItemKey || !pickerPreview) return;
@@ -453,6 +810,52 @@ export default function FormulationsTab({
     message.success(`${pickerPreview.mainitem} added`);
     resetPicker();
   }, [pickerItemKey, pickerPreview, existingItemKeys, message, resetPicker]);
+
+  const handleReplaceComponent = useCallback(() => {
+    if (replaceRowIdx == null || !replaceItemKey || !replacePreview) return;
+    const current = components[replaceRowIdx];
+    if (!current || current.component_type === 'formulation') return;
+
+    if (replaceItemKey !== current.item_key && existingItemKeys.has(replaceItemKey)) {
+      message.info('Item already in this formulation');
+      return;
+    }
+
+    const stockPrice = Number(replacePreview.stock_cost_wa) || null;
+    const orderPrice = Number(replacePreview.purchase_cost_wa) || null;
+    const defaultPrice = stockPrice ?? orderPrice ?? null;
+    const priceSource = stockPrice != null ? 'oracle_stock' : (orderPrice != null ? 'oracle_order' : null);
+    const solidsPct = replacePreview.tds_solids_pct != null ? Number(replacePreview.tds_solids_pct) : null;
+
+    setComponents((prev) => {
+      const next = [...prev];
+      const row = next[replaceRowIdx];
+      if (!row) return prev;
+      next[replaceRowIdx] = {
+        ...row,
+        component_type: 'item',
+        sub_formulation_id: null,
+        sub_formulation_name: null,
+        sub_formulation_status: null,
+        item_key: replaceItemKey,
+        mainitem: replacePreview.mainitem,
+        maindescription: replacePreview.maindescription || null,
+        catlinedesc: replacePreview.catlinedesc || null,
+        tds_solids_pct: solidsPct,
+        solids_pct: row.solids_pct_source === 'override' ? row.solids_pct : solidsPct,
+        solids_pct_source: row.solids_pct_source === 'override' ? 'override' : (solidsPct != null ? 'tds' : null),
+        unit_price: row.unit_price_source === 'override' ? row.unit_price : defaultPrice,
+        unit_price_source: row.unit_price_source === 'override' ? 'override' : priceSource,
+        oracle_stock_price: stockPrice,
+        oracle_order_price: orderPrice,
+      };
+      return next;
+    });
+
+    setDirty(true);
+    message.success('Component replaced');
+    resetReplace();
+  }, [replaceRowIdx, replaceItemKey, replacePreview, components, existingItemKeys, message, resetReplace]);
 
   // ── Sub-formulation picker ────────────────────────────────────────────────
   const openSubPicker = useCallback(async () => {
@@ -516,9 +919,14 @@ export default function FormulationsTab({
       <Spin spinning={listLoading}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <Text strong style={{ fontSize: 14 }}>Formulations — {catlinedesc}</Text>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-            New Formulation
-          </Button>
+          <Space>
+            <Button onClick={openComparator} loading={compareLoading} disabled={compareSelectedIds.length < 2}>
+              Compare ({compareSelectedIds.length}/{COMPARE_MAX})
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+              New Formulation
+            </Button>
+          </Space>
         </div>
 
         {!formulations.length && !listLoading && (
@@ -533,7 +941,46 @@ export default function FormulationsTab({
         <div style={{ display: 'grid', gap: 10 }}>
           {formulationsByName.map(({ name, versions }) => (
             <Card key={name} size="small" style={{ border: '1px solid #e2e8f0' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{name}</div>
+              {/* Name row with inline rename */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                {renamingName === name ? (
+                  <>
+                    <Input
+                      size="small"
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onPressEnter={() => handleRename(name, versions[0]?.id)}
+                      style={{ fontWeight: 700, fontSize: 14, maxWidth: 320 }}
+                    />
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<CheckOutlined />}
+                      loading={renameLoading}
+                      onClick={() => handleRename(name, versions[0]?.id)}
+                    />
+                    <Button
+                      size="small"
+                      icon={<CloseOutlined />}
+                      onClick={() => setRenamingName(null)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{name}</span>
+                    <Tooltip title="Rename">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EditOutlined />}
+                        style={{ color: '#aaa' }}
+                        onClick={() => { setRenamingName(name); setRenameValue(name); }}
+                      />
+                    </Tooltip>
+                  </>
+                )}
+              </div>
               <div style={{ display: 'grid', gap: 6 }}>
                 {versions.map((f) => (
                   <div
@@ -549,8 +996,8 @@ export default function FormulationsTab({
                     }}
                   >
                     <Space size={6} wrap>
-                      <Tag color={statusColor(f.status)} style={{ fontSize: 11 }}>
-                        v{f.version} · {f.status}
+                      <Tag color={f.status === 'draft' ? 'default' : statusColor(f.status)} style={{ fontSize: 11 }}>
+                        v{f.version}{f.status === 'draft' ? '' : ` · ${f.status}`}
                       </Tag>
                       {f.is_default && <Tag color="gold" style={{ fontSize: 11 }}>Default</Tag>}
                       <Text type="secondary" style={{ fontSize: 11 }}>
@@ -568,14 +1015,21 @@ export default function FormulationsTab({
                       )}
                     </Space>
                     <Space size={4}>
+                      <Button
+                        size="small"
+                        type={compareSelectedIds.includes(Number(f.id)) ? 'primary' : 'default'}
+                        onClick={() => toggleCompareSelection(f.id)}
+                      >
+                        {compareSlotById.get(Number(f.id)) || 'Pick'}
+                      </Button>
                       <Button size="small" onClick={() => openFormulation(f.id)}>
                         Open v{f.version}
                       </Button>
-                      <Tooltip title="Duplicate as new version">
+                      <Tooltip title="Duplicate options">
                         <Button
                           size="small"
                           icon={<CopyOutlined />}
-                          onClick={() => handleDuplicate(f.id, true)}
+                          onClick={() => openDuplicateModal(f.id, f.name)}
                         />
                       </Tooltip>
                       <Popconfirm
@@ -593,6 +1047,112 @@ export default function FormulationsTab({
             </Card>
           ))}
         </div>
+
+        {/* Comparator Modal (2-5 formulas) */}
+        <Modal
+          title="Formulation Comparison"
+          open={compareOpen}
+          onCancel={() => setCompareOpen(false)}
+          width="94vw"
+          styles={{ body: { maxHeight: '78vh', overflowY: 'auto', overflowX: 'hidden', padding: '12px 14px' } }}
+          footer={[
+            <Button key="close" type="primary" onClick={() => setCompareOpen(false)}>
+              Close
+            </Button>,
+          ]}
+          destroyOnHidden
+        >
+          {compareTargets.length < 2 ? (
+            <Alert type="info" showIcon message={`Pick 2 to ${COMPARE_MAX} formulations and click Compare.`} />
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {compareTargets.map((f, idx) => (
+                  <Tag key={f.id} color={COMPARE_COLORS[idx % COMPARE_COLORS.length]}>
+                    {(COMPARE_LABELS[idx] || `#${idx + 1}`)}: {f.name} v{f.version}
+                  </Tag>
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 6 }}>
+                {compareTargets.map((f, idx) => {
+                  const slot = COMPARE_LABELS[idx] || `#${idx + 1}`;
+                  const isA = idx === 0;
+                  const isB = idx === 1;
+                  const border = isA ? '#dbeafe' : isB ? '#e9d5ff' : '#d1fae5';
+                  const bg = isA ? '#eff6ff' : isB ? '#faf5ff' : '#f0fdf4';
+                  return (
+                    <div key={f.id} style={{ border: `1px solid ${border}`, background: bg, borderRadius: 8, padding: '5px 7px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                        <Text strong style={{ fontSize: 13, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {slot} — {f.name} v{f.version}
+                        </Text>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6, marginTop: 4 }}>
+                        <div style={{ border: '1px solid #dbeafe', background: '#ffffff', borderRadius: 6, padding: '6px 7px' }}>
+                          <Text type="secondary" style={{ fontSize: 10, lineHeight: 1 }}>Mix Ratio</Text>
+                          <div><Text strong style={{ fontFamily: 'monospace' }}>{fmtNum(f.totals?.total_parts, 2)}</Text></div>
+                        </div>
+                        <div style={{ border: '1px solid #d1fae5', background: '#ffffff', borderRadius: 6, padding: '6px 7px' }}>
+                          <Text type="secondary" style={{ fontSize: 10, lineHeight: 1 }}>Solids %</Text>
+                          <div><Text strong style={{ fontFamily: 'monospace' }}>{f.totals?.solids_share_pct != null ? `${Number(f.totals.solids_share_pct).toFixed(1)}%` : '—'}</Text></div>
+                        </div>
+                        <div style={{ border: '1px solid #f59e0b', background: '#fffbeb', borderRadius: 6, padding: '6px 7px' }}>
+                          <Text type="secondary" style={{ fontSize: 10, lineHeight: 1 }}>/kg Wet</Text>
+                          <div><Text strong style={{ fontFamily: 'monospace', color: '#b45309' }}>{fmtCurrency(f.totals?.price_per_kg_wet, 4)}</Text></div>
+                        </div>
+                        <div style={{ border: '1px solid #a78bfa', background: '#faf5ff', borderRadius: 6, padding: '6px 7px' }}>
+                          <Text type="secondary" style={{ fontSize: 10, lineHeight: 1 }}>/kg Solids</Text>
+                          <div><Text strong style={{ fontFamily: 'monospace', color: '#6d28d9' }}>{fmtCurrency(f.totals?.price_per_kg_solids, 4)}</Text></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Duplicate Modal */}
+        <Modal
+          title="Duplicate Formulation"
+          open={dupOpen}
+          onCancel={() => setDupOpen(false)}
+          onOk={confirmDuplicate}
+          okText="Duplicate"
+          confirmLoading={dupLoading}
+          okButtonProps={{ disabled: dupMode === 'name' && !dupName.trim() }}
+          destroyOnHidden
+        >
+          <div style={{ display: 'grid', gap: 12, paddingTop: 4 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Mode</div>
+              <Select
+                style={{ width: '100%' }}
+                value={dupMode}
+                options={[
+                  { value: 'version', label: `New version of "${dupSourceName || 'same name'}"` },
+                  { value: 'name', label: 'Duplicate with a new name' },
+                ]}
+                onChange={(v) => setDupMode(v)}
+              />
+            </div>
+            {dupMode === 'name' && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>New Name *</div>
+                <Input
+                  autoFocus
+                  maxLength={255}
+                  value={dupName}
+                  onChange={(e) => setDupName(e.target.value)}
+                  placeholder="Enter new formulation name"
+                  onPressEnter={confirmDuplicate}
+                />
+              </div>
+            )}
+          </div>
+        </Modal>
 
         {/* New Formulation Modal */}
         <Modal
@@ -639,15 +1199,17 @@ export default function FormulationsTab({
     <Spin spinning={detailLoading}>
 
       {/* ── Header bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', paddingBottom: 8, marginBottom: 4, borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <Space>
           <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>Back</Button>
           <div>
             <Text strong style={{ fontSize: 15 }}>{activeFormulation.name}</Text>
             <Text type="secondary" style={{ marginLeft: 6 }}>v{activeFormulation.version}</Text>
-            <Tag color={statusColor(activeFormulation.status)} style={{ marginLeft: 6 }}>
-              {activeFormulation.status}
-            </Tag>
+            {(activeFormulation.status !== 'draft' || dirty) && (
+              <Tag color={statusColor(activeFormulation.status)} style={{ marginLeft: 6 }}>
+                {activeFormulation.status}
+              </Tag>
+            )}
             {activeFormulation.is_default && <Tag color="gold">Default</Tag>}
             {dirty && <Tag color="gold">Unsaved</Tag>}
           </div>
@@ -661,9 +1223,9 @@ export default function FormulationsTab({
           )}
           <Button
             icon={<CopyOutlined />}
-            onClick={() => handleDuplicate(activeFormulation.id, true)}
+            onClick={() => openDuplicateModal(activeFormulation.id, activeFormulation.name)}
           >
-            Duplicate → v{activeFormulation.version + 1}
+            Duplicate
           </Button>
           {activeFormulation.status === 'draft' && (
             <Popconfirm
@@ -703,13 +1265,20 @@ export default function FormulationsTab({
         />
       )}
 
-      {/* ── Add buttons ── */}
-      {!isReadOnly && (
-        <Space wrap style={{ marginBottom: 10 }}>
-          <Button icon={<PlusOutlined />} onClick={() => setPickerOpen(true)}>Add Item</Button>
-          <Button icon={<PlusOutlined />} onClick={openSubPicker}>Add Sub-Formulation</Button>
-        </Space>
-      )}
+      {/* ── Two-column layout: BOM table (left) + Summary panel (right) ── */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+
+        {/* LEFT — Add buttons + BOM table */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+
+          {/* Add buttons */}
+          {!isReadOnly && (
+            <Space wrap style={{ marginBottom: 8 }}>
+              <Button icon={<PlusOutlined />} onClick={() => setPickerOpen(true)}>Add Item</Button>
+              <Button icon={<PlusOutlined />} onClick={openSubPicker}>Add Sub-Formulation</Button>
+              <Button icon={<SettingOutlined />} onClick={() => setManageRolesOpen(true)}>Manage Roles</Button>
+            </Space>
+          )}
 
       {/* ── BOM table ── */}
       <Table
@@ -717,13 +1286,40 @@ export default function FormulationsTab({
         pagination={false}
         dataSource={components.map((c, i) => ({ ...c, _idx: i }))}
         rowKey="_idx"
-        tableLayout="fixed"
-        scroll={{ x: 1120, y: 340 }}
+        scroll={{ x: 860, y: 360 }}
+        onRow={(row) => ({
+          style: {
+            borderLeft: `3px solid ${row.component_type === 'formulation' ? '#8B5CF6' : (roleColorMap[row.component_role] || '#e8e8e8')}`,
+          },
+        })}
         locale={{ emptyText: 'No components yet — click "Add Item" or "Add Sub-Formulation" above.' }}
+        summary={() => (
+          <Table.Summary.Row style={{ background: '#fafafa', fontWeight: 700 }}>
+            <Table.Summary.Cell index={0}>
+              <Text style={{ fontSize: 11, color: '#888', letterSpacing: '0.06em', fontWeight: 700 }}>TOTAL</Text>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={1} />
+            <Table.Summary.Cell index={2} align="center">
+              <Text strong style={{ fontFamily: 'monospace', color: '#3B82F6' }}>{fmtNum(totals.total_parts, 2)}</Text>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={3} align="center">
+              <Text style={{ fontFamily: 'monospace', fontSize: 12 }}>{totals.solids_share_pct != null ? `${totals.solids_share_pct.toFixed(1)}%` : '—'}</Text>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={4} align="center">
+              <Text style={{ fontFamily: 'monospace', fontSize: 12 }}>{fmtCurrency(totals.price_per_kg_wet, 4)}</Text>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={5} align="right">
+              <Text strong style={{ fontFamily: 'monospace', whiteSpace: 'nowrap', color: '#3B82F6' }}>{fmtCurrency(totals.total_cost, 2)}</Text>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={6} />
+            <Table.Summary.Cell index={7} />
+          </Table.Summary.Row>
+        )}
         columns={[
           {
             title: 'Component',
-            ellipsis: true,
+            width: 260,
+            ellipsis: false,
             render: (_, row) => row.component_type === 'formulation' ? (
               <div>
                 <Text strong style={{ fontSize: 12 }}>
@@ -735,9 +1331,24 @@ export default function FormulationsTab({
               </div>
             ) : (
               <div style={{ minWidth: 0 }}>
-                <Text strong style={{ fontSize: 12 }}>{row.mainitem || row.item_key}</Text>
-                <div><Text type="secondary" style={{ fontSize: 11 }}>{row.maindescription || '—'}</Text></div>
-                {row.catlinedesc && <Tag style={{ fontSize: 10 }}>{row.catlinedesc}</Tag>}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, overflow: 'hidden' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {row.maindescription || row.mainitem || '—'}
+                  </span>
+                  <span style={{ fontSize: 10, color: '#999', fontFamily: 'monospace', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {row.mainitem || row.item_key}
+                  </span>
+                </div>
+                {totals.total_parts > 0 && (
+                  <div style={{ marginTop: 3, height: 2, background: '#f0f0f0', borderRadius: 1 }}>
+                    <div style={{
+                      height: 2, borderRadius: 1,
+                      width: `${Math.min(100, ((Number(row.parts) || 0) / totals.total_parts) * 100)}%`,
+                      background: roleColorMap[row.component_role] || '#6366f1',
+                      opacity: 0.75, transition: 'width 0.3s',
+                    }} />
+                  </div>
+                )}
               </div>
             ),
           },
@@ -756,7 +1367,7 @@ export default function FormulationsTab({
             ),
           },
           {
-            title: 'Parts',
+            title: 'Mix Ratio',
             width: 88,
             align: 'center',
             render: (_, row) => (
@@ -782,13 +1393,13 @@ export default function FormulationsTab({
                 : src === 'resolved' ? { label: 'R', color: 'purple', tip: 'Resolved from sub-formulation' }
                 : null;
               return (
-                <div style={{ display: 'grid', gap: 2 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                   <InputNumber
                     size="small"
                     min={0}
                     max={100}
                     step={0.1}
-                    style={{ width: '100%' }}
+                    style={{ flex: 1, minWidth: 0 }}
                     value={row.solids_pct}
                     disabled={isReadOnly || row.component_type === 'formulation'}
                     onChange={(v) => {
@@ -802,7 +1413,7 @@ export default function FormulationsTab({
                   />
                   {badge && (
                     <Tooltip title={badge.tip}>
-                      <Tag color={badge.color} style={{ margin: 0, fontSize: 9, width: 'fit-content' }}>{badge.label}</Tag>
+                      <Tag color={badge.color} style={{ margin: 0, fontSize: 9, padding: '0 3px', flexShrink: 0 }}>{badge.label}</Tag>
                     </Tooltip>
                   )}
                 </div>
@@ -811,7 +1422,7 @@ export default function FormulationsTab({
           },
           {
             title: '$/kg',
-            width: 104,
+            width: 110,
             align: 'center',
             render: (_, row) => {
               const src = row.unit_price_source;
@@ -822,12 +1433,12 @@ export default function FormulationsTab({
                 : src === 'resolved' ? { label: 'R', color: 'purple' }
                 : null;
               return (
-                <div style={{ display: 'grid', gap: 2 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                   <InputNumber
                     size="small"
                     min={0}
                     step={0.0001}
-                    style={{ width: '100%' }}
+                    style={{ flex: 1, minWidth: 0 }}
                     value={row.unit_price}
                     disabled={isReadOnly || row.component_type === 'formulation'}
                     onChange={(v) => {
@@ -844,7 +1455,7 @@ export default function FormulationsTab({
                     }}
                   />
                   {badge && (
-                    <Tag color={badge.color} style={{ margin: 0, fontSize: 9, width: 'fit-content' }}>{badge.label}</Tag>
+                    <Tag color={badge.color} style={{ margin: 0, fontSize: 9, padding: '0 3px', flexShrink: 0 }}>{badge.label}</Tag>
                   )}
                 </div>
               );
@@ -852,16 +1463,16 @@ export default function FormulationsTab({
           },
           {
             title: 'Cost',
-            width: 88,
-            align: 'center',
+            width: 120,
+            align: 'right',
             render: (_, row) => {
               const v = (Number(row.parts) || 0) * (Number(row.unit_price) || 0);
-              return <Text strong>{fmtCurrency(v, 2)}</Text>;
+              return <Text strong style={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{fmtCurrency(v, 2)}</Text>;
             },
           },
           {
             title: 'Notes',
-            width: 150,
+            width: 200,
             render: (_, row) => (
               <Input
                 size="small"
@@ -874,86 +1485,184 @@ export default function FormulationsTab({
           },
           {
             title: '',
-            width: 50,
+            width: 74,
             align: 'center',
             render: (_, row) => isReadOnly ? null : (
-              <Popconfirm
-                title="Remove this component?"
-                onConfirm={() => removeComponent(row._idx)}
-                okText="Remove"
-                okButtonProps={{ danger: true }}
-              >
-                <Button type="link" danger size="small">×</Button>
-              </Popconfirm>
+              <Space size={2}>
+                {row.component_type !== 'formulation' && (
+                  <Tooltip title="Replace component">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => openReplaceForRow(row._idx)}
+                    />
+                  </Tooltip>
+                )}
+                <Popconfirm
+                  title="Remove this component?"
+                  onConfirm={() => removeComponent(row._idx)}
+                  okText="Remove"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button type="link" danger size="small">×</Button>
+                </Popconfirm>
+              </Space>
             ),
           },
         ]}
       />
 
-      {/* Legend */}
-      <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 4 }}>
-        T = from TDS &nbsp;·&nbsp; O = manual override &nbsp;·&nbsp; R = resolved from sub-formulation
-        &nbsp;·&nbsp; St/Or/Av = Oracle stock / order / avg price
-      </Text>
+          {/* Legend */}
+          <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>
+            T = from TDS &nbsp;·&nbsp; O = manual override &nbsp;·&nbsp; R = resolved from sub-formulation &nbsp;·&nbsp; St/Or/Av = Oracle stock / order / avg price
+          </div>
 
-      {/* ── Summary + Quick Estimate ── */}
-      <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
-        <Col xs={24} xl={12}>
-          <Card size="small" title="Summary">
-            <Row gutter={[8, 8]}>
+        </div>{/* end left column */}
+
+        {/* RIGHT — Summary panel */}
+        <div style={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Formulation Summary KPIs */}
+          <div style={{ border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ background: '#fafafa', borderBottom: '1px solid #e8e8e8', padding: '7px 12px', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase' }}>
+              Summary
+            </div>
+            <div style={{ padding: '10px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
-                { label: 'Total Parts', value: fmtNum(totals.total_parts, 4) },
-                { label: 'Total Solids', value: fmtNum(totals.total_solids, 4) },
-                { label: 'Total Cost', value: fmtCurrency(totals.total_cost, 2) },
-                { label: '$/kg (Wet)', value: fmtCurrency(totals.price_per_kg_wet, 4) },
-                { label: '$/kg (Solids)', value: fmtCurrency(totals.price_per_kg_solids, 4) },
-                { label: 'Solids Share %', value: totals.solids_share_pct != null ? `${totals.solids_share_pct.toFixed(2)}%` : '—' },
-              ].map(({ label, value }) => (
-                <Col span={12} key={label}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>{label}</Text>
-                  <div><Text strong>{value}</Text></div>
-                </Col>
+                { label: 'Mix Ratio',   value: fmtNum(totals.total_parts, 2),                                          accent: '#3B82F6' },
+                { label: 'Solids %',    value: totals.solids_share_pct != null ? `${totals.solids_share_pct.toFixed(1)}%` : '—', accent: '#10B981' },
+                { label: '$/kg Wet',    value: fmtCurrency(totals.price_per_kg_wet, 4),                               accent: '#F59E0B' },
+                { label: '$/kg Solids', value: fmtCurrency(totals.price_per_kg_solids, 4),                            accent: '#A78BFA' },
+              ].map(({ label, value, accent }) => (
+                <div key={label} style={{ borderTop: `2px solid ${accent}`, borderRadius: 6, background: '#f9f9f9', padding: '8px 10px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#aaa', textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, fontFamily: 'monospace', color: '#1a1a1a' }}>{value}</div>
+                </div>
               ))}
-            </Row>
-          </Card>
-        </Col>
+            </div>
+            <div style={{ borderTop: '1px solid #f0f0f0', margin: '0 12px 10px', paddingTop: 10 }}>
+              <div style={{ borderTop: '2px solid #F87171', borderRadius: 6, background: '#f9f9f9', padding: '8px 10px' }}>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#aaa', textTransform: 'uppercase', marginBottom: 4 }}>Total Cost</div>
+                <div style={{ fontSize: 17, fontWeight: 800, fontFamily: 'monospace', color: '#1a1a1a' }}>{fmtCurrency(totals.total_cost, 2)}</div>
+              </div>
+            </div>
+          </div>
 
-        <Col xs={24} xl={12}>
-          <Card size="small" title="Quick Estimate">
-            <Row gutter={[10, 8]}>
-              <Col span={12}>
-                <Text type="secondary" style={{ fontSize: 11 }}>Deposit (g/m²)</Text>
-                <InputNumber
-                  size="small"
-                  min={0}
-                  step={0.01}
-                  style={{ width: '100%', marginTop: 4 }}
-                  value={quickGSM}
-                  onChange={(v) => setQuickGSM(v ?? 0)}
-                />
-              </Col>
-              <Col span={12}>
-                <Text type="secondary" style={{ fontSize: 11 }}>Wet GSM</Text>
-                <div style={{ marginTop: 6 }}><Text strong>{fmtNum(quickEstimate.wet_gsm, 4)}</Text></div>
-              </Col>
-              <Col span={12}>
-                <Text type="secondary" style={{ fontSize: 11 }}>Cost / m²</Text>
-                <div style={{ marginTop: 6 }}><Text strong>{fmtCurrency(quickEstimate.cost_per_sqm, 6)}</Text></div>
-              </Col>
-              <Col span={12}>
-                <Text type="secondary" style={{ fontSize: 11 }}>Cost / 1000 m²</Text>
-                <div style={{ marginTop: 6 }}><Text strong>{fmtCurrency(quickEstimate.cost_per_1000_sqm, 2)}</Text></div>
-              </Col>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
+          {/* Application Estimate */}
+          <div style={{ border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ background: '#fafafa', borderBottom: '1px solid #e8e8e8', padding: '7px 12px', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase' }}>
+              Application Estimate
+            </div>
+            <div style={{ padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: 5, textTransform: 'uppercase' }}>Deposit g/m²</div>
+              <InputNumber
+                size="small"
+                min={0}
+                step={0.1}
+                style={{ width: '100%', marginBottom: 10 }}
+                value={quickGSM}
+                onChange={(v) => setQuickGSM(v ?? 0)}
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'Wet GSM',      value: fmtNum(quickEstimate.wet_gsm, 4),            color: '#1a1a1a' },
+                  { label: 'Cost/m²',      value: fmtCurrency(quickEstimate.cost_per_sqm, 6),  color: '#10B981' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ background: '#f9f9f9', borderRadius: 6, padding: '8px 10px', border: '1px solid #f0f0f0' }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: '#aaa', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 3 }}>{label}</div>
+                    <div style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color }}>{value}</div>
+                  </div>
+                ))}
+                <div style={{ background: '#f0f7ff', borderRadius: 6, padding: '8px 10px', border: '1px solid #bfdbfe', gridColumn: 'span 2' }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: '#93BBFD', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 3 }}>Cost / 1000 m²</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 17, fontWeight: 800, color: '#2563EB' }}>{fmtCurrency(quickEstimate.cost_per_1000_sqm, 2)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      {activeFormulation.notes && (
-        <Alert type="info" style={{ marginTop: 10 }} message={`Notes: ${activeFormulation.notes}`} />
-      )}
+          {/* Mix Composition */}
+          {components.length > 0 && (
+            <div style={{ border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ background: '#fafafa', borderBottom: '1px solid #e8e8e8', padding: '7px 12px', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase' }}>
+                Mix Composition
+              </div>
+              <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {components.map((c, i) => {
+                  const pct = totals.total_parts > 0 ? ((Number(c.parts) || 0) / totals.total_parts) * 100 : 0;
+                  const color = roleColorMap[c.component_role] || '#6366f1';
+                  const name = c.component_type === 'formulation'
+                    ? (c.sub_formulation_name || `Sub #${c.sub_formulation_id}`)
+                    : (c.maindescription || c.mainitem || '—');
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <span style={{ fontSize: 11, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{name}</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color, flexShrink: 0, marginLeft: 6 }}>{pct.toFixed(1)}%</span>
+                      </div>
+                      <div style={{ height: 3, background: '#f0f0f0', borderRadius: 2 }}>
+                        <div style={{ height: 3, borderRadius: 2, width: `${pct}%`, background: color, transition: 'width 0.3s' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-      {/* ── Component Picker Modal (2-step: category → spec-table items) ── */}
+          {/* Notes */}
+          {activeFormulation.notes && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: '#92400e' }}>
+              <span style={{ fontWeight: 700 }}>Notes: </span>{activeFormulation.notes}
+            </div>
+          )}
+
+        </div>{/* end right panel */}
+
+      </div>{/* end two-column wrapper */}
+
+      {/* Duplicate Modal */}
+      <Modal
+        title="Duplicate Formulation"
+        open={dupOpen}
+        onCancel={() => setDupOpen(false)}
+        onOk={confirmDuplicate}
+        okText="Duplicate"
+        confirmLoading={dupLoading}
+        okButtonProps={{ disabled: dupMode === 'name' && !dupName.trim() }}
+        destroyOnHidden
+      >
+        <div style={{ display: 'grid', gap: 12, paddingTop: 4 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Mode</div>
+            <Select
+              style={{ width: '100%' }}
+              value={dupMode}
+              options={[
+                { value: 'version', label: `New version of "${dupSourceName || 'same name'}"` },
+                { value: 'name', label: 'Duplicate with a new name' },
+              ]}
+              onChange={(v) => setDupMode(v)}
+            />
+          </div>
+          {dupMode === 'name' && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>New Name *</div>
+              <Input
+                autoFocus
+                maxLength={255}
+                value={dupName}
+                onChange={(e) => setDupName(e.target.value)}
+                placeholder="Enter new formulation name"
+                onPressEnter={confirmDuplicate}
+              />
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── Component Picker Modal (3-step: category → group → items) ── */}
       <Modal
         title="Add Component"
         open={pickerOpen}
@@ -980,18 +1689,36 @@ export default function FormulationsTab({
               placeholder="Select a category"
               value={pickerCatId}
               options={categoryOptions}
-              onChange={(v) => { setPickerCatId(v); setPickerItemKey(null); setPickerItems([]); }}
+              onChange={(v) => { setPickerCatId(v); setPickerGroupKey(null); setPickerGroups([]); setPickerItemKey(null); setPickerItems([]); }}
               showSearch
               filterOption={(input, opt) => String(opt.label || '').toLowerCase().includes(input.toLowerCase())}
             />
           </div>
 
           <div>
-            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 2 — Item</div>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 2 — Category Group</div>
             <Select
               style={{ width: '100%' }}
-              placeholder={pickerCatId ? 'Search or select an item' : 'Select a category first'}
+              placeholder={pickerCatId ? 'Select a category group' : 'Select a category first'}
               disabled={!pickerCatId}
+              loading={pickerGroupsLoading}
+              value={pickerGroupKey}
+              options={(pickerGroups || []).map((g) => ({
+                value: g.catlinedesc,
+                label: g.display_name || g.catlinedesc,
+              }))}
+              onChange={(v) => { setPickerGroupKey(v); setPickerItemKey(null); setPickerItems([]); }}
+              showSearch
+              filterOption={(input, opt) => String(opt.label || '').toLowerCase().includes(input.toLowerCase())}
+            />
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 3 — Item</div>
+            <Select
+              style={{ width: '100%' }}
+              placeholder={pickerGroupKey ? 'Search or select an item' : 'Select a category group first'}
+              disabled={!pickerGroupKey}
               loading={pickerItemsLoading}
               value={pickerItemKey}
               options={(pickerItems || []).map((item) => ({
@@ -999,7 +1726,6 @@ export default function FormulationsTab({
                 label: [
                   item.mainitem,
                   item.maindescription ? `– ${item.maindescription}` : null,
-                  item.catlinedesc     ? `[${item.catlinedesc}]`       : null,
                 ].filter(Boolean).join(' '),
                 disabled: item.already_in_formulation,
               }))}
@@ -1039,6 +1765,116 @@ export default function FormulationsTab({
                 </Col>
               </Row>
               {pickerPreview.already_in_formulation && (
+                <Tag color="warning" style={{ marginTop: 6 }}>Already in this formulation</Tag>
+              )}
+            </Card>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── Replace Component Modal ── */}
+      <Modal
+        title="Replace Component"
+        open={replaceOpen}
+        onCancel={resetReplace}
+        footer={[
+          <Button key="cancel" onClick={resetReplace}>Cancel</Button>,
+          <Button
+            key="replace"
+            type="primary"
+            disabled={!replaceItemKey || !replacePreview || (replacePreview.already_in_formulation && replaceItemKey !== replaceCurrentItemKey)}
+            onClick={handleReplaceComponent}
+          >
+            Replace ✓
+          </Button>,
+        ]}
+        width={580}
+        destroyOnHidden
+      >
+        <div style={{ display: 'grid', gap: 16, paddingTop: 8 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 1 — Category</div>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="Select a category"
+              value={replaceCatId}
+              options={categoryOptions}
+              onChange={(v) => { setReplaceCatId(v); setReplaceGroupKey(null); setReplaceGroups([]); setReplaceItemKey(null); setReplaceItems([]); }}
+              showSearch
+              filterOption={(input, opt) => String(opt.label || '').toLowerCase().includes(input.toLowerCase())}
+            />
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 2 — Category Group</div>
+            <Select
+              style={{ width: '100%' }}
+              placeholder={replaceCatId ? 'Select a category group' : 'Select a category first'}
+              disabled={!replaceCatId}
+              loading={replaceGroupsLoading}
+              value={replaceGroupKey}
+              options={(replaceGroups || []).map((g) => ({
+                value: g.catlinedesc,
+                label: g.display_name || g.catlinedesc,
+              }))}
+              onChange={(v) => { setReplaceGroupKey(v); setReplaceItemKey(null); setReplaceItems([]); }}
+              showSearch
+              filterOption={(input, opt) => String(opt.label || '').toLowerCase().includes(input.toLowerCase())}
+            />
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Step 3 — Item</div>
+            <Select
+              style={{ width: '100%' }}
+              placeholder={replaceGroupKey ? 'Search or select an item' : 'Select a category group first'}
+              disabled={!replaceGroupKey}
+              loading={replaceItemsLoading}
+              value={replaceItemKey}
+              options={(replaceItems || []).map((item) => ({
+                value: item.item_key,
+                label: [
+                  item.mainitem,
+                  item.maindescription ? `– ${item.maindescription}` : null,
+                ].filter(Boolean).join(' '),
+                disabled: item.already_in_formulation && item.item_key !== replaceCurrentItemKey,
+              }))}
+              onChange={(v) => setReplaceItemKey(v)}
+              showSearch
+              filterOption={(input, opt) => String(opt.label || '').toLowerCase().includes(input.toLowerCase())}
+            />
+          </div>
+
+          {replacePreview && (
+            <Card size="small" style={{ background: '#f8fbff', border: '1px solid #dbeafe' }}>
+              <div>
+                <Text strong>{replacePreview.mainitem}</Text>
+                {replacePreview.maindescription && (
+                  <Text type="secondary"> · {replacePreview.maindescription}</Text>
+                )}
+              </div>
+              <div style={{ marginTop: 2 }}>
+                <Text type="secondary" style={{ fontSize: 11 }}>{replacePreview.catlinedesc}</Text>
+              </div>
+              <Row gutter={8} style={{ marginTop: 6 }}>
+                <Col span={8}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>Stock WA</Text>
+                  <div><Text strong style={{ fontSize: 12 }}>{fmtCurrency(replacePreview.stock_cost_wa, 4)}</Text></div>
+                </Col>
+                <Col span={8}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>On Order WA</Text>
+                  <div><Text strong style={{ fontSize: 12 }}>{fmtCurrency(replacePreview.purchase_cost_wa, 4)}</Text></div>
+                </Col>
+                <Col span={8}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>Solids %</Text>
+                  <div>
+                    <Text strong style={{ fontSize: 12 }}>
+                      {replacePreview.tds_solids_pct != null ? `${replacePreview.tds_solids_pct}%` : '—'}
+                    </Text>
+                  </div>
+                </Col>
+              </Row>
+              {replacePreview.already_in_formulation && replaceItemKey !== replaceCurrentItemKey && (
                 <Tag color="warning" style={{ marginTop: 6 }}>Already in this formulation</Tag>
               )}
             </Card>
@@ -1096,9 +1932,7 @@ export default function FormulationsTab({
             style: { cursor: existingSubIds.has(row.id) ? 'not-allowed' : 'pointer' },
           })}
           columns={[
-            {
-              title: 'Formulation',
-              render: (_, row) => (
+            { title: 'Formulation', render: (_, row) => (
                 <div>
                   <Text strong style={{ fontSize: 12 }}>{row.name}</Text>
                   <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>v{row.version}</Text>
@@ -1118,6 +1952,171 @@ export default function FormulationsTab({
           ]}
         />
       </Modal>
+
+      {/* ── Manage Roles Modal ── */}
+      <Modal
+        title={`Manage Roles — ${materialClass || 'default'}`}
+        open={manageRolesOpen}
+        onCancel={() => { setManageRolesOpen(false); setRolesEditing(null); setRolesNewLabel(''); setRolesNewValue(''); }}
+        footer={null}
+        width={520}
+        destroyOnHidden
+      >
+        <ManageRolesPanel
+          materialClass={materialClass}
+          headers={headers}
+          rolesLoading={rolesLoading}
+          setRolesLoading={setRolesLoading}
+          rolesEditing={rolesEditing}
+          setRolesEditing={setRolesEditing}
+          rolesNewLabel={rolesNewLabel}
+          setRolesNewLabel={setRolesNewLabel}
+          rolesNewValue={rolesNewValue}
+          setRolesNewValue={setRolesNewValue}
+          onChanged={fetchRoles}
+        />
+      </Modal>
+    </Spin>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+function ManageRolesPanel({
+  materialClass, headers,
+  rolesLoading, setRolesLoading,
+  rolesEditing, setRolesEditing,
+  rolesNewLabel, setRolesNewLabel,
+  rolesNewValue, setRolesNewValue,
+  onChanged,
+}) {
+  const { message: msg } = App.useApp();
+  const [rows, setRows] = useState([]);
+  const mc = String(materialClass || '_default').toLowerCase().trim();
+
+  const load = useCallback(() => {
+    setRolesLoading(true);
+    axios.get(`${API}/api/mes/master-data/component-roles`, { headers, params: { material_class: mc } })
+      .then((res) => setRows(res.data.data || []))
+      .catch(() => msg.error('Failed to load roles'))
+      .finally(() => setRolesLoading(false));
+  }, [mc, headers]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { load(); }, [mc]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const slugify = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+  const handleAdd = () => {
+    const label = rolesNewLabel.trim();
+    if (!label) { msg.warning('Enter a label'); return; }
+    const value = rolesNewValue.trim() || slugify(label);
+    setRolesLoading(true);
+    axios.post(`${API}/api/mes/master-data/component-roles`, { material_class: mc, value, label }, { headers })
+      .then(() => { msg.success('Role added'); setRolesNewLabel(''); setRolesNewValue(''); load(); onChanged(); })
+      .catch((e) => msg.error(e.response?.data?.message || 'Save failed'))
+      .finally(() => setRolesLoading(false));
+  };
+
+  const handleSaveEdit = (id) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    setRolesLoading(true);
+    axios.put(`${API}/api/mes/master-data/component-roles/${id}`, { label: row.label, sort_order: row.sort_order }, { headers })
+      .then(() => { msg.success('Saved'); setRolesEditing(null); load(); onChanged(); })
+      .catch((e) => msg.error(e.response?.data?.message || 'Save failed'))
+      .finally(() => setRolesLoading(false));
+  };
+
+  const handleDelete = (id) => {
+    setRolesLoading(true);
+    axios.delete(`${API}/api/mes/master-data/component-roles/${id}`, { headers })
+      .then(() => { msg.success('Deleted'); load(); onChanged(); })
+      .catch((e) => msg.error(e.response?.data?.message || 'Delete failed'))
+      .finally(() => setRolesLoading(false));
+  };
+
+  const columns = [
+    {
+      title: 'Label',
+      dataIndex: 'label',
+      render: (val, row) =>
+        rolesEditing === row.id ? (
+          <Input
+            size="small"
+            value={rows.find(r => r.id === row.id)?.label || val}
+            onChange={(e) => setRows(prev => prev.map(r => r.id === row.id ? { ...r, label: e.target.value } : r))}
+            onPressEnter={() => handleSaveEdit(row.id)}
+            autoFocus
+          />
+        ) : val,
+    },
+    { title: 'Value', dataIndex: 'value', width: 130, render: (v) => <Text code style={{ fontSize: 11 }}>{v}</Text> },
+    {
+      title: 'Order',
+      dataIndex: 'sort_order',
+      width: 80,
+      render: (val, row) =>
+        rolesEditing === row.id ? (
+          <InputNumber
+            size="small"
+            min={0}
+            style={{ width: 64 }}
+            value={rows.find(r => r.id === row.id)?.sort_order ?? val}
+            onChange={(v) => setRows(prev => prev.map(r => r.id === row.id ? { ...r, sort_order: v ?? 0 } : r))}
+          />
+        ) : val,
+    },
+    {
+      title: '',
+      width: 120,
+      render: (_, row) =>
+        rolesEditing === row.id ? (
+          <Space>
+            <Button size="small" type="primary" onClick={() => handleSaveEdit(row.id)}>Save</Button>
+            <Button size="small" onClick={() => { setRolesEditing(null); load(); }}>Cancel</Button>
+          </Space>
+        ) : (
+          <Space>
+            <Button size="small" icon={<SettingOutlined />} onClick={() => setRolesEditing(row.id)} />
+            <Popconfirm title="Delete this role?" onConfirm={() => handleDelete(row.id)} okText="Yes" cancelText="No">
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          </Space>
+        ),
+    },
+  ];
+
+  return (
+    <Spin spinning={rolesLoading}>
+      <Table
+        size="small"
+        rowKey="id"
+        dataSource={rows}
+        columns={columns}
+        pagination={false}
+        style={{ marginBottom: 16 }}
+      />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <Input
+          placeholder="Label (e.g. Hardener)"
+          size="small"
+          value={rolesNewLabel}
+          onChange={(e) => { setRolesNewLabel(e.target.value); setRolesNewValue(slugify(e.target.value)); }}
+          style={{ flex: 1 }}
+        />
+        <Input
+          placeholder="slug (auto)"
+          size="small"
+          value={rolesNewValue}
+          onChange={(e) => setRolesNewValue(e.target.value)}
+          style={{ width: 130 }}
+        />
+        <Button size="small" type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+          Add Role
+        </Button>
+      </div>
+      <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block' }}>
+        Changes apply immediately to the “Role” dropdown in the BOM editor.
+      </Text>
     </Spin>
   );
 }

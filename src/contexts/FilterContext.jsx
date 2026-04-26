@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useExcelData } from './ExcelDataContext';
 import { useAuth } from './AuthContext';
 import { deduplicatedFetch } from '../utils/deduplicatedFetch';
@@ -14,6 +14,7 @@ export const FilterProvider = ({ children }) => {
   // Track if initial config has been loaded to prevent reloading on navigation
   const configLoadedRef = useRef(false);
   const currentUserIdRef = useRef(null);
+  const shouldPersistChartVisibilityRef = useRef(false);
   
   // Filter states
   const [availableFilters, setAvailableFilters] = useState({
@@ -363,15 +364,22 @@ export const FilterProvider = ({ children }) => {
     // Note: Not automatically saving - will be cleared when user saves preferences
   };
 
+  // Helper function to save chart visibility to backend (uses user preferences API)
+  const saveChartVisibilityToBackend = useCallback(async (visibility) => {
+    try {
+      await updatePreferences({ chart_visible_columns: visibility });
+    } catch (error) {
+      console.error('Failed to save chart visibility to backend:', error);
+    }
+  }, [updatePreferences]);
+
   // Toggle visibility of a column in charts
   const toggleChartColumnVisibility = (columnId) => {
+    shouldPersistChartVisibilityRef.current = true;
     setChartVisibleColumns(prev => {
-      const newVisibility = prev.includes(columnId) 
+      const newVisibility = prev.includes(columnId)
         ? prev.filter(id => id !== columnId)  // Remove if present (hide)
         : [...prev, columnId];                // Add if not present (show)
-      
-      // Save to backend immediately
-      saveChartVisibilityToBackend(newVisibility);
       return newVisibility;
     });
   };
@@ -486,46 +494,40 @@ export const FilterProvider = ({ children }) => {
     
     // Update the ref for next comparison
     prevColumnOrderIds.current = currentIds;
-    
-    setChartVisibleColumns(prev => {
-      let updated = [...prev];
-      let changed = false;
-      
-      // Only add TRULY new columns (ones that weren't in the previous columnOrder)
-      // This prevents re-adding columns that were manually hidden
-      if (trulyNewColumns.length > 0) {
-        trulyNewColumns.forEach(id => {
-          if (!updated.includes(id)) {
-            updated.push(id);
-            changed = true;
-          }
-        });
-      }
-      
-      // Remove columns that no longer exist in columnOrder
-      const filtered = updated.filter(id => currentIds.includes(id));
-      if (filtered.length !== updated.length) {
-        updated = filtered;
-        changed = true;
-      }
-      
-      // Only save if something actually changed
-      if (changed) {
-        saveChartVisibilityToBackend(updated);
-      }
-      
-      return updated;
-    });
-  }, [columnOrder]);
 
-  // Helper function to save chart visibility to backend (uses user preferences API)
-  const saveChartVisibilityToBackend = async (visibility) => {
-    try {
-      await updatePreferences({ chart_visible_columns: visibility });
-    } catch (error) {
-      console.error('Failed to save chart visibility to backend:', error);
+    let updated = [...chartVisibleColumns];
+    let changed = false;
+
+    // Only add TRULY new columns (ones that weren't in the previous columnOrder)
+    // This prevents re-adding columns that were manually hidden
+    if (trulyNewColumns.length > 0) {
+      trulyNewColumns.forEach(id => {
+        if (!updated.includes(id)) {
+          updated.push(id);
+          changed = true;
+        }
+      });
     }
-  };
+
+    // Remove columns that no longer exist in columnOrder
+    const filtered = updated.filter(id => currentIds.includes(id));
+    if (filtered.length !== updated.length) {
+      updated = filtered;
+      changed = true;
+    }
+
+    if (changed) {
+      shouldPersistChartVisibilityRef.current = true;
+      setChartVisibleColumns(updated);
+    }
+  }, [columnOrder, chartVisibleColumns]);
+
+  // Persist chart visibility only after state has been committed.
+  useEffect(() => {
+    if (!shouldPersistChartVisibilityRef.current) return;
+    shouldPersistChartVisibilityRef.current = false;
+    saveChartVisibilityToBackend(chartVisibleColumns);
+  }, [chartVisibleColumns, saveChartVisibilityToBackend]);
 
   // Values to expose in the context - MEMOIZED to prevent infinite re-renders
   const value = useMemo(() => ({

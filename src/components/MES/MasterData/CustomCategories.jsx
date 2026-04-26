@@ -1710,9 +1710,6 @@ export default function CustomCategories() {
                                         <Text strong style={{ color: active ? '#0f766e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                           {group.display_name || group.catlinedesc}
                                         </Text>
-                                        {group.is_custom && (
-                                          <Tag color="purple" style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>Custom</Tag>
-                                        )}
                                       </div>
                                       <Text strong style={{ fontSize: 13, color: active ? '#0f766e' : '#1d39c4', flexShrink: 0 }}>{fmtCurrency(group.avg_price_wa, 2)}</Text>
                                     </div>

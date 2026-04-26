@@ -35,7 +35,7 @@ export default function BOMConfigurator() {
   const { productGroupId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const token = user?.token;
+  const token = localStorage.getItem('auth_token') || user?.token;
   const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
 
   // State
@@ -64,11 +64,12 @@ export default function BOMConfigurator() {
         setItems(itemsRes.data.data || []);
         setProductTypes(typesRes.data.data || []);
 
-        // Try to get PG name from product groups API
+        // Try to get PG name from CRM products API
         try {
-          const pgRes = await axios.get(`${API_BASE}/api/products/groups`, authHeaders);
-          const pg = (pgRes.data || []).find(g => g.id === parseInt(productGroupId));
-          if (pg) setPgName(pg.product_group || `Product Group #${productGroupId}`);
+          const pgRes = await axios.get(`${API_BASE}/api/crm/products`, authHeaders);
+          const list = pgRes.data?.data || pgRes.data || [];
+          const pg = list.find(g => g.id === parseInt(productGroupId));
+          if (pg) setPgName(pg.product_group || pg.name || `Product Group #${productGroupId}`);
           else setPgName(`Product Group #${productGroupId}`);
         } catch {
           setPgName(`Product Group #${productGroupId}`);
@@ -449,4 +450,3 @@ export default function BOMConfigurator() {
   );
 }
 
-        destroyOnHidden

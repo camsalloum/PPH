@@ -30,6 +30,9 @@ const DEFS = {
     { key:'density_g_cm3',label:'Density',unit:'g/cm3',type:'number',step:0.001,required:true,min:0.89,max:0.93 },
   ],
   adhesives: [
+    { key:'appearance',label:'Appearance',unit:'-',type:'text',maxLength:120 },
+    { key:'carrying_solvent',label:'Carrying Solvent',unit:'-',type:'text',maxLength:120 },
+    { key:'functionality',label:'Functionality',unit:'-',type:'text',maxLength:40 },
     { key:'solids_pct',label:'Solids',unit:'%',type:'number',step:0.1,required:true,min:10,max:100 },
     { key:'viscosity_cps',label:'Viscosity',unit:'cps',type:'number',step:1,required:true,min:10,max:20000 },
     { key:'density_g_cm3',label:'Density',unit:'g/cm3',type:'number',step:0.001,min:0.7,max:1.5 },

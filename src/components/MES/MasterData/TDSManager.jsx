@@ -23,6 +23,7 @@ import {
   Typography,
   Alert,
   AutoComplete,
+  Popconfirm,
 } from 'antd';
 import {
   SearchOutlined,
@@ -44,6 +45,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import ParameterSchemaAdmin from './ParameterSchemaAdmin';
+import { ALU_FOIL_PROFILE_KEY } from '../../../config/mes-profiles';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -104,6 +106,77 @@ const CAT_DESC_BG = {
 };
 
 const TDS_WRITE_ROLES = ['admin', 'production_manager', 'quality_control'];
+const ADMIN_ROLES = ['admin', 'it_admin'];
+const COMPOSITION_LIMIT_ELEMENTS = ['Si', 'Fe', 'Cu', 'Mn', 'Mg', 'Zn', 'Ti', 'Cr', 'Ni', 'Pb', 'Al', 'OthersEach', 'OthersTotal'];
+
+function normalizeCompositionLimits(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([element]) => String(element || '').trim()));
+}
+
+function CompositionLimitsInput({ value, onChange, disabled }) {
+  const clean = normalizeCompositionLimits(value);
+  const rows = Object.entries(clean).map(([element, limits]) => ({
+    element,
+    min: limits?.min,
+    max: limits?.max,
+  }));
+  const available = COMPOSITION_LIMIT_ELEMENTS.filter((element) => !clean[element]);
+
+  const emit = (nextRows) => {
+    const next = {};
+    nextRows.forEach((row) => {
+      const element = String(row.element || '').trim();
+      if (!element) return;
+      const min = row.min === '' || row.min === null || row.min === undefined ? null : Number(row.min);
+      const max = row.max === '' || row.max === null || row.max === undefined ? null : Number(row.max);
+      if (Number.isFinite(min) || Number.isFinite(max)) {
+        next[element] = {
+          ...(Number.isFinite(min) ? { min } : {}),
+          ...(Number.isFinite(max) ? { max } : {}),
+        };
+      }
+    });
+    onChange?.(next);
+  };
+
+  const updateRow = (index, patch) => {
+    emit(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
+  };
+
+  return (
+    <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 8, background: disabled ? '#f9fafb' : '#fff' }}>
+      <Row gutter={[8, 6]} style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>
+        <Col span={8}>Element</Col>
+        <Col span={7}>Min %</Col>
+        <Col span={7}>Max %</Col>
+        <Col span={2} />
+      </Row>
+      {rows.map((row, index) => (
+        <Row gutter={[8, 6]} key={`${row.element}-${index}`} style={{ marginBottom: 6 }}>
+          <Col span={8}>
+            <Input size="small" value={row.element} readOnly={disabled} onChange={(event) => updateRow(index, { element: event.target.value })} />
+          </Col>
+          <Col span={7}>
+            <InputNumber size="small" value={row.min} step={0.001} readOnly={disabled} controls={!disabled} style={{ width: '100%' }} onChange={(next) => updateRow(index, { min: next })} />
+          </Col>
+          <Col span={7}>
+            <InputNumber size="small" value={row.max} step={0.001} readOnly={disabled} controls={!disabled} style={{ width: '100%' }} onChange={(next) => updateRow(index, { max: next })} />
+          </Col>
+          <Col span={2}>
+            {!disabled && <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => emit(rows.filter((_, rowIndex) => rowIndex !== index))} />}
+          </Col>
+        </Row>
+      ))}
+      {!rows.length && <Text type="secondary" style={{ fontSize: 11 }}>No composition limits recorded.</Text>}
+      {!disabled && available.length > 0 && (
+        <Button size="small" icon={<PlusOutlined />} style={{ marginTop: rows.length ? 2 : 8 }} onClick={() => emit([...rows, { element: available[0], min: undefined, max: undefined }])}>
+          Add Element
+        </Button>
+      )}
+    </div>
+  );
+}
 
 const TECH_PARAM_CONFIG = [
   { key: 'mfr_190_2_16', label: 'MFR 190/2.16', unit: 'g/10min', methodKey: 'mfr_190_2_16_test_method', step: 0.01 },
@@ -183,7 +256,6 @@ const NON_RESIN_STATUS_OPTIONS = [
   { value: 'verified', label: 'Verified' },
 ];
 
-const ALU_FOIL_PROFILE_KEY = 'substrates_alu_foil';
 const ALU_FOIL_MATCH_RE = /(aluminium|aluminum|alu\s*foil|foil\s*alu|\balu\b)(?!\s*\/?\s*pap)/i;
 
 // ── Substrate-specific profile detection (order matters: specific before general) ──
@@ -196,291 +268,16 @@ const SUBSTRATE_PROFILES = [
   { key: 'substrates_pvc',     re: /\bpvc\b/i },
   { key: 'substrates_petc',    re: /\bpet\s*c\b|\bpetc\b|\bc-pet\b/i },
   { key: 'substrates_petg',    re: /\bpet\s*g\b|\bpetg\b|\bg-pet\b/i },
-  { key: 'substrates_alu_pap', re: /\balu\s*\/?\s*pap\b|\bbutter\s*foil\b|\bwalki\b|paper\s*\/\s*foil|foil\s*lam/i },
-  { key: 'substrates_pap',     re: /\bpaper\b|\bpap\b|\bkraft\b|\bglassine\b/i },
+  { key: 'substrates_alu_pap',     re: /\balu\s*\/?\s*pap\b|\bbutter\s*foil\b|\bwalki\b|paper\s*\/\s*foil|foil\s*lam/i },
+  { key: 'substrates_greaseproof', re: /\bgrease\s*-?\s*proof\b|\bgreaseproof\b|\bglassine\b/i },
+  { key: 'substrates_pap',         re: /\bpaper\b|\bpap\b|\bkraft\b/i },
 ];
 
-const NON_RESIN_PARAM_SCHEMAS = {
-  substrates: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'mic', type: 'number', step: 0.1, required: true, min: 5, max: 300 },
-    { key: 'width_mm', label: 'Width', unit: 'mm', type: 'number', step: 1, required: true, min: 50, max: 3000 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm3', type: 'number', step: 0.001, min: 0.8, max: 1.5 },
-    { key: 'cof', label: 'COF', unit: '-', type: 'number', step: 0.001, required: true, min: 0.05, max: 1.5 },
-    { key: 'corona_dyne', label: 'Corona', unit: 'dyne', type: 'number', step: 1, min: 30, max: 60 },
-  ],
-  substrates_alu_foil: [
-    { key: 'alloy', label: 'Alloy', unit: '-', type: 'text', required: true, maxLength: 40 },
-    { key: 'temper', label: 'Temper', unit: '-', type: 'text', required: true, maxLength: 20 },
-    { key: 'thickness_min_mm', label: 'Thickness Min', unit: 'mm', type: 'number', step: 0.001, required: true, min: 0.001, max: 0.5 },
-    { key: 'thickness_max_mm', label: 'Thickness Max', unit: 'mm', type: 'number', step: 0.001, required: true, min: 0.001, max: 0.5 },
-    { key: 'thickness_tolerance_pct', label: 'Thickness Tolerance', unit: '%', type: 'number', step: 0.1, min: 0, max: 30 },
-    { key: 'width_tolerance_mm', label: 'Width Tolerance', unit: 'mm', type: 'number', step: 0.1, min: 0, max: 20 },
-    { key: 'tensile_strength_min_mpa', label: 'Tensile Strength Min', unit: 'MPa', type: 'number', step: 1, min: 10, max: 400 },
-    { key: 'tensile_strength_max_mpa', label: 'Tensile Strength Max', unit: 'MPa', type: 'number', step: 1, min: 10, max: 400 },
-    { key: 'elongation_min_pct', label: 'Elongation Min', unit: '%', type: 'number', step: 0.1, min: 0, max: 100 },
-    { key: 'core_id_small_mm', label: 'Core ID (small)', unit: 'mm', type: 'number', step: 0.1, min: 30, max: 120 },
-    { key: 'max_coil_od_small_core_mm', label: 'Max Coil OD (small core)', unit: 'mm', type: 'number', step: 1, min: 100, max: 2000 },
-    { key: 'core_id_large_mm', label: 'Core ID (large)', unit: 'mm', type: 'number', step: 0.1, min: 100, max: 250 },
-    { key: 'max_coil_od_large_core_mm', label: 'Max Coil OD (large core)', unit: 'mm', type: 'number', step: 1, min: 100, max: 2500 },
-    { key: 'silicon_min_pct', label: 'Silicon Min', unit: '%', type: 'number', step: 0.001, min: 0, max: 5 },
-    { key: 'silicon_max_pct', label: 'Silicon Max', unit: '%', type: 'number', step: 0.001, min: 0, max: 5 },
-    { key: 'iron_min_pct', label: 'Iron Min', unit: '%', type: 'number', step: 0.001, min: 0, max: 5 },
-    { key: 'iron_max_pct', label: 'Iron Max', unit: '%', type: 'number', step: 0.001, min: 0, max: 5 },
-    { key: 'copper_max_pct', label: 'Copper Max', unit: '%', type: 'number', step: 0.001, min: 0, max: 2 },
-    { key: 'manganese_max_pct', label: 'Manganese Max', unit: '%', type: 'number', step: 0.001, min: 0, max: 2 },
-    { key: 'magnesium_max_pct', label: 'Magnesium Max', unit: '%', type: 'number', step: 0.001, min: 0, max: 2 },
-    { key: 'zinc_max_pct', label: 'Zinc Max', unit: '%', type: 'number', step: 0.001, min: 0, max: 2 },
-    { key: 'titanium_max_pct', label: 'Titanium Max', unit: '%', type: 'number', step: 0.001, min: 0, max: 2 },
-    { key: 'chemical_test_method', label: 'Chemical Test Method', unit: '-', type: 'text', maxLength: 80 },
-    { key: 'mechanical_test_method', label: 'Mechanical Test Method', unit: '-', type: 'text', maxLength: 80 },
-    { key: 'gauge_test_method', label: 'Gauge Test Method', unit: '-', type: 'text', maxLength: 80 },
-    { key: 'pinhole_test_method', label: 'Pinhole Test Method', unit: '-', type: 'text', maxLength: 80 },
-  ],
-  // ── BOPP (21 params) ──
-  substrates_bopp: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 10, max: 60 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 0.89, max: 0.93 },
-    { key: 'yield_m2_per_kg', label: 'Yield', unit: 'm²/kg', type: 'number', step: 0.1, min: 20, max: 120 },
-    { key: 'haze_pct', label: 'Haze', unit: '%', type: 'number', step: 0.1, min: 0.3, max: 10 },
-    { key: 'gloss_60', label: 'Gloss 60°', unit: 'GU', type: 'number', step: 1, min: 60, max: 150 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 100, max: 250 },
-    { key: 'tensile_strength_td_mpa', label: 'Tensile TD', unit: 'MPa', type: 'number', step: 1, min: 150, max: 350 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 50, max: 250 },
-    { key: 'elongation_td_pct', label: 'Elongation TD', unit: '%', type: 'number', step: 1, min: 20, max: 100 },
-    { key: 'cof_static', label: 'COF Static', unit: '-', type: 'number', step: 0.001, min: 0.1, max: 1.0 },
-    { key: 'cof_kinetic', label: 'COF Kinetic', unit: '-', type: 'number', step: 0.001, min: 0.05, max: 0.8 },
-    { key: 'corona_dyne', label: 'Corona', unit: 'dyne/cm', type: 'number', step: 1, min: 32, max: 50 },
-    { key: 'shrinkage_md_pct', label: 'Shrinkage MD', unit: '%', type: 'number', step: 0.1, min: 0, max: 10 },
-    { key: 'shrinkage_td_pct', label: 'Shrinkage TD', unit: '%', type: 'number', step: 0.1, min: 0, max: 5 },
-    { key: 'otr_cc_m2_day', label: 'OTR', unit: 'cc/m²/24h', type: 'number', step: 1, min: 0, max: 3000 },
-    { key: 'wvtr_g_m2_day', label: 'WVTR', unit: 'g/m²/24h', type: 'number', step: 0.1, min: 0, max: 20 },
-    { key: 'seal_strength_n_15mm', label: 'Seal Strength', unit: 'N/15mm', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'treatment_side', label: 'Treatment Side', unit: '-', type: 'text', maxLength: 40 },
-    { key: 'surface_type', label: 'Surface Type', unit: '-', type: 'text', maxLength: 40 },
-    { key: 'tear_strength_md_mn', label: 'Tear MD', unit: 'mN', type: 'number', step: 1, min: 20, max: 500 },
-    { key: 'tear_strength_td_mn', label: 'Tear TD', unit: 'mN', type: 'number', step: 1, min: 50, max: 1000 },
-  ],
-  // ── CPP (22 params) ──
-  substrates_cpp: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 15, max: 100 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 0.89, max: 0.92 },
-    { key: 'yield_m2_per_kg', label: 'Yield', unit: 'm²/kg', type: 'number', step: 0.1, min: 10, max: 70 },
-    { key: 'haze_pct', label: 'Haze', unit: '%', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'gloss_60', label: 'Gloss 60°', unit: 'GU', type: 'number', step: 1, min: 60, max: 130 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 30, max: 100 },
-    { key: 'tensile_strength_td_mpa', label: 'Tensile TD', unit: 'MPa', type: 'number', step: 1, min: 30, max: 80 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 200, max: 800 },
-    { key: 'elongation_td_pct', label: 'Elongation TD', unit: '%', type: 'number', step: 1, min: 200, max: 800 },
-    { key: 'cof_static', label: 'COF Static', unit: '-', type: 'number', step: 0.001, min: 0.1, max: 1.0 },
-    { key: 'cof_kinetic', label: 'COF Kinetic', unit: '-', type: 'number', step: 0.001, min: 0.05, max: 0.8 },
-    { key: 'seal_init_temp_c', label: 'SIT (Seal Init Temp)', unit: '°C', type: 'number', step: 1, required: true, min: 90, max: 160 },
-    { key: 'seal_strength_n_15mm', label: 'Seal Strength', unit: 'N/15mm', type: 'number', step: 0.1, min: 1, max: 15 },
-    { key: 'hot_tack_temp_c', label: 'Hot Tack Temp', unit: '°C', type: 'number', step: 1, min: 90, max: 160 },
-    { key: 'hot_tack_strength_n_15mm', label: 'Hot Tack Strength', unit: 'N/15mm', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'otr_cc_m2_day', label: 'OTR', unit: 'cc/m²/24h', type: 'number', step: 1, min: 0, max: 5000 },
-    { key: 'wvtr_g_m2_day', label: 'WVTR', unit: 'g/m²/24h', type: 'number', step: 0.1, min: 0, max: 30 },
-    { key: 'corona_dyne', label: 'Corona', unit: 'dyne/cm', type: 'number', step: 1, min: 32, max: 50 },
-    { key: 'dart_drop_g', label: 'Dart Drop', unit: 'g', type: 'number', step: 1, min: 30, max: 500 },
-    { key: 'puncture_resistance_n', label: 'Puncture', unit: 'N', type: 'number', step: 0.1, min: 2, max: 30 },
-    { key: 'seal_range_temp_c', label: 'Sealing Window', unit: '°C range', type: 'text', maxLength: 30 },
-    { key: 'surface_type', label: 'Surface Type', unit: '-', type: 'text', maxLength: 40 },
-  ],
-  // ── PET / BOPET (20 params) ──
-  substrates_pet: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 6, max: 50 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 1.33, max: 1.41 },
-    { key: 'yield_m2_per_kg', label: 'Yield', unit: 'm²/kg', type: 'number', step: 0.1, min: 18, max: 120 },
-    { key: 'haze_pct', label: 'Haze', unit: '%', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'gloss_60', label: 'Gloss 60°', unit: 'GU', type: 'number', step: 1, min: 70, max: 180 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 100, max: 300 },
-    { key: 'tensile_strength_td_mpa', label: 'Tensile TD', unit: 'MPa', type: 'number', step: 1, min: 100, max: 300 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 50, max: 200 },
-    { key: 'elongation_td_pct', label: 'Elongation TD', unit: '%', type: 'number', step: 1, min: 50, max: 200 },
-    { key: 'shrinkage_md_pct', label: 'Shrinkage MD', unit: '%', type: 'number', step: 0.1, min: 0, max: 5 },
-    { key: 'shrinkage_td_pct', label: 'Shrinkage TD', unit: '%', type: 'number', step: 0.1, min: 0, max: 3 },
-    { key: 'otr_cc_m2_day', label: 'OTR', unit: 'cc/m²/24h', type: 'number', step: 1, min: 0, max: 200 },
-    { key: 'wvtr_g_m2_day', label: 'WVTR', unit: 'g/m²/24h', type: 'number', step: 0.1, min: 0, max: 30 },
-    { key: 'corona_dyne', label: 'Corona', unit: 'dyne/cm', type: 'number', step: 1, min: 38, max: 56 },
-    { key: 'cof_static', label: 'COF Static', unit: '-', type: 'number', step: 0.001, min: 0.1, max: 0.8 },
-    { key: 'cof_kinetic', label: 'COF Kinetic', unit: '-', type: 'number', step: 0.001, min: 0.05, max: 0.6 },
-    { key: 'optical_density', label: 'Optical Density', unit: '-', type: 'number', step: 0.1, min: 1.5, max: 3.5 },
-    { key: 'surface_type', label: 'Surface Type', unit: '-', type: 'text', maxLength: 40 },
-    { key: 'treatment_side', label: 'Treatment Side', unit: '-', type: 'text', maxLength: 40 },
-    { key: 'solvent_retention_mg_m2', label: 'Solvent Retention', unit: 'mg/m²', type: 'number', step: 0.1, min: 0, max: 30 },
-  ],
-  // ── PA / Nylon / BOPA (17 params) ──
-  substrates_pa: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 10, max: 50 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 1.10, max: 1.16 },
-    { key: 'yield_m2_per_kg', label: 'Yield', unit: 'm²/kg', type: 'number', step: 0.1, min: 17, max: 90 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 60, max: 200 },
-    { key: 'tensile_strength_td_mpa', label: 'Tensile TD', unit: 'MPa', type: 'number', step: 1, min: 60, max: 200 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 50, max: 500 },
-    { key: 'elongation_td_pct', label: 'Elongation TD', unit: '%', type: 'number', step: 1, min: 50, max: 500 },
-    { key: 'puncture_resistance_n_mm', label: 'Puncture', unit: 'N/mm', type: 'number', step: 0.1, min: 5, max: 40 },
-    { key: 'otr_cc_m2_day', label: 'OTR', unit: 'cc/m²/24h', type: 'number', step: 0.1, min: 0, max: 100 },
-    { key: 'wvtr_g_m2_day', label: 'WVTR', unit: 'g/m²/24h', type: 'number', step: 0.1, min: 0, max: 500 },
-    { key: 'corona_dyne', label: 'Corona', unit: 'dyne/cm', type: 'number', step: 1, min: 38, max: 56 },
-    { key: 'haze_pct', label: 'Haze', unit: '%', type: 'number', step: 0.1, min: 1, max: 10 },
-    { key: 'moisture_content_pct', label: 'Moisture Content', unit: '%', type: 'number', step: 0.1, min: 0, max: 5 },
-    { key: 'seal_strength_n_15mm', label: 'Seal Strength', unit: 'N/15mm', type: 'number', step: 0.1, min: 1, max: 15 },
-    { key: 'thermoformability', label: 'Thermoformability', unit: '-', type: 'text', maxLength: 40 },
-    { key: 'cof_static', label: 'COF Static', unit: '-', type: 'number', step: 0.001, min: 0.2, max: 1.0 },
-    { key: 'cof_kinetic', label: 'COF Kinetic', unit: '-', type: 'number', step: 0.001, min: 0.1, max: 0.8 },
-  ],
-  // ── PE Lamination (12 params) ──
-  substrates_pe: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 15, max: 200 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 0.90, max: 0.97 },
-    { key: 'mfi_g_10min', label: 'MFI', unit: 'g/10min', type: 'number', step: 0.1, min: 0.1, max: 30 },
-    { key: 'seal_temp_min_c', label: 'Seal Temp Min', unit: '°C', type: 'number', step: 1, min: 80, max: 150 },
-    { key: 'seal_temp_max_c', label: 'Seal Temp Max', unit: '°C', type: 'number', step: 1, min: 120, max: 200 },
-    { key: 'seal_strength_n_15mm', label: 'Seal Strength', unit: 'N/15mm', type: 'number', step: 0.1, min: 1, max: 20 },
-    { key: 'dart_drop_g', label: 'Dart Drop', unit: 'g', type: 'number', step: 1, min: 50, max: 1000 },
-    { key: 'cof_static', label: 'COF Static', unit: '-', type: 'number', step: 0.001, min: 0.1, max: 1.0 },
-    { key: 'cof_kinetic', label: 'COF Kinetic', unit: '-', type: 'number', step: 0.001, min: 0.1, max: 0.8 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 10, max: 50 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 100, max: 800 },
-    { key: 'corona_dyne', label: 'Corona', unit: 'dyne/cm', type: 'number', step: 1, min: 32, max: 50 },
-  ],
-  // ── PVC Shrink (16 params + shrink_curve) ──
-  substrates_pvc: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 10, max: 100 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 1.25, max: 1.45 },
-    { key: 'yield_m2_per_kg', label: 'Yield', unit: 'm²/kg', type: 'number', step: 0.1, min: 7, max: 80 },
-    { key: 'haze_pct', label: 'Haze', unit: '%', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'gloss_60', label: 'Gloss 60°', unit: 'GU', type: 'number', step: 1, min: 50, max: 150 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 30, max: 100 },
-    { key: 'tensile_strength_td_mpa', label: 'Tensile TD', unit: 'MPa', type: 'number', step: 1, min: 30, max: 100 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 50, max: 400 },
-    { key: 'elongation_td_pct', label: 'Elongation TD', unit: '%', type: 'number', step: 1, min: 50, max: 300 },
-    { key: 'shrinkage_md_pct_max', label: 'Max Shrinkage MD', unit: '%', type: 'number', step: 0.1, required: true, min: 5, max: 80 },
-    { key: 'shrinkage_td_pct_max', label: 'Max Shrinkage TD', unit: '%', type: 'number', step: 0.1, required: true, min: 1, max: 30 },
-    { key: 'shrink_onset_temp_c', label: 'Shrink Onset Temp', unit: '°C', type: 'number', step: 1, min: 50, max: 90 },
-    { key: 'shrink_tunnel_temp_c', label: 'Tunnel Temp', unit: '°C', type: 'number', step: 1, min: 70, max: 120 },
-    { key: 'shrink_force_n', label: 'Shrink Force', unit: 'N', type: 'number', step: 0.1, min: 0.1, max: 10 },
-    { key: 'natural_shrink_pct', label: 'Natural Shrink', unit: '%', type: 'number', step: 0.1, min: 0, max: 5 },
-    { key: 'shrink_curve', label: 'Shrink Curve', unit: '-', type: 'json_array' },
-  ],
-  // ── PETC Shrink (16 params + shrink_curve) ──
-  substrates_petc: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 20, max: 80 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 1.25, max: 1.40 },
-    { key: 'yield_m2_per_kg', label: 'Yield', unit: 'm²/kg', type: 'number', step: 0.1, min: 8, max: 40 },
-    { key: 'haze_pct', label: 'Haze', unit: '%', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'gloss_60', label: 'Gloss 60°', unit: 'GU', type: 'number', step: 1, min: 50, max: 150 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 40, max: 200 },
-    { key: 'tensile_strength_td_mpa', label: 'Tensile TD', unit: 'MPa', type: 'number', step: 1, min: 40, max: 200 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 20, max: 300 },
-    { key: 'elongation_td_pct', label: 'Elongation TD', unit: '%', type: 'number', step: 1, min: 20, max: 200 },
-    { key: 'shrinkage_md_pct_max', label: 'Max Shrinkage MD', unit: '%', type: 'number', step: 0.1, required: true, min: 5, max: 80 },
-    { key: 'shrinkage_td_pct_max', label: 'Max Shrinkage TD', unit: '%', type: 'number', step: 0.1, required: true, min: 1, max: 20 },
-    { key: 'shrink_onset_temp_c', label: 'Shrink Onset Temp', unit: '°C', type: 'number', step: 1, min: 50, max: 80 },
-    { key: 'shrink_tunnel_temp_c', label: 'Tunnel Temp', unit: '°C', type: 'number', step: 1, min: 60, max: 100 },
-    { key: 'shrink_force_n', label: 'Shrink Force', unit: 'N', type: 'number', step: 0.1, min: 0.1, max: 10 },
-    { key: 'natural_shrink_pct', label: 'Natural Shrink', unit: '%', type: 'number', step: 0.1, min: 0, max: 5 },
-    { key: 'shrink_curve', label: 'Shrink Curve', unit: '-', type: 'json_array' },
-  ],
-  // ── PETG Shrink (16 params + shrink_curve) ──
-  substrates_petg: [
-    { key: 'thickness_mic', label: 'Thickness', unit: 'µm', type: 'number', step: 0.1, required: true, min: 20, max: 80 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm³', type: 'number', step: 0.001, required: true, min: 1.25, max: 1.40 },
-    { key: 'yield_m2_per_kg', label: 'Yield', unit: 'm²/kg', type: 'number', step: 0.1, min: 8, max: 40 },
-    { key: 'haze_pct', label: 'Haze', unit: '%', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'gloss_60', label: 'Gloss 60°', unit: 'GU', type: 'number', step: 1, min: 50, max: 150 },
-    { key: 'tensile_strength_md_mpa', label: 'Tensile MD', unit: 'MPa', type: 'number', step: 1, min: 40, max: 200 },
-    { key: 'tensile_strength_td_mpa', label: 'Tensile TD', unit: 'MPa', type: 'number', step: 1, min: 40, max: 200 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 1, min: 20, max: 300 },
-    { key: 'elongation_td_pct', label: 'Elongation TD', unit: '%', type: 'number', step: 1, min: 20, max: 200 },
-    { key: 'shrinkage_md_pct_max', label: 'Max Shrinkage MD', unit: '%', type: 'number', step: 0.1, required: true, min: 5, max: 80 },
-    { key: 'shrinkage_td_pct_max', label: 'Max Shrinkage TD', unit: '%', type: 'number', step: 0.1, required: true, min: 1, max: 20 },
-    { key: 'shrink_onset_temp_c', label: 'Shrink Onset Temp', unit: '°C', type: 'number', step: 1, min: 50, max: 80 },
-    { key: 'shrink_tunnel_temp_c', label: 'Tunnel Temp', unit: '°C', type: 'number', step: 1, min: 60, max: 100 },
-    { key: 'shrink_force_n', label: 'Shrink Force', unit: 'N', type: 'number', step: 0.1, min: 0.1, max: 10 },
-    { key: 'natural_shrink_pct', label: 'Natural Shrink', unit: '%', type: 'number', step: 0.1, min: 0, max: 5 },
-    { key: 'shrink_curve', label: 'Shrink Curve', unit: '-', type: 'json_array' },
-  ],
-  // ── PAP / Paper (14 params) ──
-  substrates_pap: [
-    { key: 'grammage_gsm', label: 'Grammage', unit: 'g/m²', type: 'number', step: 0.1, required: true, min: 20, max: 200 },
-    { key: 'thickness_mic', label: 'Caliper', unit: 'µm', type: 'number', step: 1, min: 20, max: 300 },
-    { key: 'density_g_cm3', label: 'Apparent Density', unit: 'g/cm³', type: 'number', step: 0.001, min: 0.6, max: 1.3 },
-    { key: 'tensile_strength_md_kn_m', label: 'Tensile MD', unit: 'kN/m', type: 'number', step: 0.1, min: 1, max: 20 },
-    { key: 'tensile_strength_td_kn_m', label: 'Tensile TD', unit: 'kN/m', type: 'number', step: 0.1, min: 0.5, max: 15 },
-    { key: 'elongation_md_pct', label: 'Elongation MD', unit: '%', type: 'number', step: 0.1, min: 1, max: 15 },
-    { key: 'burst_strength_kpa', label: 'Burst Strength', unit: 'kPa', type: 'number', step: 1, min: 50, max: 800 },
-    { key: 'tear_strength_md_mn', label: 'Tear MD', unit: 'mN', type: 'number', step: 1, min: 100, max: 2000 },
-    { key: 'cobb_60_g_m2', label: 'Cobb 60', unit: 'g/m²', type: 'number', step: 0.1, min: 15, max: 200 },
-    { key: 'porosity_sec', label: 'Porosity (Gurley)', unit: 'sec/100ml', type: 'number', step: 1, min: 5, max: 5000 },
-    { key: 'brightness_pct', label: 'Brightness', unit: '%', type: 'number', step: 0.1, min: 40, max: 100 },
-    { key: 'opacity_pct', label: 'Opacity', unit: '%', type: 'number', step: 0.1, min: 50, max: 100 },
-    { key: 'smoothness_sec', label: 'Smoothness (Bekk)', unit: 'sec', type: 'number', step: 1, min: 5, max: 500 },
-    { key: 'moisture_content_pct', label: 'Moisture', unit: '%', type: 'number', step: 0.1, min: 3, max: 10 },
-  ],
-  // ── Alu/Pap laminate (9 params) ──
-  substrates_alu_pap: [
-    { key: 'total_thickness_mic', label: 'Total Thickness', unit: 'µm', type: 'number', step: 1, required: true, min: 40, max: 150 },
-    { key: 'alu_thickness_mic', label: 'Alu Thickness', unit: 'µm', type: 'number', step: 0.1, min: 5, max: 20 },
-    { key: 'paper_grammage_gsm', label: 'Paper Grammage', unit: 'g/m²', type: 'number', step: 0.1, min: 20, max: 100 },
-    { key: 'total_grammage_gsm', label: 'Total Grammage', unit: 'g/m²', type: 'number', step: 0.1, min: 40, max: 200 },
-    { key: 'dead_fold', label: 'Dead Fold', unit: '-', type: 'text', maxLength: 40 },
-    { key: 'seal_strength_n_15mm', label: 'Seal Strength', unit: 'N/15mm', type: 'number', step: 0.1, min: 0.5, max: 10 },
-    { key: 'wvtr_g_m2_day', label: 'WVTR', unit: 'g/m²/24h', type: 'number', step: 0.01, min: 0, max: 2 },
-    { key: 'otr_cc_m2_day', label: 'OTR', unit: 'cc/m²/24h', type: 'number', step: 0.01, min: 0, max: 1 },
-    { key: 'surface_finish', label: 'Surface Finish', unit: '-', type: 'text', maxLength: 40 },
-  ],
-  adhesives: [
-    { key: 'solids_pct', label: 'Solids', unit: '%', type: 'number', step: 0.1, required: true, min: 10, max: 100 },
-    { key: 'viscosity_cps', label: 'Viscosity', unit: 'cPs', type: 'number', step: 1, required: true, min: 10, max: 20000 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm3', type: 'number', step: 0.001, min: 0.7, max: 1.5 },
-    {
-      key: 'mix_ratio',
-      label: 'Mix Ratio',
-      unit: '-',
-      type: 'text',
-      required: true,
-      maxLength: 30,
-      pattern: /^\d+(\.\d+)?\s*:\s*\d+(\.\d+)?$/,
-      patternMessage: 'Mix Ratio must be in the format A:B (e.g. 100:75)',
-    },
-    { key: 'pot_life_min', label: 'Pot Life', unit: 'min', type: 'number', step: 1, min: 1, max: 600 },
-  ],
-  chemicals: [
-    { key: 'purity_pct', label: 'Purity', unit: '%', type: 'number', step: 0.1, required: true, min: 50, max: 100 },
-    { key: 'density_g_cm3', label: 'Density', unit: 'g/cm3', type: 'number', step: 0.001, required: true, min: 0.6, max: 2 },
-    { key: 'boiling_point_c', label: 'Boiling Point', unit: 'C', type: 'number', step: 0.1, min: -50, max: 350 },
-    { key: 'flash_point_c', label: 'Flash Point', unit: 'C', type: 'number', step: 0.1, min: -100, max: 250 },
-    { key: 'viscosity_cps', label: 'Viscosity', unit: 'cPs', type: 'number', step: 1, min: 0, max: 20000 },
-  ],
-  additives: [
-    { key: 'dosage_pct', label: 'Dosage', unit: '%', type: 'number', step: 0.01, required: true, min: 0.01, max: 20 },
-    { key: 'carrier_resin', label: 'Carrier Resin', unit: '-', type: 'text', required: true, maxLength: 100 },
-    { key: 'active_content_pct', label: 'Active Content', unit: '%', type: 'number', step: 0.1, min: 0, max: 100 },
-    { key: 'moisture_pct', label: 'Moisture', unit: '%', type: 'number', step: 0.01, min: 0, max: 10 },
-    { key: 'ash_pct', label: 'Ash', unit: '%', type: 'number', step: 0.01, min: 0, max: 60 },
-  ],
-  coating: [
-    { key: 'solids_pct', label: 'Solids', unit: '%', type: 'number', step: 0.1, required: true, min: 5, max: 100 },
-    { key: 'viscosity_cps', label: 'Viscosity', unit: 'cPs', type: 'number', step: 1, required: true, min: 10, max: 20000 },
-    { key: 'coat_weight_gsm', label: 'Coat Weight', unit: 'gsm', type: 'number', step: 0.1, required: true, min: 0.1, max: 30 },
-    { key: 'gloss_60deg', label: 'Gloss 60°', unit: 'GU', type: 'number', step: 0.1, min: 0, max: 120 },
-    { key: 'cure_temp_c', label: 'Cure Temp', unit: 'C', type: 'number', step: 1, min: 20, max: 250 },
-  ],
-  packing_materials: [
-    { key: 'length_mm', label: 'Length', unit: 'mm', type: 'number', step: 1, required: true, min: 10, max: 5000 },
-    { key: 'width_mm', label: 'Width', unit: 'mm', type: 'number', step: 1, required: true, min: 10, max: 3000 },
-    { key: 'gsm', label: 'GSM', unit: 'gsm', type: 'number', step: 0.1, required: true, min: 30, max: 1000 },
-    { key: 'burst_strength', label: 'Burst Strength', unit: 'kPa', type: 'number', step: 1, min: 50, max: 3000 },
-    { key: 'moisture_pct', label: 'Moisture', unit: '%', type: 'number', step: 0.1, min: 0, max: 20 },
-  ],
-  mounting_tapes: [
-    { key: 'thickness_um', label: 'Thickness', unit: 'um', type: 'number', step: 1, required: true, min: 20, max: 3000 },
-    { key: 'adhesion_n_25mm', label: 'Adhesion', unit: 'N/25mm', type: 'number', step: 0.1, required: true, min: 0.1, max: 100 },
-    { key: 'tensile_n_25mm', label: 'Tensile', unit: 'N/25mm', type: 'number', step: 0.1, required: true, min: 0.1, max: 500 },
-    { key: 'elongation_pct', label: 'Elongation', unit: '%', type: 'number', step: 0.1, min: 1, max: 1500 },
-    { key: 'temp_resistance_c', label: 'Temp Resistance', unit: 'C', type: 'number', step: 1, min: -40, max: 260 },
-  ],
-};
+// NON_RESIN_PARAM_SCHEMAS removed (Phase 7.1/7.2, 2026-04-25):
+// All parameter definitions are now sourced from `mes_parameter_definitions` via
+// fetchParamDefinitions() into `dbParamDefinitions`. The legacy hardcoded fallback
+// has been deleted to eliminate dual-source drift. If a profile has no DB
+// definitions yet, the UI shows an empty schema (intentional empty state).
 
 const RM_TAG_BASE_STYLE = {
   display: 'inline-block',
@@ -630,6 +427,18 @@ function getNonResinFieldRules(field) {
     });
   }
 
+  if (field.type === 'json') {
+    rules.push({
+      validator: (_, value) => {
+        if (value === undefined || value === null || value === '') return Promise.resolve();
+        if (typeof value !== 'object' || Array.isArray(value)) {
+          return Promise.reject(new Error(`${field.label} must be an object`));
+        }
+        return Promise.resolve();
+      },
+    });
+  }
+
   return rules;
 }
 
@@ -696,6 +505,18 @@ export default function TDSManager() {
   const [nonResinUploading, setNonResinUploading] = useState(false);
   const nonResinFileInputRef = React.useRef(null);
 
+  // ─── TDS Attachment Library (Phase 6) ────────────────────────────────
+  const [tdsAttachments, setTdsAttachments] = useState([]);
+  const [tdsAttachmentsLoading, setTdsAttachmentsLoading] = useState(false);
+  const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState(null); // {id, supplier_id}
+  const [pendingAttachmentSupplierId, setPendingAttachmentSupplierId] = useState(null);
+
+  // ─── Supplier Management Modal ──────────────────────────────────────
+  const [supplierMgmtOpen, setSupplierMgmtOpen] = useState(false);
+  const [supplierForm, setSupplierForm] = useState(null); // null = closed, {} = new, {...} = edit
+  const [supplierSaving, setSupplierSaving] = useState(false);
+
   const [diffVisible, setDiffVisible] = useState(false);
   const [diffItems, setDiffItems] = useState([]);
   const [diffSelected, setDiffSelected] = useState({});
@@ -704,6 +525,16 @@ export default function TDSManager() {
   const [diffNonResinContext, setDiffNonResinContext] = useState(null);
   const [applyingDiff, setApplyingDiff] = useState(false);
   const [unlockingDiff, setUnlockingDiff] = useState(false);
+
+  // ─── Multi-Component (2-K Adhesive) Apply Modal — Phase 4 ───────────
+  const [multiCompModalOpen, setMultiCompModalOpen] = useState(false);
+  const [multiCompData, setMultiCompData] = useState(null); // {layout, shared_extracted, components, attachment}
+  const [multiCompTargets, setMultiCompTargets] = useState({}); // {[key]: mainitem}
+  const [multiCompSelected, setMultiCompSelected] = useState({}); // {[key]: {[field]: bool}}
+  const [multiCompBlend, setMultiCompBlend] = useState({});
+  const [multiCompParts, setMultiCompParts] = useState({});
+  const [multiCompParentName, setMultiCompParentName] = useState('');
+  const [multiCompApplying, setMultiCompApplying] = useState(false);
 
   const token = localStorage.getItem('auth_token');
   const headers = useMemo(
@@ -809,7 +640,16 @@ export default function TDSManager() {
   }, [isResinsTab, nonResinSpecData?.parameter_profile, inferredNonResinParamProfile, activeSpecMaterialClass, materialSpecTab]);
 
   const activeNonResinParamConfig = useMemo(
-    () => dbParamDefinitions[activeNonResinParamProfile] || dbParamDefinitions[activeSpecMaterialClass] || NON_RESIN_PARAM_SCHEMAS[activeNonResinParamProfile] || NON_RESIN_PARAM_SCHEMAS[activeSpecMaterialClass] || [],
+    () => {
+      const isSpecificSubstrateProfile =
+        activeSpecMaterialClass === 'substrates'
+        && typeof activeNonResinParamProfile === 'string'
+        && activeNonResinParamProfile.startsWith('substrates_');
+      const profileConfig = dbParamDefinitions[activeNonResinParamProfile];
+      if (profileConfig) return profileConfig;
+      if (isSpecificSubstrateProfile) return [];
+      return dbParamDefinitions[activeSpecMaterialClass] || [];
+    },
     [activeNonResinParamProfile, activeSpecMaterialClass, dbParamDefinitions]
   );
 
@@ -935,11 +775,12 @@ export default function TDSManager() {
       if (profile) url += `&profile=${encodeURIComponent(profile)}`;
       const res = await fetch(withApiBase(url), { headers });
       const json = await res.json();
-      if (json.success && json.data?.length) {
+      if (json.success) {
         const key = profile || materialClass;
+        const definitions = Array.isArray(json.data) ? json.data : [];
         setDbParamDefinitions((prev) => ({
           ...prev,
-          [key]: json.data.map((d) => ({
+          [key]: definitions.map((d) => ({
             key: d.field_key,
             label: d.label,
             unit: d.unit || '-',
@@ -958,6 +799,7 @@ export default function TDSManager() {
             testMethodOptions: d.test_method_options || [],
             paramType: d.param_type || 'input',
             testConditions: d.test_conditions || null,
+            enumOptions: Array.isArray(d.enum_options) && d.enum_options.length ? d.enum_options : null,
           })),
         }));
       }
@@ -1044,10 +886,9 @@ export default function TDSManager() {
 
       setLiveResinCatDescOptions(values);
     } catch {
-      message.error('Failed to load live resin categories from database');
       setLiveResinCatDescOptions([]);
     }
-  }, [headers, message]);
+  }, [headers]);
 
   const fetchNonResinSpec = useCallback(async (materialRow) => {
     if (isResinsTab || !materialRow) return;
@@ -1148,6 +989,33 @@ export default function TDSManager() {
     }
   }, [headers]);
 
+  // Keep declaration above effects that reference it to avoid TDZ errors.
+  const fetchTdsAttachments = useCallback(async (materialRow, materialClass) => {
+    if (!materialRow?.mainitem) {
+      setTdsAttachments([]);
+      return;
+    }
+    setTdsAttachmentsLoading(true);
+    try {
+      const params = new URLSearchParams({ mainitem: materialRow.mainitem });
+      if (materialClass) params.append('material_class', materialClass);
+      const res = await fetch(
+        withApiBase(`/api/mes/master-data/tds/attachments?${params.toString()}`),
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json();
+      if (json.success) {
+        setTdsAttachments(Array.isArray(json.data) ? json.data : []);
+      } else {
+        setTdsAttachments([]);
+      }
+    } catch {
+      setTdsAttachments([]);
+    } finally {
+      setTdsAttachmentsLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (isResinsTab) fetchRecords();
   }, [fetchRecords, isResinsTab]);
@@ -1203,8 +1071,11 @@ export default function TDSManager() {
   useEffect(() => {
     if (!isResinsTab && materialDetailView && materialDetailRecord) {
       fetchNonResinSpec(materialDetailRecord);
+      fetchTdsAttachments(materialDetailRecord, activeSpecMaterialClass || materialSpecTab);
+    } else if (!materialDetailView) {
+      setTdsAttachments([]);
     }
-  }, [isResinsTab, materialDetailView, materialDetailRecord, fetchNonResinSpec]);
+  }, [isResinsTab, materialDetailView, materialDetailRecord, fetchNonResinSpec, fetchTdsAttachments, activeSpecMaterialClass, materialSpecTab]);
 
   const compareRecords = useMemo(
     () => resinDisplayRecords.filter((r) => selectedCompareKeys.includes(r.id)).slice(0, 5),
@@ -1570,6 +1441,113 @@ export default function TDSManager() {
     }
   };
 
+  const handleAssignAttachmentSupplier = async () => {
+    if (!pendingAttachment?.id) {
+      setSupplierPickerOpen(false);
+      return;
+    }
+    try {
+      const res = await fetch(
+        withApiBase(`/api/mes/master-data/tds/attachments/${pendingAttachment.id}`),
+        {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ supplier_id: pendingAttachmentSupplierId || null }),
+        }
+      );
+      const json = await res.json();
+      if (json.success) {
+        message.success('Supplier assigned to uploaded TDS.');
+        setSupplierPickerOpen(false);
+        setPendingAttachment(null);
+        setPendingAttachmentSupplierId(null);
+        if (materialDetailRecord) {
+          fetchTdsAttachments(materialDetailRecord, activeSpecMaterialClass || materialSpecTab);
+        }
+      } else {
+        message.error(json.error || 'Failed to assign supplier');
+      }
+    } catch {
+      message.error('Failed to assign supplier');
+    }
+  };
+
+  // ─── Supplier CRUD handlers ─────────────────────────────────────────────
+  const handleSaveSupplier = async () => {
+    if (!supplierForm) return;
+    const name = (supplierForm.name || '').trim();
+    if (!name) { message.warning('Supplier name is required'); return; }
+    setSupplierSaving(true);
+    try {
+      const isEdit = !!supplierForm.id;
+      const url = isEdit
+        ? `/api/mes/master-data/tds/suppliers/${supplierForm.id}`
+        : '/api/mes/master-data/tds/suppliers';
+      const body = {
+        name,
+        country: supplierForm.country || null,
+        website: supplierForm.website || null,
+        contact_info: supplierForm.contact_info || null,
+        ...(isEdit ? { is_active: supplierForm.is_active !== false } : {}),
+      };
+      const res = await fetch(withApiBase(url), {
+        method: isEdit ? 'PATCH' : 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        message.success(isEdit ? 'Supplier updated' : 'Supplier created');
+        setSupplierForm(null);
+        fetchSuppliers();
+      } else {
+        message.error(json.error || 'Save failed');
+      }
+    } catch {
+      message.error('Save failed');
+    } finally {
+      setSupplierSaving(false);
+    }
+  };
+
+  const handleDeleteSupplier = async (id) => {
+    try {
+      const res = await fetch(
+        withApiBase(`/api/mes/master-data/tds/suppliers/${id}`),
+        { method: 'DELETE', headers }
+      );
+      const json = await res.json();
+      if (json.success) {
+        message.success(json.deactivated ? (json.message || 'Deactivated') : 'Deleted');
+        fetchSuppliers();
+      } else {
+        message.error(json.error || 'Delete failed');
+      }
+    } catch {
+      message.error('Delete failed');
+    }
+  };
+
+  const handleDeleteTdsAttachment = async (attachmentId) => {
+    try {
+      const res = await fetch(
+        withApiBase(`/api/mes/master-data/tds/attachments/${attachmentId}`),
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json();
+      if (json.success) {
+        message.success('Attachment deleted.');
+        if (materialDetailRecord) {
+          fetchTdsAttachments(materialDetailRecord, activeSpecMaterialClass || materialSpecTab);
+        }
+      } else {
+        message.error(json.error || 'Delete failed');
+      }
+    } catch {
+      message.error('Delete failed');
+    }
+  };
+
   const handleNonResinUpload = async (e) => {
     if (!canWrite) {
       message.error('You have read-only access for TDS figures.');
@@ -1588,6 +1566,10 @@ export default function TDSManager() {
       fd.append('maindescription', materialDetailRecord.maindescription || '');
       fd.append('catlinedesc', materialDetailRecord.catlinedesc || '');
       fd.append('mainunit', materialDetailRecord.mainunit || '');
+      // Phase 4: ask server to attempt 2-K layout detection for adhesives.
+      if ((activeSpecMaterialClass || materialSpecTab) === 'adhesives') {
+        fd.append('mode', 'multi_component');
+      }
 
       const res = await fetch(withApiBase('/api/mes/master-data/tds/non-resin-spec/parse-upload'), {
         method: 'POST',
@@ -1599,6 +1581,60 @@ export default function TDSManager() {
       if (!json.success) {
         message.error(json.error || 'Upload/parse failed');
         return;
+      }
+
+      // Phase 6: PDF was persisted to attachment library — refresh list and prompt for supplier
+      if (json.attachment?.id) {
+        fetchTdsAttachments(materialDetailRecord, activeSpecMaterialClass || materialSpecTab);
+      }
+
+      // Phase 4: Multi-component (2-K adhesive) layout detected — open 2-K diff modal.
+      if (json.mode === 'multi_component' && Array.isArray(json.components) && json.components.length >= 2) {
+        const initialTargets = {};
+        const initialSelected = {};
+        const initialParts = {};
+        // Try to seed parts ratio from shared mix_ratio (e.g. "100:3" or "100/3").
+        const ratioStr = String(json.shared_extracted?.mix_ratio || '').trim();
+        const ratioMatch = ratioStr.match(/(-?\d+(?:[.,]\d+)?)\s*[:\/]\s*(-?\d+(?:[.,]\d+)?)/);
+        const ratioA = ratioMatch ? Number(String(ratioMatch[1]).replace(',', '.')) : null;
+        const ratioB = ratioMatch ? Number(String(ratioMatch[2]).replace(',', '.')) : null;
+        json.components.forEach((c, idx) => {
+          initialTargets[c.key] = c.target?.mainitem || '';
+          const sel = {};
+          (c.diff || []).forEach((d) => {
+            if (!d.isLocked) sel[d.field] = true;
+          });
+          initialSelected[c.key] = sel;
+          if (Number.isFinite(ratioA) && Number.isFinite(ratioB)) {
+            initialParts[c.key] = idx === 0 ? ratioA : ratioB;
+          } else {
+            initialParts[c.key] = idx === 0 ? 100 : 75;
+          }
+        });
+        setMultiCompData(json);
+        setMultiCompTargets(initialTargets);
+        setMultiCompSelected(initialSelected);
+        setMultiCompBlend({ ...(json.shared_extracted || {}) });
+        setMultiCompParts(initialParts);
+        const detectedNames = json.components
+          .map((c) => c.detected_code || c.target?.mainitem)
+          .filter(Boolean)
+          .join(' + ');
+        setMultiCompParentName(
+          detectedNames || `${materialDetailRecord.mainitem || 'Adhesive'} 2-K`
+        );
+        setMultiCompModalOpen(true);
+        message.success(
+          `${file.name} parsed as 2-K adhesive (${json.components.length} components). Review and apply.`
+        );
+        return;
+      }
+
+      // Single-component path: prompt supplier picker for the just-uploaded attachment.
+      if (json.attachment?.id) {
+        setPendingAttachment(json.attachment);
+        setPendingAttachmentSupplierId(json.attachment.supplier_id || null);
+        setSupplierPickerOpen(true);
       }
 
       if (json.diff && json.diff.length > 0) {
@@ -1676,13 +1712,94 @@ export default function TDSManager() {
         nonResinForm.setFieldsValue(json.extracted);
         message.info('PDF parsed - no parameter differences found.');
       } else {
-        message.warning('No Alu foil parameters could be extracted from this PDF.');
+        message.warning(`No ${activeMaterialSpecLabel} parameters could be extracted from this PDF.`);
       }
     } catch {
       message.error('Upload/parse failed');
     } finally {
       setNonResinUploading(false);
       if (nonResinFileInputRef.current) nonResinFileInputRef.current.value = '';
+    }
+  };
+
+  // ─── Phase 4: apply parsed 2-K adhesive layout to formulation + per-component specs ──
+  const handleApplyMultiComponent = async () => {
+    if (!canWrite) {
+      message.error('You have read-only access for TDS figures.');
+      return;
+    }
+    if (!multiCompData || !Array.isArray(multiCompData.components)) return;
+
+    const components = [];
+    for (const c of multiCompData.components) {
+      const targetMainitem = (multiCompTargets[c.key] || '').trim();
+      if (!targetMainitem) {
+        message.error(`${c.component_label || c.key}: please pick a sub-item to apply to.`);
+        return;
+      }
+      const candidatePool = [...(c.candidates || []), ...liveMaterialRows];
+      const targetRow = candidatePool.find(
+        (r) => normalizeText(r.mainitem).toLowerCase() === targetMainitem.toLowerCase()
+      ) || c.target || {};
+
+      const baseParams = {};
+      (c.diff || []).forEach((d) => {
+        const sel = !!multiCompSelected[c.key]?.[d.field];
+        if (sel) {
+          baseParams[d.field] = d.extractedValue;
+        } else if (d.currentValue !== undefined && d.currentValue !== null && d.currentValue !== '') {
+          baseParams[d.field] = d.currentValue;
+        }
+      });
+
+      components.push({
+        mainitem: targetRow.mainitem || targetMainitem,
+        maindescription: targetRow.maindescription || c.target?.maindescription || null,
+        catlinedesc: targetRow.catlinedesc || c.target?.catlinedesc || materialDetailRecord?.catlinedesc || null,
+        mainunit: targetRow.mainunit || c.target?.mainunit || 'KG',
+        component_role: c.component_role || (c.key === 'component_a' ? 'resin' : 'hardener'),
+        parts_by_weight: Number(multiCompParts[c.key]) || (c.key === 'component_a' ? 100 : 75),
+        parameters_json: baseParams,
+        lockFields: true,
+      });
+    }
+
+    const payload = {
+      material_class: 'adhesives',
+      parent_name: (multiCompParentName || '').trim() || `${materialDetailRecord?.mainitem || 'Adhesive'} 2-K`,
+      parent_catlinedesc: materialDetailRecord?.catlinedesc || null,
+      blend_params: multiCompBlend || {},
+      components,
+      attachment_id: multiCompData.attachment?.id || null,
+      status: 'draft',
+    };
+
+    setMultiCompApplying(true);
+    try {
+      const res = await fetch(
+        withApiBase('/api/mes/master-data/tds/non-resin-spec/apply-multi-component'),
+        { method: 'POST', headers, body: JSON.stringify(payload) }
+      );
+      const json = await res.json();
+      if (!json.success) {
+        message.error(json.error || 'Failed to apply 2-K formulation');
+        return;
+      }
+      message.success(
+        `2-K formulation #${json.formulation_id} saved (${json.components?.length || 0} components${json.attachment_linked ? ', PDF linked' : ''}).`
+      );
+      setMultiCompModalOpen(false);
+      setMultiCompData(null);
+      if (materialDetailRecord) {
+        fetchTdsAttachments(materialDetailRecord, activeSpecMaterialClass || materialSpecTab);
+        if (typeof fetchNonResinSpec === 'function') {
+          fetchNonResinSpec(materialDetailRecord, activeSpecMaterialClass || materialSpecTab);
+        }
+      }
+    } catch {
+      message.error('Failed to apply 2-K formulation');
+    } finally {
+      setMultiCompApplying(false);
     }
   };
 
@@ -2576,7 +2693,7 @@ export default function TDSManager() {
             );
           })
         )}
-        {TDS_WRITE_ROLES.includes(user?.role) && (
+        {ADMIN_ROLES.includes(user?.role) && (
           <Button size="small" icon={<SettingOutlined />} onClick={() => setAdminModalVisible(true)} style={{ marginLeft: 'auto' }}>
             Admin
           </Button>
@@ -2698,7 +2815,7 @@ export default function TDSManager() {
 
     const statusKey = normalizeText(row?.non_resin_status).toLowerCase() || 'new';
     const profileKey = getNonResinParamProfile(activeSpecMaterialClass || 'substrates', row);
-    const schema = dbParamDefinitions[profileKey] || dbParamDefinitions[activeSpecMaterialClass] || NON_RESIN_PARAM_SCHEMAS[profileKey] || NON_RESIN_PARAM_SCHEMAS[activeSpecMaterialClass] || [];
+    const schema = dbParamDefinitions[profileKey] || dbParamDefinitions[activeSpecMaterialClass] || [];
     const params = row?.non_resin_parameters_json && typeof row.non_resin_parameters_json === 'object'
       ? row.non_resin_parameters_json
       : {};
@@ -2721,7 +2838,7 @@ export default function TDSManager() {
       filled,
       total: schema.length,
       percent,
-      uploaded: false,
+      uploaded: Number(row?.non_resin_attachment_count || 0) > 0,
     };
   }, [isResinsTab, activeSpecMaterialClass]);
 
@@ -3168,7 +3285,7 @@ export default function TDSManager() {
 
           {canWrite && (
             <Space>
-              {isAluFoilProfile && (
+              {!isResinsTab && (
                 <>
                   <input
                     ref={nonResinFileInputRef}
@@ -3385,7 +3502,9 @@ export default function TDSManager() {
                               style={{ marginBottom: 8 }}
                               rules={getNonResinFieldRules(field)}
                             >
-                              {field.type === 'number' ? (
+                              {field.key === 'composition_limits' || field.type === 'json' ? (
+                                <CompositionLimitsInput disabled={!nonResinSpecEditMode} />
+                              ) : field.type === 'number' ? (
                                 <InputNumber
                                   step={field.step || 0.01}
                                   min={field.min}
@@ -3393,6 +3512,15 @@ export default function TDSManager() {
                                   placeholder={field.placeholder || undefined}
                                   readOnly={!nonResinSpecEditMode}
                                   controls={nonResinSpecEditMode}
+                                  style={{ width: '100%' }}
+                                />
+                              ) : Array.isArray(field.enumOptions) && field.enumOptions.length ? (
+                                <Select
+                                  allowClear
+                                  showSearch
+                                  placeholder={field.placeholder || `Select ${field.label}`}
+                                  disabled={!nonResinSpecEditMode}
+                                  options={field.enumOptions.map((opt) => ({ label: opt, value: opt }))}
                                   style={{ width: '100%' }}
                                 />
                               ) : (
@@ -3440,11 +3568,585 @@ export default function TDSManager() {
             </Card>
           </div>
         </Form>
+
+        {/* ─── TDS Library (Phase 6) ─────────────────────────────────────── */}
+        <Card
+          title={(
+            <Space>
+              <span>TDS Library</span>
+              <Tag color="blue">{tdsAttachments.length}</Tag>
+            </Space>
+          )}
+          extra={canWrite ? (
+            <Button size="small" icon={<SettingOutlined />}
+              onClick={() => { fetchSuppliers(); setSupplierMgmtOpen(true); }}>
+              Manage Suppliers
+            </Button>
+          ) : null}
+          size="small"
+          style={{ marginBottom: 12, borderRadius: 8 }}
+          loading={tdsAttachmentsLoading}
+        >
+          {tdsAttachments.length === 0 ? (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              No TDS PDFs uploaded yet for this material. Use “Upload TDS PDF” above.
+            </Text>
+          ) : (
+            <Table
+              size="small"
+              rowKey="id"
+              pagination={false}
+              dataSource={tdsAttachments}
+              columns={[
+                {
+                  title: 'Supplier',
+                  dataIndex: 'supplier_name',
+                  width: 200,
+                  render: (v, row) =>
+                    v ? <Text strong>{v}</Text>
+                      : <Text type="warning" italic>Unassigned</Text>,
+                },
+                {
+                  title: 'File',
+                  dataIndex: 'file_name',
+                  ellipsis: true,
+                  render: (v) => <Text style={{ fontSize: 11 }}>{v}</Text>,
+                },
+                {
+                  title: 'Ver',
+                  dataIndex: 'version_no',
+                  width: 60,
+                  align: 'center',
+                  render: (v, row) => (
+                    <Space size={4}>
+                      <Tag>{`v${v || 1}`}</Tag>
+                      {row.is_current && <Tag color="green" style={{ marginInlineEnd: 0 }}>current</Tag>}
+                    </Space>
+                  ),
+                },
+                {
+                  title: 'Size',
+                  dataIndex: 'file_size',
+                  width: 90,
+                  render: (v) => v ? `${(v / 1024).toFixed(1)} KB` : '-',
+                },
+                {
+                  title: 'Parse',
+                  dataIndex: 'parse_status',
+                  width: 90,
+                  render: (v) => {
+                    const color = v === 'parsed' ? 'green' : v === 'partial' ? 'gold' : v === 'failed' ? 'red' : 'default';
+                    return <Tag color={color}>{v || 'n/a'}</Tag>;
+                  },
+                },
+                {
+                  title: 'Uploaded',
+                  dataIndex: 'uploaded_at',
+                  width: 140,
+                  render: (v) => v ? new Date(v).toLocaleString() : '-',
+                },
+                {
+                  title: 'Actions',
+                  width: 200,
+                  render: (_, row) => (
+                    <Space size={4}>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          const url = withApiBase(`/api/mes/master-data/tds/attachments/${row.id}/download`);
+                          // Open in a new tab with auth header via a temporary fetch+blob — simplest: rely on cookie/proxy + token in URL is not safe; use fetch then blob
+                          fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+                            .then((r) => r.blob())
+                            .then((blob) => {
+                              const objectUrl = URL.createObjectURL(blob);
+                              window.open(objectUrl, '_blank');
+                            })
+                            .catch(() => message.error('Download failed'));
+                        }}
+                      >
+                        View
+                      </Button>
+                      {canWrite && (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setPendingAttachment({ id: row.id, supplier_id: row.supplier_id });
+                            setPendingAttachmentSupplierId(row.supplier_id || null);
+                            setSupplierPickerOpen(true);
+                          }}
+                        >
+                          Assign
+                        </Button>
+                      )}
+                      {canWrite && (
+                        <Popconfirm
+                          title="Delete this TDS attachment?"
+                          okText="Delete"
+                          okButtonProps={{ danger: true }}
+                          onConfirm={() => handleDeleteTdsAttachment(row.id)}
+                        >
+                          <Button size="small" danger>Delete</Button>
+                        </Popconfirm>
+                      )}
+                    </Space>
+                  ),
+                },
+              ]}
+            />
+          )}
+        </Card>
+
+        {/* ─── Supplier Picker Modal (Phase 6) ───────────────────────────── */}
+        <Modal
+          title="Assign Supplier to TDS"
+          open={supplierPickerOpen}
+          onCancel={() => {
+            setSupplierPickerOpen(false);
+            setPendingAttachment(null);
+            setPendingAttachmentSupplierId(null);
+          }}
+          onOk={handleAssignAttachmentSupplier}
+          okText="Save"
+        >
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
+            Select which supplier this TDS PDF belongs to. The file will be moved to the supplier's folder in storage.
+          </Text>
+          <Select
+            allowClear
+            showSearch
+            placeholder="Select supplier (or leave empty for unassigned)"
+            value={pendingAttachmentSupplierId || undefined}
+            onChange={(v) => setPendingAttachmentSupplierId(v || null)}
+            optionFilterProp="label"
+            style={{ width: '100%' }}
+            options={(suppliers || [])
+              .filter((s) => s.is_active !== false)
+              .map((s) => ({ value: s.id, label: s.name }))}
+          />
+        </Modal>
+
+        {/* ─── Supplier Management Modal ─────────────────────────────────── */}
+        <Modal
+          title={(
+            <Space>
+              <SettingOutlined />
+              <span>Manage Suppliers</span>
+              <Tag color="blue">{(suppliers || []).length}</Tag>
+            </Space>
+          )}
+          open={supplierMgmtOpen}
+          onCancel={() => setSupplierMgmtOpen(false)}
+          footer={[
+            <Button key="close" onClick={() => setSupplierMgmtOpen(false)}>Close</Button>,
+          ]}
+          width={760}
+        >
+          <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Add, edit or deactivate TDS suppliers. Suppliers in use cannot be hard-deleted (will be deactivated instead).
+            </Text>
+            <Button type="primary" size="small" icon={<PlusOutlined />}
+              onClick={() => setSupplierForm({ name: '', country: '', website: '', contact_info: '', is_active: true })}>
+              Add Supplier
+            </Button>
+          </div>
+          <Table
+            size="small"
+            rowKey="id"
+            pagination={{ pageSize: 10, size: 'small' }}
+            dataSource={suppliers || []}
+            columns={[
+              { title: 'Name', dataIndex: 'name', render: (v, r) => (
+                <Space size={6}>
+                  <Text strong>{v}</Text>
+                  {r.is_active === false && <Tag color="default" style={{ fontSize: 10 }}>inactive</Tag>}
+                </Space>
+              ) },
+              { title: 'Country', dataIndex: 'country', width: 120, render: (v) => v || <Text type="secondary">—</Text> },
+              { title: 'Website', dataIndex: 'website', width: 200, ellipsis: true,
+                render: (v) => v ? <a href={v} target="_blank" rel="noreferrer">{v}</a> : <Text type="secondary">—</Text> },
+              {
+                title: '',
+                width: 120,
+                align: 'right',
+                render: (_, r) => (
+                  <Space size={4}>
+                    <Tooltip title="Edit">
+                      <Button size="small" type="text" icon={<EditOutlined />}
+                        onClick={() => setSupplierForm({ ...r })} />
+                    </Tooltip>
+                    <Popconfirm
+                      title="Delete this supplier?"
+                      description="If it is referenced by any TDS or attachment, it will be deactivated instead of deleted."
+                      okText="Delete"
+                      okType="danger"
+                      onConfirm={() => handleDeleteSupplier(r.id)}
+                    >
+                      <Tooltip title="Delete / Deactivate">
+                        <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                      </Tooltip>
+                    </Popconfirm>
+                  </Space>
+                ),
+              },
+            ]}
+          />
+        </Modal>
+
+        {/* ─── Supplier Add/Edit Form Modal ──────────────────────────────── */}
+        <Modal
+          title={supplierForm?.id ? 'Edit Supplier' : 'Add Supplier'}
+          open={!!supplierForm}
+          onCancel={() => setSupplierForm(null)}
+          onOk={handleSaveSupplier}
+          confirmLoading={supplierSaving}
+          okText={supplierForm?.id ? 'Save' : 'Create'}
+          width={520}
+        >
+          {supplierForm && (
+            <Form layout="vertical" size="small">
+              <Form.Item label="Name" required>
+                <Input
+                  value={supplierForm.name || ''}
+                  onChange={(e) => setSupplierForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. SABIC"
+                  autoFocus
+                />
+              </Form.Item>
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item label="Country">
+                    <Input
+                      value={supplierForm.country || ''}
+                      onChange={(e) => setSupplierForm(f => ({ ...f, country: e.target.value }))}
+                      placeholder="e.g. Saudi Arabia"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Website">
+                    <Input
+                      value={supplierForm.website || ''}
+                      onChange={(e) => setSupplierForm(f => ({ ...f, website: e.target.value }))}
+                      placeholder="https://…"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item label="Contact Info">
+                <Input.TextArea
+                  rows={2}
+                  value={supplierForm.contact_info || ''}
+                  onChange={(e) => setSupplierForm(f => ({ ...f, contact_info: e.target.value }))}
+                  placeholder="Email, phone, contact person…"
+                />
+              </Form.Item>
+              {supplierForm.id && (
+                <Form.Item>
+                  <Checkbox
+                    checked={supplierForm.is_active !== false}
+                    onChange={(e) => setSupplierForm(f => ({ ...f, is_active: e.target.checked }))}
+                  >
+                    Active (uncheck to deactivate)
+                  </Checkbox>
+                </Form.Item>
+              )}
+            </Form>
+          )}
+        </Modal>
+
+        {/* ─── Multi-Component (2-K Adhesive) Apply Modal — Phase 4 ──────── */}
+        <Modal
+          title={(
+            <span>
+              <ExperimentOutlined style={{ marginRight: 8, color: '#8B5CF6' }} />
+              2-K Adhesive Formulation — Review &amp; Apply
+            </span>
+          )}
+          open={multiCompModalOpen}
+          width={1100}
+          onCancel={() => {
+            setMultiCompModalOpen(false);
+            setMultiCompData(null);
+          }}
+          footer={[
+            <Button
+              key="cancel"
+              onClick={() => {
+                setMultiCompModalOpen(false);
+                setMultiCompData(null);
+              }}
+            >
+              Cancel
+            </Button>,
+            <Button
+              key="apply"
+              type="primary"
+              loading={multiCompApplying}
+              disabled={!canWrite || !multiCompData}
+              onClick={handleApplyMultiComponent}
+            >
+              Apply 2-K Formulation
+            </Button>,
+          ]}
+          destroyOnHidden
+        >
+          {multiCompData && (
+            <div>
+              <Alert
+                type={multiCompData.layout?.has_explicit_markers ? 'success' : 'warning'}
+                showIcon
+                style={{ marginBottom: 12 }}
+                message={
+                  multiCompData.layout?.has_explicit_markers
+                    ? 'Two-component layout detected (Part A / Part B markers found).'
+                    : 'Two-component layout inferred. Please verify component mapping below.'
+                }
+                description={
+                  (multiCompData.layout?.likely_codes || []).length
+                    ? `Detected codes: ${(multiCompData.layout.likely_codes || []).join(', ')}`
+                    : null
+                }
+              />
+
+              <Card size="small" title="Parent Formulation" style={{ marginBottom: 12 }}>
+                <Row gutter={12}>
+                  <Col xs={24} md={16}>
+                    <Text style={{ fontSize: 11 }} type="secondary">Formulation Name</Text>
+                    <Input
+                      value={multiCompParentName}
+                      onChange={(e) => setMultiCompParentName(e.target.value)}
+                      placeholder="e.g. AD12345 + HD67890"
+                    />
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <Text style={{ fontSize: 11 }} type="secondary">Catlinedesc (snapshot)</Text>
+                    <Input value={materialDetailRecord?.catlinedesc || ''} disabled />
+                  </Col>
+                </Row>
+              </Card>
+
+              <Card size="small" title="Blend Parameters (shared across both components)" style={{ marginBottom: 12 }}>
+                <Row gutter={[12, 8]}>
+                  {[
+                    { k: 'mix_ratio', label: 'Mix Ratio', isText: true, placeholder: '100:75' },
+                    { k: 'pot_life_min', label: 'Pot Life (min)' },
+                    { k: 'cure_time_hours', label: 'Cure Time (hours)' },
+                    { k: 'application_temp_c', label: 'Application Temp (°C)' },
+                    { k: 'bond_strength_n_mm2', label: 'Bond Strength (N/mm²)' },
+                    { k: 'tack_time_min', label: 'Tack Time (min)' },
+                  ].map((f) => (
+                    <Col xs={24} sm={12} md={8} key={f.k}>
+                      <Text style={{ fontSize: 11 }} type="secondary">{f.label}</Text>
+                      {f.isText ? (
+                        <Input
+                          size="small"
+                          placeholder={f.placeholder || ''}
+                          value={multiCompBlend[f.k] ?? ''}
+                          onChange={(e) =>
+                            setMultiCompBlend((prev) => ({ ...prev, [f.k]: e.target.value }))
+                          }
+                        />
+                      ) : (
+                        <InputNumber
+                          size="small"
+                          style={{ width: '100%' }}
+                          value={
+                            multiCompBlend[f.k] === '' || multiCompBlend[f.k] === undefined
+                              ? null
+                              : multiCompBlend[f.k]
+                          }
+                          onChange={(v) =>
+                            setMultiCompBlend((prev) => ({ ...prev, [f.k]: v }))
+                          }
+                        />
+                      )}
+                    </Col>
+                  ))}
+                </Row>
+              </Card>
+
+              {(multiCompData.components || []).map((c) => {
+                const candidates = c.candidates || [];
+                const candidateOptions = candidates.map((row) => ({
+                  value: row.mainitem,
+                  label: `${row.mainitem || ''} — ${row.maindescription || ''}`,
+                }));
+                // Always include any liveMaterialRows for adhesives that aren't in candidates,
+                // so user can pick existing items even without confidence match.
+                liveMaterialRows.forEach((row) => {
+                  if (!row.mainitem) return;
+                  if (!candidateOptions.some((o) => o.value === row.mainitem)) {
+                    candidateOptions.push({
+                      value: row.mainitem,
+                      label: `${row.mainitem} — ${row.maindescription || ''}`,
+                    });
+                  }
+                });
+
+                const diffSel = multiCompSelected[c.key] || {};
+                const selectedCount = (c.diff || []).filter(
+                  (d) => !d.isLocked && diffSel[d.field]
+                ).length;
+
+                return (
+                  <Card
+                    size="small"
+                    key={c.key}
+                    title={(
+                      <Space>
+                        <Tag color={c.key === 'component_a' ? 'blue' : 'magenta'}>{c.component_label || c.key}</Tag>
+                        <Tag>role: {c.component_role}</Tag>
+                        {c.detected_code && <Tag color="purple">detected: {c.detected_code}</Tag>}
+                        {c.confidence !== undefined && (
+                          <Tag color={c.confidence >= 1 ? 'green' : c.confidence >= 0.5 ? 'gold' : 'red'}>
+                            confidence: {Math.round((c.confidence || 0) * 100)}%
+                          </Tag>
+                        )}
+                      </Space>
+                    )}
+                    style={{ marginBottom: 12 }}
+                  >
+                    {(c.warnings || []).length > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 8 }}
+                        message={(c.warnings || []).join(' ')}
+                      />
+                    )}
+
+                    <Row gutter={12} style={{ marginBottom: 10 }}>
+                      <Col xs={24} md={16}>
+                        <Text style={{ fontSize: 11 }} type="secondary">Apply to sub-item (mainitem)</Text>
+                        <Select
+                          showSearch
+                          allowClear
+                          style={{ width: '100%' }}
+                          placeholder="Select adhesives sub-item"
+                          value={multiCompTargets[c.key] || undefined}
+                          onChange={(v) =>
+                            setMultiCompTargets((prev) => ({ ...prev, [c.key]: v || '' }))
+                          }
+                          optionFilterProp="label"
+                          options={candidateOptions}
+                        />
+                      </Col>
+                      <Col xs={24} md={8}>
+                        <Text style={{ fontSize: 11 }} type="secondary">Parts by weight</Text>
+                        <InputNumber
+                          min={0}
+                          step={1}
+                          style={{ width: '100%' }}
+                          value={multiCompParts[c.key] ?? null}
+                          onChange={(v) =>
+                            setMultiCompParts((prev) => ({ ...prev, [c.key]: v }))
+                          }
+                        />
+                      </Col>
+                    </Row>
+
+                    {(c.diff || []).length === 0 ? (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        No parameters extracted for this component.
+                      </Text>
+                    ) : (
+                      <>
+                        <Text style={{ fontSize: 11 }} type="secondary">
+                          {selectedCount} of {(c.diff || []).filter((d) => !d.isLocked).length} field(s) selected to apply
+                        </Text>
+                        <Table
+                          size="small"
+                          rowKey={(item) => `${c.key}:${item.field}`}
+                          dataSource={c.diff}
+                          pagination={false}
+                          rowClassName={(item) =>
+                            item.isLocked ? 'diff-row-locked' : item.isEmpty ? '' : 'diff-row-conflict'
+                          }
+                          columns={[
+                            {
+                              title: '',
+                              width: 36,
+                              render: (_, item) => (
+                                <Checkbox
+                                  checked={!!diffSel[item.field]}
+                                  disabled={item.isLocked}
+                                  onChange={(ev) =>
+                                    setMultiCompSelected((prev) => ({
+                                      ...prev,
+                                      [c.key]: { ...(prev[c.key] || {}), [item.field]: ev.target.checked },
+                                    }))
+                                  }
+                                />
+                              ),
+                            },
+                            {
+                              title: 'Field',
+                              dataIndex: 'label',
+                              width: '30%',
+                              render: (v, item) => (
+                                <Space size={4}>
+                                  <Text strong style={{ fontSize: 12 }}>{v}</Text>
+                                  {item.isLocked && (
+                                    <Tooltip title="Locked field — unlock from single-component view first.">
+                                      <LockOutlined style={{ color: '#EF4444', fontSize: 11 }} />
+                                    </Tooltip>
+                                  )}
+                                </Space>
+                              ),
+                            },
+                            {
+                              title: 'Current DB',
+                              dataIndex: 'currentValue',
+                              render: (v, item) => {
+                                const display =
+                                  item?.currentDisplay !== undefined && item?.currentDisplay !== null && item?.currentDisplay !== ''
+                                    ? item.currentDisplay
+                                    : v;
+                                return display === null || display === undefined || display === '' ? (
+                                  <Text type="secondary" style={{ fontSize: 11 }}>- empty -</Text>
+                                ) : (
+                                  <Text style={{ fontSize: 11, fontFamily: 'monospace', color: '#6B7280' }}>{String(display)}</Text>
+                                );
+                              },
+                            },
+                            {
+                              title: 'Found in PDF',
+                              dataIndex: 'extractedValue',
+                              render: (v, item) => {
+                                const display =
+                                  item?.extractedDisplay !== undefined && item?.extractedDisplay !== null && item?.extractedDisplay !== ''
+                                    ? item.extractedDisplay
+                                    : v;
+                                return (
+                                  <Text
+                                    strong
+                                    style={{
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                      color: item.isEmpty ? '#15803D' : '#B45309',
+                                    }}
+                                  >
+                                    {String(display)}
+                                  </Text>
+                                );
+                              },
+                            },
+                          ]}
+                        />
+                      </>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </Modal>
+
         {renderAdminModal()}
       </div>
     );
   }
-
   if (useDbHeaderGrid || !isResinsTab) {
     return (
       <div>

@@ -1,7 +1,7 @@
 # AGENT.md — ProPackHub / PEBI
 > **⚠️ READ THIS ENTIRE FILE BEFORE WRITING ANY CODE.**
 > **This applies to ALL agents: Claude, Cursor, Windsurf, Copilot, Aider, and any other tool.**
-> **Last Updated:** 2026-03-28
+> **Last Updated:** 2026-04-24
 >
 > **Copilot users:** Module-specific context auto-loads via `.github/instructions/` when you touch relevant files.
 > Use `/session-manager` skill for guided session start/end. See `.github/copilot-instructions.md` for the compact version.
@@ -12,30 +12,37 @@
 
 Do these steps IN ORDER before anything else:
 
-1. **Read `docs/PROJECT_CONTEXT.md`** — understand the stack, folder structure, and key decisions
-2. **Read the last 5 entries of `docs/SESSION_LOG.md`** — know what was recently done
-3. **Read `docs/TECH_DEBT.md`** — know what known issues exist before touching files
-4. **Respond with a 3-bullet summary:**
+1. **Read `docs/PROJECT_MAP.md`** — full A→Z map of the system (architecture, MES, PDF parser, Item Master / Costing flow, code-quality audit, Live Issues Board). This is the canonical knowledge base — read it FIRST.
+2. **Read `docs/PROJECT_CONTEXT.md`** — stack, folder structure, key decisions
+3. **Read the last 5 entries of `docs/SESSION_LOG.md`** — know what was recently done
+4. **Read `docs/TECH_DEBT.md`** — known issues before touching files
+5. **Respond with a 3-bullet summary:**
    - What the project is and its current state
    - What was last worked on (from session log)
    - Your proposed plan for today's task
-5. **Wait for approval before writing any code**
+6. **Wait for approval before writing any code**
 
 > Exception: If the task is a simple, safe, isolated fix (e.g., fix a typo, change a color), you may proceed — but still read the 3 docs first.
 
 ---
 
-## 2. SESSION END PROTOCOL (mandatory — every session, every agent)
+## 2. SESSION END PROTOCOL (manual — only on owner request)
 
-Before closing any session:
+**Do NOT auto-update memory after every change.** The owner will say **"update memory"** (or "update the project map", "update session log") when they want it persisted.
+
+When the owner says **"update memory"**:
 
 1. **Append one row to `docs/SESSION_LOG.md`** using this format:
    ```
    | DATE | AGENT NAME | What was done (1 sentence) | Files created/modified | New tech debt if any |
    ```
-2. **Update `docs/TECH_DEBT.md`** if any shortcut was taken or new issue discovered
-3. **Update `docs/API_CONTRACTS.md`** if any new endpoint was created or modified
-4. **State out loud:** "Session complete. [X] files changed. Session log updated."
+2. **Update affected sections of `docs/PROJECT_MAP.md`** (architecture, module map, Live Issues Board §13) — surgical edits, not full rewrites.
+3. **Update `docs/TECH_DEBT.md`** if any shortcut was taken or new issue discovered.
+4. **Update `docs/API_CONTRACTS.md`** if any endpoint was created or modified.
+5. **Update `/memories/repo/project-map-YYYY-MM-DD.md`** with any changed top-line facts.
+6. **State out loud:** "Memory updated. [X] files changed."
+
+Until the owner gives the command, focus on the work.
 
 ---
 

@@ -24,17 +24,22 @@ import CustomCategories from './CustomCategories';
 
 const MGMT_ROLES = ['admin', 'manager', 'sales_manager', 'sales_coordinator'];
 const MATERIAL_SPECS_OPS_ROLES = ['production_manager', 'quality_control'];
+// Tabs visible to ops roles (production_manager, quality_control). Other roles
+// keep the full tab set, gated by designation_level >= 6 (PR-01, 2026-04-25).
+const OPS_ROLES_ALLOWED_TAB_KEYS = ['items', 'tds'];
 
 export default function MasterDataHub() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const role = user?.role;
+  const isOpsRole = MATERIAL_SPECS_OPS_ROLES.includes(role);
+
   // Management roles keep designation gate; production/QC can access Material Specs workflows directly.
   const hasAccess = useMemo(() => {
-    const role = user?.role;
-    if (MATERIAL_SPECS_OPS_ROLES.includes(role)) return true;
+    if (isOpsRole) return true;
     return MGMT_ROLES.includes(role) && (Number(user?.designation_level) || 0) >= 6;
-  }, [user]);
+  }, [user, role, isOpsRole]);
 
   if (!hasAccess) {
     return (
@@ -84,10 +89,15 @@ export default function MasterDataHub() {
     },
   ];
 
+  // Ops roles only see Item Master + Material Specs; mgmt roles see all tabs (PR-01).
+  const visibleItems = isOpsRole
+    ? items.filter((item) => OPS_ROLES_ALLOWED_TAB_KEYS.includes(item.key))
+    : items;
+
   return (
     <div style={{ padding: '24px' }}>
       <Tabs
-        items={items}
+        items={visibleItems}
         size="large"
         type="card"
         tabBarExtraContent={{

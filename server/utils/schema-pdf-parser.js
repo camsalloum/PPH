@@ -29,8 +29,8 @@ const UNIT_PATTERNS = {
   'N/mm':     '(?:N\\s*/\\s*mm)',
   'N/15mm':   '(?:N\\s*/\\s*15\\s*mm)',
   'N/25mm':   '(?:N\\s*/\\s*25\\s*mm)',
-  'cps':      '(?:cps|mPa\\.?\\s*s|cp|cP)',
-  'cP':       '(?:cps|mPa\\.?\\s*s|cp|cP)',
+  'cps':      '(?:cps|mPa\\.?\\s*s?|cp|cP)',
+  'cP':       '(?:cps|mPa\\.?\\s*s?|cp|cP)',
   'dyne':     '(?:dyne(?:\\s*/\\s*cm)?)',
   'dyne/cm':  '(?:dyne\\s*/\\s*cm|dyne)',
   'GU':       '(?:GU|gu|gloss\\s*units?)',
@@ -87,6 +87,8 @@ const LABEL_ALIASES = {
   'viscosity':        ['viscosity'],
   'mix ratio':        ['mix(?:ing)?\\s*ratio'],
   'pot life':         ['pot\\s*life', 'working\\s*time'],
+  'appearance':       ['appearance', 'visual\\s*appearance', 'physical\\s*appearance'],
+  'carrying solvent': ['carrying\\s*solvent', 'solvent\\s*(?:system|type|base)', '(?:diluent|solvent)\\s*used'],
   'purity':           ['purity'],
   'boiling point':    ['boiling\\s*point'],
   'flash point':      ['flash\\s*point'],
@@ -94,7 +96,10 @@ const LABEL_ALIASES = {
   'burst strength':   ['burst(?:ing)?\\s*strength'],
   'brightness':       ['brightness'],
   'opacity':          ['opacity'],
-  'moisture':         ['moisture(?:\\s*content)?'],
+  'optical density':  ['optical\\s*density', 'o\\.\\s*d\\.', 'light\\s*transmission'],
+  'moisture':         ['moisture(?:\\s*content)?', 'water\\s*content', 'water\\s*uptake', 'regain'],
+  'cobb 60':          ['cobb\\s*(?:60)?', 'water\\s*absorption.*60'],
+  'porosity':         ['porosity', 'gurley(?:\\s*number)?', 'air\\s*permeability.*gurley'],
   'adhesion':         ['adhesion', 'peel\\s*(?:strength|adhesion)'],
   'coat weight':      ['coat(?:ing)?\\s*weight', 'dry\\s*coat\\s*weight'],
   'cure temp':        ['cure\\s*temp', 'curing\\s*temp'],
@@ -151,38 +156,109 @@ function buildUnitRegex(unit) {
  * Extract a numeric value near a label match, optionally followed by a unit.
  * Searches within a window of text around the label match.
  */
-function extractNumericNearLabel(text, labelRegexes, unitRegex) {
+function extractNumericNearLabel(text, labelRegexes, unitRegex, fieldKey = '') {
   for (const labelRe of labelRegexes) {
     const match = labelRe.exec(text);
     if (!match) continue;
 
-    // Get a window of ~200 chars after the label match
+    // Get a window of text after the label match and prefer same-line parsing.
     const start = match.index;
-    const window = text.slice(start, start + 300);
+    const window = text.slice(start, start + 320);
+    const sameLine = window.slice(match[0].length).split(/[\n\r]/)[0] || '';
 
     // Strategy 1: label ... number unit (on same line or nearby)
     if (unitRegex) {
-      const withUnit = new RegExp(
-        '([<>≤≥~]?\\s*-?\\d+[,.]?\\d*)\\s*' + unitRegex.source,
+      const source = sameLine || window;
+
+      // Prefer principal value in tolerance expressions (e.g., "70 +/- 2%" -> 70).
+      const withTolerance = new RegExp(
+        '([<>≤≥~]?\\s*-?\\d[\\d,.]*)\\s*(?:\\+\\s*\\/\\s*-|\\+\\s*-|±)\\s*\\d[\\d,.]*\\s*' + unitRegex.source,
         'i'
       );
-      const m = withUnit.exec(window);
+      const tolMatch = withTolerance.exec(source);
+      if (tolMatch) {
+        const tolVal = toNumber(tolMatch[1]);
+        if (Number.isFinite(tolVal)) return { value: tolVal, method: findTestMethod(source) };
+      }
+
+      const withUnit = new RegExp(
+        '([<>≤≥~]?\\s*-?\\d[\\d,.]*)\\s*' + unitRegex.source,
+        'i'
+      );
+      const m = withUnit.exec(source);
       if (m) {
-        const val = parseFloat(m[1].replace(/[<>≤≥~\s]/g, '').replace(',', '.'));
+        const val = toNumber(m[1]);
         // Find test method AFTER the value, not before
-        const afterValue = window.slice(m.index + m[0].length);
-        if (Number.isFinite(val)) return { value: val, method: findTestMethod(afterValue) || findTestMethod(window) };
+        const afterValue = source.slice(m.index + m[0].length);
+        if (Number.isFinite(val)) return { value: val, method: findTestMethod(afterValue) || findTestMethod(source) };
       }
     }
 
-    // Strategy 2: label ... number (no unit, just first number after label)
-    const numOnly = /([<>≤≥~]?\s*-?\d+[,.]?\d*)/;
-    // Skip the label text itself, look for number after it
-    const afterLabel = window.slice(match[0].length);
-    const m2 = numOnly.exec(afterLabel);
-    if (m2) {
-      const val = parseFloat(m2[1].replace(/[<>≤≥~\s]/g, '').replace(',', '.'));
-      if (Number.isFinite(val)) return { value: val, method: findTestMethod(window) };
+    // Strategy 2: label ... number (no unit)
+    const numOnly = /([<>≤≥~]?\s*-?\d[\d,.]*)/g;
+    // Skip the label text itself and ignore temperature tokens like 25°C.
+    const afterLabel = window
+      .slice(match[0].length)
+      .replace(/\b(?:at\s*)?-?\d+(?:[.,]\d+)?\s*(?:°\s*)?(?:deg\.?\s*)?[CF](?:elsius|ahrenheit)?\b/gi, ' ')
+      .replace(/\btemp(?:erature)?\s*[:=-]?\s*-?\d+(?:[.,]\d+)?\b/gi, ' ');
+
+    const source = sameLine && sameLine.trim().length > 0 ? sameLine : afterLabel;
+    const candidates = [];
+    let m2;
+    while ((m2 = numOnly.exec(source)) !== null) {
+      const token = m2[1];
+      const tail = source.slice(m2.index + token.length, m2.index + token.length + 10);
+      const head = source.slice(Math.max(0, m2.index - 12), m2.index);
+
+      // Ignore temperature-like numbers when unit is absent (e.g. "at 25 C").
+      if (!unitRegex) {
+        if (/(?:°\s*[CF]\b|deg\.?\s*[CF]\b)/i.test(tail)) continue;
+        if (/\b(?:at|temp|temperature)\s*$/i.test(head)) continue;
+      }
+
+      const val = toNumber(token);
+      if (!Number.isFinite(val)) continue;
+
+      const context = source.slice(Math.max(0, m2.index - 28), m2.index + token.length + 28);
+      let score = 1;
+
+      // For viscosity without explicit unit, avoid tiny values commonly from temp context.
+      if (!unitRegex && /viscosity/i.test(fieldKey) && val < 50) continue;
+      if (/viscosity/i.test(fieldKey) && /\b(?:cps?|cp|mPa\.?\s*s?)\b/i.test(context)) score += 1;
+
+      if (/pot_life/i.test(fieldKey)) {
+        const hasTimeUnit = /\b(?:sec|seconds?|min|minutes?|h|hr|hrs|hour|hours)\b/i.test(context);
+        const hasPotLifePhrase = /\bpot\s*life\b/i.test(context);
+        if (!hasTimeUnit && !hasPotLifePhrase) continue;
+        if (hasTimeUnit) score += 3;
+        if (hasPotLifePhrase) score += 2;
+        if (val > 120 && !/\b(?:min|minutes?)\b/i.test(context)) score -= 2;
+      }
+
+      if (/cure_time/i.test(fieldKey)) {
+        if (/\b(?:hour|hours|hr|hrs|h)\b/i.test(context)) score += 2;
+        if (/\b(?:min|minutes?)\b/i.test(context)) score += 1;
+      }
+
+      candidates.push({ value: val, index: m2.index, score, context });
+    }
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => (b.score - a.score) || (a.index - b.index));
+      const best = candidates[0];
+      let val = best.value;
+
+      if (/pot_life/i.test(fieldKey)) {
+        if (/\b(?:hour|hours|hr|hrs|h)\b/i.test(best.context)) {
+          val = val * 60;
+        } else if (/\b(?:sec|seconds?)\b/i.test(best.context)) {
+          val = val / 60;
+        }
+      } else if (/cure_time/i.test(fieldKey) && /\b(?:min|minutes?)\b/i.test(best.context)) {
+        val = val / 60;
+      }
+
+      return { value: val, method: findTestMethod(source) };
     }
   }
   return null;
@@ -195,11 +271,96 @@ function extractTextNearLabel(text, labelRegexes) {
   for (const labelRe of labelRegexes) {
     const match = labelRe.exec(text);
     if (!match) continue;
-    const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 100);
-    // Take the first non-empty token after the label
-    const cleaned = afterLabel.replace(/^[\s:=]+/, '').split(/[\n\r]/)[0].trim();
-    if (cleaned && cleaned.length > 0 && cleaned.length < 80) return { value: cleaned };
+    const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 220);
+    const ratioWindow = text.slice(match.index + match[0].length, match.index + match[0].length + 700);
+    const firstLine = afterLabel
+      .replace(/^[\s:=\-]+/, '')
+      .split(/[\n\r]/)[0]
+      .trim();
+
+    // Prefer ratio-like text when present (e.g., "100 parts by weight : 3 parts by weight").
+    const ratioLike = ratioWindow.match(/\b(-?\d+(?:[.,]\d+)?)\s*parts?\s*by\s*weight\b[^\n\r]{0,120}\b(-?\d+(?:[.,]\d+)?)\s*parts?\s*by\s*weight\b/i)
+      || ratioWindow.match(/(?:^|[^A-Za-z0-9])(-?\d+(?:[.,]\d+)?)\s*(?:[:\/]|to)\s*(-?\d+(?:[.,]\d+)?)(?:$|[^A-Za-z0-9])/i);
+    if (ratioLike) {
+      return { value: ratioLike[0].trim() };
+    }
+
+    // Use first meaningful segment before separators used for notes/test methods.
+    const cleaned = firstLine
+      .split(/\s{2,}|\|/)[0]
+      .replace(/^[-,:;]+|[-,:;]+$/g, '')
+      .trim();
+    if (cleaned && cleaned.length > 0 && cleaned.length < 120) return { value: cleaned };
   }
+  return null;
+}
+
+function toNumber(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+
+  let text = String(raw)
+    .trim()
+    .replace(/[<>≤≥~]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^0-9,\.\-+]/g, '');
+
+  if (!text) return null;
+
+  const hasComma = text.includes(',');
+  const hasDot = text.includes('.');
+
+  if (hasComma && hasDot) {
+    const lastComma = text.lastIndexOf(',');
+    const lastDot = text.lastIndexOf('.');
+    const decimalSep = lastComma > lastDot ? ',' : '.';
+    if (decimalSep === ',') {
+      text = text.replace(/\./g, '').replace(/,/g, '.');
+    } else {
+      text = text.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    if (/^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) {
+      text = text.replace(/,/g, '');
+    } else if (/^[+-]?\d+,\d{1,3}$/.test(text)) {
+      text = text.replace(',', '.');
+    } else {
+      text = text.replace(/,/g, '');
+    }
+  } else if (hasDot) {
+    if (/^[+-]?\d{1,3}(\.\d{3})+$/.test(text)) {
+      text = text.replace(/\./g, '');
+    }
+  }
+
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeNumericToken(raw) {
+  const n = toNumber(raw);
+  if (!Number.isFinite(n)) return null;
+  if (Number.isInteger(n)) return String(n);
+  return String(Number(n.toFixed(6))).replace(/\.0+$/, '');
+}
+
+function normalizeMixRatioText(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return text;
+
+  const byWeight = text.match(/\b(-?\d+(?:[.,]\d+)?)\s*parts?\s*by\s*weight\b[^\n\r]{0,120}\b(-?\d+(?:[.,]\d+)?)\s*parts?\s*by\s*weight\b/i);
+  if (byWeight) {
+    const left = normalizeNumericToken(byWeight[1]);
+    const right = normalizeNumericToken(byWeight[2]);
+    if (left && right) return `${left}:${right}`;
+  }
+
+  const direct = text.match(/(?:^|[^A-Za-z0-9])(-?\d+(?:[.,]\d+)?)\s*(?:[:\/]|to)\s*(-?\d+(?:[.,]\d+)?)(?:$|[^A-Za-z0-9])/i);
+  if (direct) {
+    const left = normalizeNumericToken(direct[1]);
+    const right = normalizeNumericToken(direct[2]);
+    if (left && right) return `${left}:${right}`;
+  }
+
   return null;
 }
 
@@ -231,7 +392,12 @@ function handleDensityConversion(fieldKey, value, unit) {
 function extractBySchema(pdfText, paramDefs) {
   if (!pdfText || !Array.isArray(paramDefs) || !paramDefs.length) return {};
 
-  const text = pdfText.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ');
+  // Normalize Unicode dashes (en-dash, em-dash, minus sign) to ASCII hyphen so
+  // numeric ranges like "100\u20131000" parse correctly. (PB-05, 2026-04-25)
+  const text = pdfText
+    .replace(/[\u2013\u2014\u2212]/g, '-')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ');
   const results = {};
 
   for (const def of paramDefs) {
@@ -247,23 +413,40 @@ function extractBySchema(pdfText, paramDefs) {
 
     if (field_type === 'text') {
       const result = extractTextNearLabel(text, labelRegexes);
-      if (result) results[field_key] = result.value;
+      if (result) {
+        let val = result.value;
+        if (field_key === 'mix_ratio') {
+          val = normalizeMixRatioText(val);
+          if (!val) continue;
+        }
+        results[field_key] = val;
+      }
       continue;
     }
 
     // Numeric extraction
-    const result = extractNumericNearLabel(text, labelRegexes, unitRegex);
+    const result = extractNumericNearLabel(text, labelRegexes, unitRegex, field_key);
     if (result) {
       let val = result.value;
 
       // Density conversion
       val = handleDensityConversion(field_key, val, unit);
 
-      // Validate against min/max if defined
+      // Validate against min/max if defined.
+      // When unit is missing (common for adhesive DB defs), be stricter to avoid
+      // contamination from unrelated numbers in dense TDS tables.
       const min = def.min != null ? Number(def.min) : null;
       const max = def.max != null ? Number(def.max) : null;
-      if (min !== null && val < min * 0.5) continue; // way out of range, skip
-      if (max !== null && val > max * 2) continue;   // way out of range, skip
+      const hasUnit = !!(unit && String(unit).trim() && String(unit).trim() !== '-');
+      const strictByField = /solids|viscosity|density|pot_life|bond_strength|cure_time|application_temp/i.test(field_key);
+      const strictRange = !hasUnit || strictByField;
+      if (strictRange) {
+        if (min !== null && val < min) continue;
+        if (max !== null && val > max) continue;
+      } else {
+        if (min !== null && val < min * 0.5) continue;
+        if (max !== null && val > max * 2) continue;
+      }
 
       results[field_key] = val;
 
